@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="Seguí tus transacciones y ganancias en criptomonedas" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" href="https://via.placeholder.com/32?text=₿" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>₿</text></svg>" />
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -39,6 +39,15 @@
     #loadingBar.active {
       transform: scaleX(1);
     }
+    #errorMessage {
+      display: none;
+      background: #ef4444;
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -46,9 +55,12 @@
   <div id="loadingBar"></div>
 
   <div class="max-w-6xl mx-auto">
+    <!-- Mensaje de error -->
+    <div id="errorMessage"></div>
+
     <!-- Encabezado con logo -->
     <div class="text-center mb-8">
-      <img src="https://via.placeholder.com/64?text=₿" alt="Crypto Tracker Logo" class="mx-auto mb-2 w-16 h-16" />
+      <span class="text-4xl">₿</span>
       <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
         CRYPTO TRACKER
       </h1>
@@ -72,7 +84,7 @@
         <button id="refreshPrices" class="px-4 py-2 rounded-lg transition-all bg-green-600 hover:bg-green-700 shadow-md text-white">
           🔄 Actualizar Precios
         </button>
-        <div class="text-sm text-slate-400">Precios de CoinGecko API</div>
+        <div class="text-sm text-slate-400">Precios de CoinMarketCap API</div>
       </div>
 
       <!-- Tarjetas de saldo -->
@@ -192,14 +204,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Gráfico en Tracker -->
-      <div class="bg-slate-800 rounded-xl p-6 mb-6 shadow-lg">
-        <h3 id="chartTitle" class="text-xl font-semibold mb-4 text-blue-300">Gráfico Lineal - Tiempo vs Profit (USD)</h3>
-        <div class="chart-container">
-          <canvas id="profitChart"></canvas>
-        </div>
-      </div>
     </div>
 
     <!-- Vista Historial -->
@@ -253,7 +257,6 @@
     };
     let loading = false;
     let chartData = [];
-    let profitChart = null;
     let usdChart = null;
     let btcChart = null;
 
@@ -290,28 +293,45 @@
       return `${symbols[curr]}${convertedAmount.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`;
     }
 
-    // Obtener precios de criptomonedas desde CoinGecko API
+    // Formatear BTC
+    function formatBTC(amount) {
+      return `₿${amount.toFixed(6)}`;
+    }
+
+    // Mostrar mensaje de error
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
+    }
+
+    // Obtener precios de criptomonedas desde CoinMarketCap API
     async function fetchCryptoPrices() {
       loading = true;
       document.getElementById('refreshPrices').textContent = 'Actualizando...';
       document.getElementById('refreshPrices').disabled = true;
       document.getElementById('loadingBar').classList.add('active');
       try {
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=usd&include_24hr_change=true'
-        );
+        const response = await fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=BTC,ETH,BNB,SOL', {
+          headers: {
+            'X-CMC_PRO_API_KEY': 'YOUR_API_KEY' // Reemplaza con tu clave de CoinMarketCap
+          }
+        });
+        if (!response.ok) throw new Error('Error al obtener datos de CoinMarketCap');
         const data = await response.json();
         cryptoDetails = {
-          BTC: { ...cryptoDetails.BTC, price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
-          ETH: { ...cryptoDetails.ETH, price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
-          BNB: { ...cryptoDetails.BNB, price: data.binancecoin?.usd || 0, change: data.binancecoin?.usd_24h_change || 0 },
-          SOL: { ...cryptoDetails.SOL, price: data.solana?.usd || 0, change: data.solana?.usd_24h_change || 0 }
+          BTC: { ...cryptoDetails.BTC, price: data.data.BTC?.quote.USD.price || 0, change: data.data.BTC?.quote.USD.percent_change_24h || 0 },
+          ETH: { ...cryptoDetails.ETH, price: data.data.ETH?.quote.USD.price || 0, change: data.data.ETH?.quote.USD.percent_change_24h || 0 },
+          BNB: { ...cryptoDetails.BNB, price: data.data.BNB?.quote.USD.price || 0, change: data.data.BNB?.quote.USD.percent_change_24h || 0 },
+          SOL: { ...cryptoDetails.SOL, price: data.data.SOL?.quote.USD.price || 0, change: data.data.SOL?.quote.USD.percent_change_24h || 0 }
         };
         updateCryptoDisplay();
         updateTransactionFormPrice();
         updateBalances();
       } catch (error) {
         console.error('Error al obtener precios de criptomonedas:', error);
+        showError('No se pudieron actualizar los precios. Verifica tu conexión o la clave API.');
       } finally {
         loading = false;
         document.getElementById('refreshPrices').textContent = '🔄 Actualizar Precios';
@@ -356,9 +376,9 @@
     // Actualizar visualización de saldos
     function updateBalances() {
       const balances = calculateTotalBalance();
-      document.getElementById('totalUSD').textContent = `$${balances.usd.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`;
-      document.getElementById('totalARS').textContent = `$${balances.ars.toLocaleString('es-ES', { maximumFractionDigits: 0 })}`;
-      document.getElementById('totalBTC').textContent = `₿${balances.btc.toFixed(6)}`;
+      document.getElementById('totalUSD').textContent = formatCurrency(balances.usd, 'USD');
+      document.getElementById('totalARS').textContent = formatCurrency(balances.usd, 'ARS');
+      document.getElementById('totalBTC').textContent = formatBTC(balances.btc);
       updateProfit();
     }
 
@@ -430,48 +450,9 @@
       updateCharts();
     }
 
-    // Actualizar todos los gráficos
+    // Actualizar gráficos
     function updateCharts() {
-      // Gráfico en vista Tracker
-      const ctxTracker = document.getElementById('profitChart').getContext('2d');
-      if (profitChart) profitChart.destroy();
-      profitChart = new Chart(ctxTracker, {
-        type: 'line',
-        data: {
-          labels: chartData.map(d => d.fecha),
-          datasets: [{
-            label: 'Profit',
-            data: chartData.map(d => d.profit * exchangeRates[currency]),
-            borderColor: '#3B82F6',
-            borderWidth: 3,
-            fill: false,
-            pointRadius: 4,
-            pointBackgroundColor: '#3B82F6'
-          }]
-        },
-        options: {
-          scales: {
-            x: { grid: { color: '#374151' } },
-            y: { grid: { color: '#374151' } }
-          },
-          plugins: {
-            tooltip: {
-              backgroundColor: '#1F2937',
-              borderColor: '#374151',
-              borderWidth: 1,
-              cornerRadius: 8,
-              callbacks: {
-                label: function(context) {
-                  return `Profit: ${formatCurrency(context.raw)}`;
-                }
-              }
-            }
-          }
-        }
-      });
-      document.getElementById('chartTitle').textContent = `Gráfico Lineal - Tiempo vs Profit (${currency})`;
-
-      // Gráfico USD en vista Gráficos
+      // Gráfico USD
       const ctxUSD = document.getElementById('usdChart').getContext('2d');
       if (usdChart) usdChart.destroy();
       usdChart = new Chart(ctxUSD, {
@@ -509,7 +490,7 @@
         }
       });
 
-      // Gráfico BTC en vista Gráficos
+      // Gráfico BTC
       const ctxBTC = document.getElementById('btcChart').getContext('2d');
       if (btcChart) btcChart.destroy();
       btcChart = new Chart(ctxBTC, {
@@ -533,15 +514,13 @@
           },
           plugins: {
             tooltip: {
-              backgroundColor: '#
-
-1F2937',
+              backgroundColor: '#1F2937',
               borderColor: '#374151',
               borderWidth: 1,
               cornerRadius: 8,
               callbacks: {
                 label: function(context) {
-                  return `Profit: ₿${context.raw.toFixed(6)}`;
+                  return `Profit: ${formatBTC(context.raw)}`;
                 }
               }
             }
@@ -593,7 +572,7 @@
       transactionList.innerHTML = '';
       if (transactions.length === 0) {
         transactionList.innerHTML = `
-          <div class="text-center py-8 text-slateacct-400">
+          <div class="text-center py-8 text-slate-400">
             <span class="h-12 w-12 mx-auto mb-4 opacity-50">🕒</span>
             <p>No hay transacciones registradas.</p>
           </div>
@@ -631,7 +610,6 @@
           `;
           transactionList.appendChild(div);
         });
-        // Añadir event listeners a los botones de eliminación
         document.querySelectorAll('.delete-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const id = parseInt(btn.getAttribute('data-id'));
@@ -697,7 +675,6 @@
     document.getElementById('currencySelect').addEventListener('change', (e) => {
       currency = e.target.value;
       updateBalances();
-      updateCharts();
     });
 
     document.getElementById('transactionType').addEventListener('change', (e) => {
