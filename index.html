@@ -8,6 +8,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Track your cryptocurrency transactions and profits" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="https://via.placeholder.com/32?text=₿" />
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -20,12 +25,30 @@
       width: 100%;
       height: 300px;
     }
+    #loadingBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #3B82F6;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease-in-out;
+    }
+    #loadingBar.active {
+      transform: scaleX(1);
+    }
   </style>
 </head>
 <body>
+  <!-- Loading Bar -->
+  <div id="loadingBar"></div>
+
   <div class="max-w-6xl mx-auto">
-    <!-- Header -->
+    <!-- Header with Logo -->
     <div class="text-center mb-8">
+      <img src="https://via.placeholder.com/64?text=₿" alt="Crypto Tracker Logo" class="mx-auto mb-2 w-16 h-16" />
       <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
         CRYPTO TRACKER
       </h1>
@@ -86,33 +109,25 @@
           <div class="text-2xl mb-1">₿</div>
           <div class="font-semibold">BTC</div>
           <div id="priceBTC" class="text-sm opacity-75">Cargando...</div>
-          <div id="changeBTC" class="text-xs flex items-center justify-center mt-1 text-green-400">
-            ...%
-          </div>
+          <div id="changeBTC" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
         </button>
         <button id="selectETH" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700">
           <div class="text-2xl mb-1">◊</div>
           <div class="font-semibold">ETH</div>
           <div id="priceETH" class="text-sm opacity-75">Cargando...</div>
-          <div id="changeETH" class="text-xs flex items-center justify-center mt-1 text-green-400">
-            ...%
-          </div>
+          <div id="changeETH" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
         </button>
         <button id="selectBNB" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700">
           <div class="text-2xl mb-1">⬢</div>
           <div class="font-semibold">BNB</div>
           <div id="priceBNB" class="text-sm opacity-75">Cargando...</div>
-          <div id="changeBNB" class="text-xs flex items-center justify-center mt-1 text-green-400">
-            ...%
-          </div>
+          <div id="changeBNB" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</%</div>
         </button>
         <button id="selectSOL" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700">
           <div class="text-2xl mb-1">S</div>
           <div class="font-semibold">SOL</div>
           <div id="priceSOL" class="text-sm opacity-75">Cargando...</div>
-          <div id="changeSOL" class="text-xs flex items-center justify-center mt-1 text-green-400">
-            ...%
-          </div>
+          <div id="changeSOL" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
         </button>
       </div>
 
@@ -144,136 +159,9 @@
             <option value="BNB">BNB</option>
             <option value="SOL">SOL</option>
           </select>
-          <input
-            id="transactionAmount"
-            type="number"
-            placeholder="Cantidad"
-            class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-
-
-System: The provided HTML code is incomplete, as it appears to have been cut off mid-input element in the transaction form section. Below, I will complete the HTML file by finishing the transaction form, adding the remaining sections (Profit Cards, Linear Chart, and Transaction History View), and including the full JavaScript logic to replicate the functionality of the original React code. This will ensure the application works as intended in a single HTML file with embedded CSS and JavaScript.
-
-```html
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crypto Tracker</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(to bottom right, #0f172a, #4c1d95, #0f172a);
-      color: white;
-      min-height: 100vh;
-      padding: 1rem;
-    }
-    .chart-container {
-      width: 100%;
-      height: 300px;
-    }
-  </style>
-</head>
-<body>
-  <div class="max-w-6xl mx-auto">
-    <!-- Header -->
-    <div class="text-center mb-8">
-      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-        CRYPTO TRACKER
-      </h1>
-      <div class="flex justify-center gap-4 mt-4">
-        <button id="trackerBtn" class="px-4 py-2 rounded-lg transition-all bg-blue-600 text-white shadow-lg">
-          📊 Tracker
-        </button>
-        <button id="historyBtn" class="px-4 py-2 rounded-lg transition-all bg-slate-700 hover:bg-slate-600">
-          🕒 Historial
-        </button>
-      </div>
-    </div>
-
-    <!-- Tracker View -->
-    <div id="trackerView" class="block">
-      <!-- Price Refresh and API Source -->
-      <div class="flex justify-between items-center mb-4">
-        <button id="refreshPrices" class="px-4 py-2 rounded-lg transition-all bg-green-600 hover:bg-green-700 shadow-md text-white">
-          🔄 Actualizar Precios
-        </button>
-        <div class="text-sm text-slate-400">Precios de CoinGecko API</div>
-      </div>
-
-      <!-- Total Balance Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl p-4 shadow-lg">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-sm font-semibold opacity-90">Saldo Total USD</h3>
-              <p id="totalUSD" class="text-2xl font-bold">$0.00</p>
-            </div>
-            <span class="h-8 w-8 opacity-75">💵</span>
-          </div>
-        </div>
-        <div class="bg-gradient-to-r from-blue-600 to ang="BTC" class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 shadow-lg">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-sm font-semibold opacity-90">Saldo Total BTC</h3>
-              <p id="totalBTC" class="text-2xl font-bold">₿0.000000</p>
-            </div>
-            <span class="text-2xl opacitycolonialism</option>
-          </div>
-        </div>
-      </div>
-
-      <!-- Currency Selector -->
-      <div class="mb-6 flex justify-center">
-        <select id="currencySelect" class="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none shadow-md">
-          <option value="USD">USD - Dólar</option>
-          <option value="EUR">EUR - Euro</option>
-          <option value="ARS">ARS - Peso Argentino</option>
-          <option value="MXN">MXN - Peso Mexicano</option>
-          <option value="COP">COP - Peso Colombiano</option>
-          <option value="BRL">BRL - Real Brasileño</option>
-        </select>
-      </div>
-
-      <!-- Add Transaction Form -->
-      <div class="bg-slate-800 rounded-xl p-6 mb-6 shadow-lg">
-        <h3 class="text-xl font-semibold mb-4 text-blue-300">Registrar Transacción</h3>
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <select id="transactionType" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
-            <option value="compra">Compra</option>
-            <option value="venta">Venta</option>
-            <option value="comision_compra">Comisión Compra</option>
-            <option value="comision_venta">Comisión Venta</option>
-          </select>
-          <select id="transactionCrypto" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
-            <option value="BTC">BTC</option>
-            <option value="ETH">ETH</option>
-            <option value="BNB">BNB</option>
-            <option value="SOL">SOL</option>
-          </select>
-          <input
-            id="transactionAmount"
-            type="number"
-            placeholder="Cantidad"
-            class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-            min="0"
-          />
-          <input
-            id="transactionPrice"
-            type="number"
-            placeholder="Precio"
-            class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-            min="0"
-          />
-          <input
-            id="transactionDate"
-            type="date"
-            class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-            value={new Date().toISOString().split('T')[0]}
-          />
+          <input id="transactionAmount" type="number" placeholder="Cantidad" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+          <input id="transactionPrice" type="number" placeholder="Precio" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+          <input id="transactionDate" type="date" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" value="" />
           <button id="addTransaction" class="col-span-full md:col-span-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 px-4 py-2 rounded-lg transition-all shadow-md">
             ➕ Agregar
           </button>
@@ -353,6 +241,22 @@ System: The provided HTML code is incomplete, as it appears to have been cut off
       BRL: 5.2
     };
 
+    // Load transactions from localStorage
+    function loadTransactions() {
+      const saved = localStorage.getItem('cryptoTransactions');
+      if (saved) {
+        transactions = JSON.parse(saved);
+        updateBalances();
+        updateChartData();
+        updateTransactionHistory();
+      }
+    }
+
+    // Save transactions to localStorage
+    function saveTransactions() {
+      localStorage.setItem('cryptoTransactions', JSON.stringify(transactions));
+    }
+
     // Format currency function
     function formatCurrency(amount, curr = currency) {
       const convertedAmount = amount * exchangeRates[curr];
@@ -365,6 +269,7 @@ System: The provided HTML code is incomplete, as it appears to have been cut off
       loading = true;
       document.getElementById('refreshPrices').textContent = 'Actualizando...';
       document.getElementById('refreshPrices').disabled = true;
+      document.getElementById('loadingBar').classList.add('active');
       try {
         const response = await fetch(
           'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=usd&include_24hr_change=true'
@@ -385,6 +290,7 @@ System: The provided HTML code is incomplete, as it appears to have been cut off
         loading = false;
         document.getElementById('refreshPrices').textContent = '🔄 Actualizar Precios';
         document.getElementById('refreshPrices').disabled = false;
+        document.getElementById('loadingBar').classList.remove('active');
       }
     }
 
@@ -555,6 +461,7 @@ System: The provided HTML code is incomplete, as it appears to have been cut off
           timestamp: new Date().toISOString()
         };
         transactions.unshift(transaction);
+        saveTransactions();
         document.getElementById('transactionAmount').value = '';
         document.getElementById('transactionPrice').value = cryptoDetails[selectedCrypto].price.toString();
         document.getElementById('transactionType').value = 'compra';
@@ -671,7 +578,18 @@ System: The provided HTML code is incomplete, as it appears to have been cut off
     document.getElementById('addTransaction').addEventListener('click', addTransaction);
     document.getElementById('refreshPrices').addEventListener('click', fetchCryptoPrices);
 
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service Worker registered'))
+          .catch(err => console.error('Service Worker registration failed:', err));
+      });
+    }
+
     // Initial setup
+    loadTransactions();
+    document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
     fetchCryptoPrices();
     setInterval(fetchCryptoPrices, 60000);
     updateChartData();
