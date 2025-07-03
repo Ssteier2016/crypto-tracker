@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Tracker</title>
+    <!-- Carga de Tailwind CSS para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de React y ReactDOM desde CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Carga de Babel para transformar JSX en JavaScript de navegador -->
+    <!-- ¡IMPORTANTE! Babel debe cargarse ANTES de tus scripts React con type="text/babel" -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Carga de Lucide React para iconos -->
+    <script src="https://unpkg.com/lucide-react@0.395.0/dist/lucide-react.umd.min.js"></script>
+    <!-- Carga de Recharts para gráficos -->
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
+
+    <style>
+      /* Estilo global para la fuente Inter */
+      body { font-family: 'Inter', sans-serif; }
+      /* Asegura que el contenedor de React ocupe todo el espacio disponible */
+      #root { min-height: 100vh; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Carga tu archivo de componente React y transpílalo con Babel -->
+    <!-- El atributo type="text/babel" es CRUCIAL para que Babel procese este archivo -->
+    <script type="text/babel" src="./cryptotracker.js"></script>
+</body>
+</html>
+
