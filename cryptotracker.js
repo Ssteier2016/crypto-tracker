@@ -1,12 +1,16 @@
-// cryptotracker.js
 const { useState, useEffect } = React;
 const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts || {};
-const lucide = window.lucide || {};
 
-if (!React || !ReactDOM || !LineChart || !lucide) {
-    console.error('Alguna biblioteca no se cargó correctamente:', { React, ReactDOM, LineChart, lucide });
-    throw new Error('Faltan dependencias esenciales');
+if (!React || !ReactDOM || !LineChart) {
+    console.error('Alguna biblioteca no se cargó correctamente:', { React, ReactDOM, LineChart });
+    throw new Error('Faltan dependencias esenciales (Recharts no se cargó)');
 }
+
+const lucide = window.lucide || {};
+const renderIcon = (iconName, props = {}) => {
+    const IconComponent = lucide[iconName] || (() => null);
+    return React.createElement(IconComponent, { ...props });
+};
 
 const CryptoTracker = () => {
     const [selectedCrypto, setSelectedCrypto] = useState('BTC');
@@ -187,11 +191,6 @@ const CryptoTracker = () => {
                 }
                 return total;
             }, 0);
-    };
-
-    const renderIcon = (iconName, props = {}) => {
-        const IconComponent = lucide[iconName] || (() => null);
-        return React.createElement(IconComponent, { ...props });
     };
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
