@@ -1,548 +1,198 @@
 // cryptotracker.js
-// No necesitas importar React, { useState, useEffect } de esta manera
-// cuando usas CDNs, ya que React y ReactDOM están disponibles globalmente.
-// En su lugar, usa React.useState, React.useEffect, etc.
+const { useState, useEffect } = React;
+const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts || {};
+const lucide = window.lucide || {};
 
-// Desestructuración de Lucide React para usar los iconos directamente
-// Asegúrate de que LucideReact esté disponible globalmente desde el CDN.
-const { Calendar, TrendingUp, TrendingDown, DollarSign, Plus, Minus, BarChart3, History } = LucideReact;
-// Desestructuración de Recharts para usar los componentes de gráfico
-// Asegúrate de que Recharts esté disponible globalmente desde el CDN.
-const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+if (!React || !ReactDOM || !LineChart || !lucide) {
+    console.error('Alguna biblioteca no se cargó correctamente:', { React, ReactDOM, LineChart, lucide });
+    throw new Error('Faltan dependencias esenciales');
+}
 
 const CryptoTracker = () => {
-  // State variables for managing application data and UI
-  const [selectedCrypto, setSelectedCrypto] = React.useState('BTC'); // Currently selected cryptocurrency (e.g., BTC, ETH)
-  const [currency, setCurrency] = React.useState('USD'); // Currently selected display currency (e.g., USD, ARS)
-  const [currentView, setCurrentView] = React.useState('tracker'); // Current view: 'tracker' or 'history'
-  const [transactions, setTransactions] = React.useState([]); // Array to store all recorded transactions
-  const [newTransaction, setNewTransaction] = React.useState({ // State for the new transaction form
-    type: 'compra', // Type of transaction: 'compra', 'venta', 'comision_compra', 'comision_venta'
-    crypto: 'BTC', // Cryptocurrency involved in the transaction
-    amount: '', // Amount of cryptocurrency
-    price: '', // Price per unit of cryptocurrency at the time of transaction
-    date: new Date().toISOString().split('T')[0] // Date of the transaction (YYYY-MM-DD)
-  });
-  const [cryptoDetails, setCryptoDetails] = React.useState({ // Stores real-time price and change data for cryptocurrencies
-    BTC: { name: 'Bitcoin', symbol: '₿', price: 0, change: 0 },
-    ETH: { name: 'Ethereum', symbol: '◊', price: 0, change: 0 },
-    BNB: { name: 'BNB', symbol: '⬢', price: 0, change: 0 },
-    SOL: { name: 'Solana', symbol: 'S', price: 0, change: 0 }
-  });
-  const [loading, setLoading] = React.useState(false); // Loading state for API calls
-  const [chartData, setChartData] = React.useState([]); // Data for the profit line chart
-
-  // Simulated exchange rates for different currencies against USD
-  const exchangeRates = {
-    USD: 1,
-    EUR: 0.85,
-    ARS: 350, // Example rate, can be updated
-    MXN: 18.5,
-    COP: 4200,
-    BRL: 5.2
-  };
-
-  // Function to fetch real-time cryptocurrency prices from CoinGecko API
-  const fetchCryptoPrices = async () => {
-    setLoading(true); // Set loading state to true
-    try {
-      const response = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=usd&include_24hr_change=true'
-      );
-      const data = await response.json();
-      
-      // Update the cryptoDetails state with the fetched prices and 24h change
-      setCryptoDetails(prevDetails => ({
-        ...prevDetails,
-        BTC: { 
-          ...prevDetails.BTC, 
-          price: data.bitcoin?.usd || 0, 
-          change: data.bitcoin?.usd_24h_change || 0 
-        },
-        ETH: { 
-          ...prevDetails.ETH, 
-          price: data.ethereum?.usd || 0, 
-          change: data.ethereum?.usd_24h_change || 0 
-        },
-        BNB: { 
-          ...prevDetails.BNB, 
-          price: data.binancecoin?.usd || 0, 
-          change: data.binancecoin?.usd_24h_change || 0 
-        },
-        SOL: { 
-          ...prevDetails.SOL, 
-          price: data.solana?.usd || 0, 
-          change: data.solana?.usd_24h_change || 0 
-        }
-      }));
-      
-    } catch (error) {
-      console.error('Error fetching crypto prices:', error); // Log any errors
-    } finally {
-      setLoading(false); // Set loading state to false
-    }
-  };
-
-  // React.useEffect hook to fetch prices on component mount and then every 60 seconds
-  React.useEffect(() => {
-    fetchCryptoPrices(); // Initial fetch
-    const interval = setInterval(fetchCryptoPrices, 60000); // Fetch every 60 seconds
-    return () => clearInterval(interval); // Cleanup interval on component unmount
-  }, []);
-
-  // React.useEffect hook to update the new transaction's price when selected crypto or its price changes
-  React.useEffect(() => {
-    setNewTransaction(prev => ({
-      ...prev,
-      price: cryptoDetails[selectedCrypto]?.price.toString() || '' // Set price to current market price
-    }));
-  }, [selectedCrypto, cryptoDetails]); // Dependencies: selectedCrypto and cryptoDetails
-
-  // React.useEffect hook to calculate and update chart data whenever transactions change
-  React.useEffect(() => {
-    const calculateCumulativeProfitData = () => {
-      const dailyProfits = {}; // Object to store daily profit/loss
-
-      // Calculate profit/loss for each transaction
-      transactions.forEach(t => {
-        const date = t.date; // Date of the transaction
-        let transactionProfit = 0;
-        if (t.type === 'venta') {
-          transactionProfit = t.total; // Selling increases profit
-        } else if (t.type === 'compra' || t.type === 'comision_compra' || t.type === 'comision_venta') {
-          transactionProfit = -t.total; // Buying or commissions decrease profit
-        }
-        dailyProfits[date] = (dailyProfits[date] || 0) + transactionProfit; // Aggregate daily profits
-      });
-
-      const sortedDates = Object.keys(dailyProfits).sort(); // Sort dates chronologically
-      const newChartData = []; // Array to hold the new chart data points
-
-      let currentCumulativeProfit = 0; // Accumulator for cumulative profit
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Normalize today's date to start of day
-
-      // Add a starting point for the chart (0 profit)
-      if (sortedDates.length > 0) {
-        const firstTransactionDate = new Date(sortedDates[0]);
-        firstTransactionDate.setHours(0, 0, 0, 0);
-
-        // Add a point for the day before the first transaction with 0 profit to ensure chart starts from 0
-        const dayBeforeFirst = new Date(firstTransactionDate);
-        dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
-        newChartData.push({ fecha: dayBeforeFirst.toISOString().split('T')[0], profit: 0 });
-
-        let currentDate = new Date(firstTransactionDate);
-        // Iterate from the first transaction date up to today to build cumulative profit
-        while (currentDate <= today) {
-          const dateString = currentDate.toISOString().split('T')[0];
-          if (dailyProfits[dateString]) {
-            currentCumulativeProfit += dailyProfits[dateString];
-          }
-          newChartData.push({ fecha: dateString, profit: currentCumulativeProfit });
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-      } else {
-        // If no transactions, just add today with 0 profit
-        newChartData.push({ fecha: today.toISOString().split('T')[0], profit: 0 });
-      }
-
-      setChartData(newChartData); // Update the chart data state
-    };
-
-    calculateCumulativeProfitData(); // Call the function to calculate data
-  }, [transactions]); // Dependency: recalculate when transactions change
-
-  // Function to calculate the total balance across all cryptocurrencies in different currencies
-  const calculateTotalBalance = () => {
-    const cryptoBalances = {
-      BTC: 0,
-      ETH: 0,
-      BNB: 0,
-      SOL: 0
-    };
-    
-    // Calculate the net balance for each cryptocurrency based on transactions
-    transactions.forEach(transaction => {
-      if (transaction.type === 'compra') {
-        cryptoBalances[transaction.crypto] += parseFloat(transaction.amount);
-      } else if (transaction.type === 'venta') {
-        cryptoBalances[transaction.crypto] -= parseFloat(transaction.amount);
-      }
-      // Commission transactions do not affect crypto balances
-    });
-    
-    // Calculate the total value in USD by multiplying crypto balances with current prices
-    const totalUSD = Object.entries(cryptoBalances).reduce((total, [crypto, amount]) => {
-      return total + (amount * cryptoDetails[crypto].price); // Use cryptoDetails for current prices
-    }, 0);
-    
-    // Return balances in USD, ARS, and BTC equivalent
-    return {
-      usd: totalUSD,
-      ars: totalUSD * exchangeRates.ARS,
-      btc: cryptoDetails.BTC.price > 0 ? totalUSD / cryptoDetails.BTC.price : 0, // Convert total USD to BTC
-      cryptoBalances // Individual crypto balances
-    };
-  };
-
-  // Function to format a given amount into the selected currency
-  const formatCurrency = (amount, curr = currency) => {
-    const convertedAmount = amount * exchangeRates[curr]; // Convert to selected currency
-    const symbols = {
-      USD: '$',
-      EUR: '€',
-      ARS: '$',
-      MXN: '$',
-      COP: '$',
-      BRL: 'R$'
-    };
-    return `${symbols[curr]}${convertedAmount.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`;
-  };
-
-  // Function to add a new transaction
-  const addTransaction = () => {
-    // Validate if amount and price are entered
-    if (newTransaction.amount && newTransaction.price) {
-      const transaction = {
-        ...newTransaction,
-        id: Date.now(), // Unique ID for the transaction
-        total: parseFloat(newTransaction.amount) * parseFloat(newTransaction.price), // Calculate total value
-        timestamp: new Date().toISOString() // Full timestamp
-      };
-      setTransactions([transaction, ...transactions]); // Add new transaction to the beginning of the list
-      
-      // Reset the transaction form
-      setNewTransaction({
+    const [selectedCrypto, setSelectedCrypto] = useState('BTC');
+    const [currency, setCurrency] = useState('USD');
+    const [currentView, setCurrentView] = useState('tracker');
+    const [transactions, setTransactions] = useState([]);
+    const [newTransaction, setNewTransaction] = useState({
         type: 'compra',
         crypto: 'BTC',
         amount: '',
-        price: cryptoDetails[selectedCrypto]?.price.toString() || '', // Reset price to current crypto price
+        price: '',
         date: new Date().toISOString().split('T')[0]
-      });
-    }
-  };
+    });
+    const [cryptoDetails, setCryptoDetails] = useState({
+        BTC: { name: 'Bitcoin', symbol: '₿', price: 0, change: 0 },
+        ETH: { name: 'Ethereum', symbol: '◊', price: 0, change: 0 },
+        BNB: { name: 'BNB', symbol: '⬢', price: 0, change: 0 },
+        SOL: { name: 'Solana', symbol: 'S', price: 0, change: 0 }
+    });
+    const [loading, setLoading] = useState(false);
+    const [chartData, setChartData] = useState([]);
 
-  // Function to calculate the total profit/loss from all transactions
-  const calculateTotalProfit = () => {
-    return transactions.reduce((total, t) => {
-      if (t.type === 'venta') {
-        return total + t.total; // Selling increases profit
-      } else if (t.type === 'compra' || t.type === 'comision_compra' || t.type === 'comision_venta') {
-        return total - t.total; // Buying or commissions decrease profit
-      }
-      return total;
-    }, 0);
-  };
+    const exchangeRates = {
+        USD: 1,
+        EUR: 0.85,
+        ARS: 350,
+        MXN: 18.5,
+        COP: 4200,
+        BRL: 5.2
+    };
 
-  // Function to calculate profit/loss for today's transactions
-  const getTodayProfit = () => {
-    const today = new Date().toISOString().split('T')[0]; // Get today's date string
-    return transactions
-      .filter(t => t.date === today) // Filter transactions for today
-      .reduce((total, t) => {
-        if (t.type === 'venta') {
-          return total + t.total;
-        } else if (t.type === 'compra' || t.type === 'comision_compra' || t.type === 'comision_venta') {
-          return total - t.total;
+    const fetchCryptoPrices = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(
+                'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=usd&include_24hr_change=true'
+            );
+            const data = await response.json();
+            setCryptoDetails(prevDetails => ({
+                ...prevDetails,
+                BTC: { ...prevDetails.BTC, price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
+                ETH: { ...prevDetails.ETH, price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
+                BNB: { ...prevDetails.BNB, price: data.binancecoin?.usd || 0, change: data.binancecoin?.usd_24h_change || 0 },
+                SOL: { ...prevDetails.SOL, price: data.solana?.usd || 0, change: data.solana?.usd_24h_change || 0 }
+            }));
+        } catch (error) {
+            console.error('Error fetching crypto prices:', error);
+        } finally {
+            setLoading(false);
         }
-        return total;
-      }, 0);
-  };
+    };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 font-inter">
-      <div className="max-w-6xl mx-auto">
-        {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-            CRYPTO TRACKER
-          </h1>
-          {/* Navigation buttons for Tracker and History views */}
-          <div className="flex justify-center gap-4 mt-4">
-            <button
-              onClick={() => setCurrentView('tracker')}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                currentView === 'tracker' 
-                  ? 'bg-blue-600 text-white shadow-lg' 
-                  : 'bg-slate-700 hover:bg-slate-600'
-              }`}
-            >
-              <BarChart3 className="inline mr-2 h-4 w-4" />
-              Tracker
-            </button>
-            <button
-              onClick={() => setCurrentView('history')}
-              className={`px-4 py-2 rounded-lg transition-all ${
-                currentView === 'history' 
-                  ? 'bg-blue-600 text-white shadow-lg' 
-                  : 'bg-slate-700 hover:bg-slate-600'
-              }`}
-            >
-              <History className="inline mr-2 h-4 w-4" />
-              Historial
-            </button>
-          </div>
-        </div>
+    useEffect(() => {
+        fetchCryptoPrices();
+        const interval = setInterval(fetchCryptoPrices, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
-        {/* Conditional rendering based on currentView */}
-        {currentView === 'tracker' ? (
-          <>
-            {/* Header with price refresh button and API source */}
-            <div className="flex justify-between items-center mb-4">
-              <button
-                onClick={fetchCryptoPrices}
-                disabled={loading}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  loading 
-                    ? 'bg-slate-600 cursor-not-allowed' 
-                    : 'bg-green-600 hover:bg-green-700 shadow-md'
-                } text-white`}
-              >
-                {loading ? 'Actualizando...' : '🔄 Actualizar Precios'}
-              </button>
-              <div className="text-sm text-slate-400">
-                Precios de CoinGecko API
-              </div>
-            </div>
+    useEffect(() => {
+        setNewTransaction(prev => ({
+            ...prev,
+            price: cryptoDetails[selectedCrypto]?.price.toString() || ''
+        }));
+    }, [selectedCrypto, cryptoDetails]);
 
-            {/* Total Balance Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl p-4 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold opacity-90">Saldo Total USD</h3>
-                    <p className="text-2xl font-bold">${calculateTotalBalance().usd.toLocaleString('es-ES', { maximumFractionDigits: 2 })}</p>
-                  </div>
-                  <DollarSign className="h-8 w-8 opacity-75" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-4 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold opacity-90">Saldo Total ARS</h3>
-                    <p className="text-2xl font-bold">${calculateTotalBalance().ars.toLocaleString('es-ES', { maximumFractionDigits: 0 })}</p>
-                  </div>
-                  <DollarSign className="h-8 w-8 opacity-75" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-4 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold opacity-90">Saldo Total BTC</h3>
-                    <p className="text-2xl font-bold">₿{calculateTotalBalance().btc.toFixed(6)}</p>
-                  </div>
-                  <span className="text-2xl opacity-75">₿</span>
-                </div>
-              </div>
-            </div>
+    useEffect(() => {
+        const calculateCumulativeProfitData = () => {
+            const dailyProfits = {};
+            transactions.forEach(t => {
+                const date = t.date;
+                let transactionProfit = 0;
+                if (t.type === 'venta') {
+                    transactionProfit = t.total;
+                } else if (t.type === 'compra' || t.type === 'comision_compra' || t.type === 'comision_venta') {
+                    transactionProfit = -t.total;
+                }
+                dailyProfits[date] = (dailyProfits[date] || 0) + transactionProfit;
+            });
 
-            {/* Crypto Selection Buttons */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              {Object.entries(cryptoDetails).map(([symbol, data]) => (
-                <button
-                  key={symbol}
-                  onClick={() => setSelectedCrypto(symbol)}
-                  className={`p-4 rounded-xl transition-all transform hover:scale-105 shadow-md ${
-                    selectedCrypto === symbol
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 ring-2 ring-blue-400'
-                      : 'bg-slate-800 hover:bg-slate-700'
-                  }`}
-                >
-                  <div className="text-2xl mb-1">{data.symbol}</div>
-                  <div className="font-semibold">{symbol}</div>
-                  <div className="text-sm opacity-75">
-                    {loading ? 'Cargando...' : formatCurrency(data.price, 'USD')} {/* Always show USD for crypto price */}
-                  </div>
-                  <div className={`text-xs flex items-center justify-center mt-1 ${
-                    data.change >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {data.change >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                    {loading ? '...' : `${data.change.toFixed(2)}%`}
-                  </div>
-                </button>
-              ))}
-            </div>
+            const sortedDates = Object.keys(dailyProfits).sort();
+            const newChartData = [];
+            let currentCumulativeProfit = 0;
 
-            {/* Currency Selector */}
-            <div className="mb-6 flex justify-center">
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none shadow-md"
-              >
-                <option value="USD">USD - Dólar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="ARS">ARS - Peso Argentino</option>
-                <option value="MXN">MXN - Peso Mexicano</option>
-                <option value="COP">COP - Peso Colombiano</option>
-                <option value="BRL">BRL - Real Brasileño</option>
-              </select>
-            </div>
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-            {/* Add Transaction Form */}
-            <div className="bg-slate-800 rounded-xl p-6 mb-6 shadow-lg">
-              <h3 className="text-xl font-semibold mb-4 text-blue-300">Registrar Transacción</h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <select
-                  value={newTransaction.type}
-                  onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value})}
-                  className="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="compra">Compra</option>
-                  <option value="venta">Venta</option>
-                  <option value="comision_compra">Comisión Compra</option>
-                  <option value="comision_venta">Comisión Venta</option>
-                </select>
-                <select
-                  value={newTransaction.crypto}
-                  onChange={(e) => setNewTransaction({...newTransaction, crypto: e.target.value})}
-                  className="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-                >
-                  {Object.keys(cryptoDetails).map(crypto => (
-                    <option key={crypto} value={crypto}>{crypto}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  placeholder="Cantidad"
-                  value={newTransaction.amount}
-                  onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
-                  className="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-                  min="0"
-                />
-                <input
-                  type="number"
-                  placeholder="Precio"
-                  value={newTransaction.price}
-                  onChange={(e) => setNewTransaction({...newTransaction, price: e.target.value})}
-                  className="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-                  min="0"
-                />
-                <input
-                  type="date"
-                  value={newTransaction.date}
-                  onChange={(e) => setNewTransaction({...newTransaction, date: e.target.value})}
-                  className="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none"
-                />
-                <button
-                  onClick={addTransaction}
-                  className="col-span-full md:col-span-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 px-4 py-2 rounded-lg transition-all shadow-md"
-                >
-                  <Plus className="h-4 w-4 inline mr-1" />
-                  Agregar
-                </button>
-              </div>
-            </div>
+            if (sortedDates.length > 0) {
+                const firstTransactionDate = new Date(sortedDates[0]);
+                firstTransactionDate.setHours(0, 0, 0, 0);
+                const dayBeforeFirst = new Date(firstTransactionDate);
+                dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
+                newChartData.push({ fecha: dayBeforeFirst.toISOString().split('T')[0], profit: 0 });
 
-            {/* Profit Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold opacity-90">Profit Hoy</h3>
-                    <p className="text-3xl font-bold">{formatCurrency(getTodayProfit())}</p>
-                  </div>
-                  <DollarSign className="h-12 w-12 opacity-75" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold opacity-90">Profit Total</h3>
-                    <p className="text-3xl font-bold">{formatCurrency(calculateTotalProfit())}</p>
-                  </div>
-                  <TrendingUp className="h-12 w-12 opacity-75" />
-                </div>
-              </div>
-            </div>
+                let currentDate = new Date(firstTransactionDate);
+                while (currentDate <= today) {
+                    const dateString = currentDate.toISOString().split('T')[0];
+                    if (dailyProfits[dateString]) {
+                        currentCumulativeProfit += dailyProfits[dateString];
+                    }
+                    newChartData.push({ fecha: dateString, profit: currentCumulativeProfit });
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            } else {
+                newChartData.push({ fecha: today.toISOString().split('T')[0], profit: 0 });
+            }
 
-            {/* Linear Chart */}
-            <div className="bg-slate-800 rounded-xl p-6 mb-6 shadow-lg">
-              <h3 className="text-xl font-semibold mb-4 text-blue-300">Gráfico Lineal - Tiempo vs Profit ({currency})</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="fecha" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: '1px solid #374151',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value) => [formatCurrency(value), 'Profit']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="profit" 
-                    stroke="#3B82F6" 
-                    strokeWidth={3}
-                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </>
-        ) : (
-          /* Transaction History View */
-          <div className="bg-slate-800 rounded-xl p-6 shadow-lg">
-            <h3 className="text-2xl font-semibold mb-6 text-blue-300">Historial de Transacciones</h3>
-            {transactions.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No hay transacciones registradas.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Sort transactions by timestamp in descending order for newest first */}
-                {transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map((transaction) => (
-                  <div key={transaction.id} className="bg-slate-700 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-md">
-                    <div className="flex items-center space-x-4 mb-2 sm:mb-0">
-                      <div className={`p-2 rounded-full ${
-                        transaction.type === 'compra' || transaction.type === 'comision_compra' ? 'bg-red-600' : 
-                        transaction.type === 'venta' || transaction.type === 'comision_venta' ? 'bg-green-600' :
-                        'bg-purple-600' // Fallback color
-                      }`}>
-                        {transaction.type === 'compra' ? <Minus className="h-4 w-4" /> : 
-                         transaction.type === 'venta' ? <Plus className="h-4 w-4" /> :
-                         <DollarSign className="h-4 w-4" />}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-lg">
-                          {transaction.type.replace('_', ' ').toUpperCase()} {transaction.crypto}
-                        </div>
-                        <div className="text-sm text-slate-400">
-                          {transaction.amount} × {formatCurrency(transaction.price, 'USD')}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-semibold text-xl ${
-                        transaction.type === 'compra' || transaction.type === 'comision_compra' ? 'text-red-400' : 'text-green-400'
-                      }`}>
-                        {transaction.type === 'compra' || transaction.type === 'comision_compra' ? '-' : '+'}{formatCurrency(transaction.total)}
-                      </div>
-                      <div className="text-sm text-slate-400 flex items-center justify-end">
-                        <Calendar className="h-3 w-3 inline mr-1" />
-                        {new Date(transaction.date).toLocaleDateString('es-ES')}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+            setChartData(newChartData);
+        };
 
-// Renderiza el componente CryptoTracker en el elemento con id 'root'
-// Esta línea es crucial y debe estar en el archivo que se carga con type="text/babel"
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<CryptoTracker />);
+        calculateCumulativeProfitData();
+    }, [transactions]);
 
+    const calculateTotalBalance = () => {
+        const cryptoBalances = { BTC: 0, ETH: 0, BNB: 0, SOL: 0 };
+        transactions.forEach(transaction => {
+            if (transaction.type === 'compra') {
+                cryptoBalances[transaction.crypto] += parseFloat(transaction.amount);
+            } else if (transaction.type === 'venta') {
+                cryptoBalances[transaction.crypto] -= parseFloat(transaction.amount);
+            }
+        });
+        const totalUSD = Object.entries(cryptoBalances).reduce((total, [crypto, amount]) => {
+            return total + (amount * cryptoDetails[crypto].price);
+        }, 0);
+        return {
+            usd: totalUSD,
+            ars: totalUSD * exchangeRates.ARS,
+            btc: cryptoDetails.BTC.price > 0 ? totalUSD / cryptoDetails.BTC.price : 0,
+            cryptoBalances
+        };
+    };
+
+    const formatCurrency = (amount, curr = currency) => {
+        const convertedAmount = amount * exchangeRates[curr];
+        const symbols = { USD: '$', EUR: '€', ARS: '$', MXN: '$', COP: '$', BRL: 'R$' };
+        return `${symbols[curr]}${convertedAmount.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`;
+    };
+
+    const addTransaction = () => {
+        if (newTransaction.amount && newTransaction.price) {
+            const transaction = {
+                ...newTransaction,
+                id: Date.now(),
+                total: parseFloat(newTransaction.amount) * parseFloat(newTransaction.price),
+                timestamp: new Date().toISOString()
+            };
+            setTransactions([transaction, ...transactions]);
+            setNewTransaction({
+                type: 'compra',
+                crypto: 'BTC',
+                amount: '',
+                price: cryptoDetails[selectedCrypto]?.price.toString() || '',
+                date: new Date().toISOString().split('T')[0]
+            });
+        }
+    };
+
+    const calculateTotalProfit = () => {
+        return transactions.reduce((total, t) => {
+            if (t.type === 'venta') {
+                return total + t.total;
+            } else if (t.type === 'compra' || t.type === 'comision_compra' || t.type === 'comision_venta') {
+                return total - t.total;
+            }
+            return total;
+        }, 0);
+    };
+
+    const getTodayProfit = () => {
+        const today = new Date().toISOString().split('T')[0];
+        return transactions
+            .filter(t => t.date === today)
+            .reduce((total, t) => {
+                if (t.type === 'venta') {
+                    return total + t.total;
+                } else if (t.type === 'compra' || t.type === 'comision_compra' || t.type === 'comision_venta') {
+                    return total - t.total;
+                }
+                return total;
+            }, 0);
+    };
+
+    const renderIcon = (iconName, props = {}) => {
+        const IconComponent = lucide[iconName] || (() => null);
+        return React.createElement(IconComponent, { ...props });
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(CryptoTracker));
