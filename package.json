@@ -1,0 +1,10 @@
+{
+  "name": "crypto-tracker",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "echo 'Serving static files'; npx serve -s ."
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  }
+}
