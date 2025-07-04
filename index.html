@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Seguí tus transacciones y ganancias en criptomonedas" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>₿</text></svg>" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to bottom right, #0f172a, #4c1d95, #0f172a);
+      color: white;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .chart-container {
+      width: 100%;
+      height: 300px;
+    }
+    #loadingBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #3B82F6;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease-in-out;
+    }
+    #loadingBar.active {
+      transform: scaleX(1);
+    }
+    #errorMessage {
+      display: none;
+      background: #ef4444;
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Barra de carga -->
+  <div id="loadingBar"></div>
+
+  <div class="max-w-6xl mx-auto">
+    <!-- Mensaje de error -->
+    <div id="errorMessage"></div>
+
+    <!-- Encabezado con logo -->
+    <div class="text-center mb-8">
+      <span class="text-4xl">₿</span>
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+        CRYPTO TRACKER
+      </h1>
+      <div class="flex justify-center gap-4 mt-4">
+        <button id="trackerBtn" class="px-4 py-2 rounded-lg transition-all bg-blue-600 text-white shadow-lg">
+          📊 Tracker
+        </button>
+        <button id="historyBtn" class="px-4 py-2 rounded-lg transition-all bg-slate-700 hover:bg-slate-600">
+          🕒 Historial
+        </button>
+        <button id="chartsBtn" class="px-4 py-2 rounded-lg transition-all bg-slate-700 hover:bg-slate-600">
+          📈 Gráficos
+        </button>
+      </div>
+    </div>
+
+    <!-- Vista Tracker -->
+    <div id="trackerView" class="block">
+      <!-- Botón de actualización y fuente de API -->
+      <div class="flex justify-between items-center mb-4">
+        <button id="refreshPrices" class="px-4 py-2 rounded-lg transition-all bg-green-600 hover:bg-green-700 shadow-md text-white">
+          🔄 Actualizar Precios
+        </button>
+        <div class="text-sm text-slate-400">Precios de CoinGecko API</div>
+      </div>
+
+      <!-- Tarjetas de saldo -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold opacity-90">Saldo Total USD</h3>
+              <p id="totalUSD" class="text-2xl font-bold">$0.00</p>
+            </div>
+            <span class="h-8 w-8 opacity-75">💵</span>
+          </div>
+        </div>
+        <div class="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold opacity-90">Saldo Total ARS</h3>
+              <p id="totalARS" class="text-2xl font-bold">$0</p>
+            </div>
+            <span class="h-8 w-8 opacity-75">💵</span>
+          </div>
+        </div>
+        <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold opacity-90">Saldo Total BTC</h3>
+              <p id="totalBTC" class="text-2xl font-bold">₿0.000000</p>
+            </div>
+            <span class="text-2xl opacity-75">₿</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de selección de criptomonedas -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <button id="selectBTC" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-gradient-to-r from-blue-600 to-purple-600 ring-2 ring-blue-400">
+          <div class="text-2xl mb-1">₿</div>
+          <div class="font-semibold">BTC</div>
+          <div id="priceBTC" class="text-sm opacity-75">Cargando...</div>
+          <div id="changeBTC" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
+        </button>
+        <button id="selectETH" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700">
+          <div class="text-2xl mb-1">◊</div>
+          <div class="font-semibold">ETH</div>
+          <div id="priceETH" class="text-sm opacity-75">Cargando...</div>
+          <div id="changeETH" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
+        </button>
+        <button id="selectBNB" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700">
+          <div class="text-2xl mb-1">⬢</div>
+          <div class="font-semibold">BNB</div>
+          <div id="priceBNB" class="text-sm opacity-75">Cargando...</div>
+          <div id="changeBNB" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
+        </button>
+        <button id="selectSOL" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700">
+          <div class="text-2xl mb-1">S</div>
+          <div class="font-semibold">SOL</div>
+          <div id="priceSOL" class="text-sm opacity-75">Cargando...</div>
+          <div id="changeSOL" class="text-xs flex items-center justify-center mt-1 text-green-400">...%</div>
+        </button>
+      </div>
+
+      <!-- Selector de moneda -->
+      <div class="mb-6 flex justify-center">
+        <select id="currencySelect" class="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none shadow-md">
+          <option value="USD">USD - Dólar</option>
+          <option value="EUR">EUR - Euro</option>
+          <option value="ARS">ARS - Peso Argentino</option>
+          <option value="MXN">MXN - Peso Mexicano</option>
+          <option value="COP">COP - Peso Colombiano</option>
+          <option value="BRL">BRL - Real Brasileño</option>
+        </select>
+      </div>
+
+      <!-- Formulario de transacciones -->
+      <div class="bg-slate-800 rounded-xl p-6 mb-6 shadow-lg">
+        <h3 class="text-xl font-semibold mb-4 text-blue-300">Registrar Transacción</h3>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <select id="transactionType" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
+            <option value="compra">Compra</option>
+            <option value="venta">Venta</option>
+            <option value="comision_compra">Comisión Compra</option>
+            <option value="comision_venta">Comisión Venta</option>
+          </select>
+          <select id="transactionCrypto" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+            <option value="BNB">BNB</option>
+            <option value="SOL">SOL</option>
+          </select>
+          <input id="transactionAmount" type="number" placeholder="Cantidad" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+          <input id="transactionPrice" type="number" placeholder="Precio" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+          <input id="transactionDate" type="date" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" value="" />
+          <button id="addTransaction" class="col-span-full md:col-span-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 px-4 py-2 rounded-lg transition-all shadow-md">
+            ➕ Agregar
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjetas de profit -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold opacity-90">Profit Hoy</h3>
+              <p id="todayProfit" class="text-3xl font-bold">$0.00</p>
+            </div>
+            <span class="h-12 w-12 opacity-75">💵</span>
+          </div>
+        </div>
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold opacity-90">Profit Total</h3>
+              <p id="totalProfit" class="text-3xl font-bold">$0.00</p>
+            </div>
+            <span class="h-12 w-12 opacity-75">📈</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vista Historial -->
+    <div id="historyView" class="hidden">
+      <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+        <h3 class="text-2xl font-semibold mb-6 text-blue-300">Historial de Transacciones</h3>
+        <div id="transactionList" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <!-- Vista Gráficos -->
+    <div id="chartsView" class="hidden">
+      <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+        <h3 class="text-2xl font-semibold mb-6 text-blue-300">Gráficos de Profit</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="text-lg font-semibold mb-4 text-blue-300">Profit en USD vs Tiempo</h4>
+            <div class="chart-container">
+              <canvas id="usdChart"></canvas>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-lg font-semibold mb-4 text-blue-300">Profit en BTC vs Tiempo</h4>
+            <div class="chart-container">
+              <canvas id="btcChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables de estado
+    let selectedCrypto = 'BTC';
+    let currency = 'USD';
+    let currentView = 'tracker';
+    let transactions = [];
+    let newTransaction = {
+      type: 'compra',
+      crypto: 'BTC',
+      amount: '',
+      price: '',
+      date: new Date().toISOString().split('T')[0]
+    };
+    let cryptoDetails = {
+      BTC: { name: 'Bitcoin', symbol: '₿', price: 0, change: 0 },
+      ETH: { name: 'Ethereum', symbol: '◊', price: 0, change: 0 },
+      BNB: { name: 'BNB', symbol: '⬢', price: 0, change: 0 },
+      SOL: { name: 'Solana', symbol: 'S', price: 0, change: 0 }
+    };
+    let loading = false;
+    let chartData = [];
+    let usdChart = null;
+    let btcChart = null;
+
+    // Tasas de cambio
+    const exchangeRates = {
+      USD: 1,
+      EUR: 0.85,
+      ARS: 350,
+      MXN: 18.5,
+      COP: 4200,
+      BRL: 5.2
+    };
+
+    // Cargar transacciones desde localStorage
+    function loadTransactions() {
+      const saved = localStorage.getItem('cryptoTransactions');
+      if (saved) {
+        transactions = JSON.parse(saved);
+        updateBalances();
+        updateChartData();
+        updateTransactionHistory();
+      }
+    }
+
+    // Guardar transacciones en localStorage
+    function saveTransactions() {
+      localStorage.setItem('cryptoTransactions', JSON.stringify(transactions));
+    }
+
+    // Formatear moneda
+    function formatCurrency(amount, curr = currency) {
+      const convertedAmount = amount * exchangeRates[curr];
+      const symbols = { USD: '$', EUR: '€', ARS: '$', MXN: '$', COP: '$', BRL: 'R$' };
+      return `${symbols[curr]}${convertedAmount.toLocaleString('es-ES', { maximumFractionDigits: curr === 'ARS' ? 0 : 2 })}`;
+    }
+
+    // Formatear BTC
+    function formatBTC(amount) {
+      return `₿${amount.toFixed(6)}`;
+    }
+
+    // Mostrar mensaje de error
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
+    }
+
+    // Obtener precios de criptomonedas desde CoinGecko API
+    async function fetchCryptoPrices() {
+      loading = true;
+      document.getElementById('refreshPrices').textContent = 'Actualizando...';
+      document.getElementById('refreshPrices').disabled = true;
+      document.getElementById('loadingBar').classList.add('active');
+      try {
+        const response = await fetch(
+          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=usd&include_24hr_change=true'
+        );
+        if (!response.ok) throw new Error('Error al obtener datos de CoinGecko');
+        const data = await response.json();
+        cryptoDetails = {
+          BTC: { ...cryptoDetails.BTC, price: data.bitcoin?.usd || 0, change: data.bitcoin?.usd_24h_change || 0 },
+          ETH: { ...cryptoDetails.ETH, price: data.ethereum?.usd || 0, change: data.ethereum?.usd_24h_change || 0 },
+          BNB: { ...cryptoDetails.BNB, price: data.binancecoin?.usd || 0, change: data.binancecoin?.usd_24h_change || 0 },
+          SOL: { ...cryptoDetails.SOL, price: data.solana?.usd || 0, change: data.solana?.usd_24h_change || 0 }
+        };
+        updateCryptoDisplay();
+        updateTransactionFormPrice();
+        updateBalances();
+      } catch (error) {
+        console.error('Error al obtener precios de criptomonedas:', error);
+        showError('No se pudieron actualizar los precios. Verifica tu conexión.');
+      } finally {
+        loading = false;
+        document.getElementById('refreshPrices').textContent = '🔄 Actualizar Precios';
+        document.getElementById('refreshPrices').disabled = false;
+        document.getElementById('loadingBar').classList.remove('active');
+      }
+    }
+
+    // Actualizar visualización de precios de criptomonedas
+    function updateCryptoDisplay() {
+      ['BTC', 'ETH', 'BNB', 'SOL'].forEach(crypto => {
+        document.getElementById(`price${crypto}`).textContent = formatCurrency(cryptoDetails[crypto].price, 'USD');
+        const changeEl = document.getElementById(`change${crypto}`);
+        changeEl.textContent = `${cryptoDetails[crypto].change >= 0 ? '↑' : '↓'}${cryptoDetails[crypto].change.toFixed(2)}%`;
+        changeEl.className = `text-xs flex items-center justify-center mt-1 ${cryptoDetails[crypto].change >= 0 ? 'text-green-400' : 'text-red-400'}`;
+      });
+    }
+
+    // Actualizar precio en el formulario de transacciones
+    function updateTransactionFormPrice() {
+      document.getElementById('transactionPrice').value = cryptoDetails[selectedCrypto].price.toString();
+    }
+
+    // Calcular saldo total
+    function calculateTotalBalance() {
+      const cryptoBalances = { BTC: 0, ETH: 0, BNB: 0, SOL: 0 };
+      transactions.forEach(t => {
+        if (t.type === 'compra') cryptoBalances[t.crypto] += parseFloat(t.amount);
+        else if (t.type === 'venta') cryptoBalances[t.crypto] -= parseFloat(t.amount);
+      });
+      const totalUSD = Object.entries(cryptoBalances).reduce((total, [crypto, amount]) => {
+        return total + (amount * cryptoDetails[crypto].price);
+      }, 0);
+      return {
+        usd: totalUSD,
+        ars: totalUSD * exchangeRates.ARS,
+        btc: cryptoDetails.BTC.price > 0 ? totalUSD / cryptoDetails.BTC.price : 0,
+        cryptoBalances
+      };
+    }
+
+    // Actualizar visualización de saldos
+    function updateBalances() {
+      const balances = calculateTotalBalance();
+      document.getElementById('totalUSD').textContent = `$${balances.usd.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`;
+      document.getElementById('totalARS').textContent = `$${balances.ars.toLocaleString('es-ES', { maximumFractionDigits: 0 })}`;
+      document.getElementById('totalBTC').textContent = `₿${balances.btc.toFixed(6)}`;
+      updateProfit();
+    }
+
+    // Calcular profit total
+    function calculateTotalProfit() {
+      return transactions.reduce((total, t) => {
+        if (t.type === 'venta') return total + t.total;
+        else if (['compra', 'comision_compra', 'comision_venta'].includes(t.type)) return total - t.total;
+        return total;
+      }, 0);
+    }
+
+    // Calcular profit de hoy
+    function getTodayProfit() {
+      const today = new Date().toISOString().split('T')[0];
+      return transactions
+        .filter(t => t.date === today)
+        .reduce((total, t) => {
+          if (t.type === 'venta') return total + t.total;
+          else if (['compra', 'comision_compra', 'comision_venta'].includes(t.type)) return total - t.total;
+          return total;
+        }, 0);
+    }
+
+    // Actualizar visualización de profit
+    function updateProfit() {
+      document.getElementById('todayProfit').textContent = formatCurrency(getTodayProfit());
+      document.getElementById('totalProfit').textContent = formatCurrency(calculateTotalProfit());
+    }
+
+    // Actualizar datos de gráficos
+    function updateChartData() {
+      const dailyProfits = {};
+      transactions.forEach(t => {
+        const date = t.date;
+        let transactionProfit = 0;
+        if (t.type === 'venta') transactionProfit = t.total;
+        else if (['compra', 'comision_compra', 'comision_venta'].includes(t.type)) transactionProfit = -t.total;
+        dailyProfits[date] = (dailyProfits[date] || 0) + transactionProfit;
+      });
+
+      const sortedDates = Object.keys(dailyProfits).sort();
+      const newChartData = [];
+      let currentCumulativeProfit = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (sortedDates.length > 0) {
+        const firstTransactionDate = new Date(sortedDates[0]);
+        firstTransactionDate.setHours(0, 0, 0, 0);
+        const dayBeforeFirst = new Date(firstTransactionDate);
+        dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
+        newChartData.push({ fecha: dayBeforeFirst.toISOString().split('T')[0], profit: 0 });
+
+        let currentDate = new Date(firstTransactionDate);
+        while (currentDate <= today) {
+          const dateString = currentDate.toISOString().split('T')[0];
+          if (dailyProfits[dateString]) {
+            currentCumulativeProfit += dailyProfits[dateString];
+          }
+          newChartData.push({ fecha: dateString, profit: currentCumulativeProfit });
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      } else {
+        newChartData.push({ fecha: today.toISOString().split('T')[0], profit: 0 });
+      }
+
+      chartData = newChartData;
+      if (currentView === 'charts') {
+        updateCharts();
+      }
+    }
+
+    // Actualizar gráficos
+    function updateCharts() {
+      // Gráfico USD
+      const ctxUSD = document.getElementById('usdChart').getContext('2d');
+      if (usdChart) usdChart.destroy();
+      usdChart = new Chart(ctxUSD, {
+        type: 'line',
+        data: {
+          labels: chartData.map(d => d.fecha),
+          datasets: [{
+            label: 'Profit USD',
+            data: chartData.map(d => d.profit * exchangeRates['USD']),
+            borderColor: '#10B981',
+            borderWidth: 3,
+            fill: false,
+            pointRadius: 4,
+            pointBackgroundColor: '#10B981'
+          }]
+        },
+        options: {
+          scales: {
+            x: { grid: { color: '#374151' } },
+            y: { grid: { color: '#374151' } }
+          },
+          plugins: {
+            tooltip: {
+              backgroundColor: '#1F2937',
+              borderColor: '#374151',
+              borderWidth: 1,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return `Profit: ${formatCurrency(context.raw, 'USD')}`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Gráfico BTC
+      const ctxBTC = document.getElementById('btcChart').getContext('2d');
+      if (btcChart) btcChart.destroy();
+      btcChart = new Chart(ctxBTC, {
+        type: 'line',
+        data: {
+          labels: chartData.map(d => d.fecha),
+          datasets: [{
+            label: 'Profit BTC',
+            data: chartData.map(d => cryptoDetails.BTC.price > 0 ? d.profit / cryptoDetails.BTC.price : 0),
+            borderColor: '#F59E0B',
+            borderWidth: 3,
+            fill: false,
+            pointRadius: 4,
+            pointBackgroundColor: '#F59E0B'
+          }]
+        },
+        options: {
+          scales: {
+            x: { grid: { color: '#374151' } },
+            y: { grid: { color: '#374151' } }
+          },
+          plugins: {
+            tooltip: {
+              backgroundColor: '#1F2937',
+              borderColor: '#374151',
+              borderWidth: 1,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return `Profit: ${formatBTC(context.raw)}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Agregar transacción
+    function addTransaction() {
+      const amount = document.getElementById('transactionAmount').value;
+      const price = document.getElementById('transactionPrice').value;
+      if (amount && price) {
+        const transaction = {
+          id: Date.now(),
+          type: document.getElementById('transactionType').value,
+          crypto: document.getElementById('transactionCrypto').value,
+          amount: parseFloat(amount),
+          price: parseFloat(price),
+          date: document.getElementById('transactionDate').value,
+          total: parseFloat(amount) * parseFloat(price),
+          timestamp: new Date().toISOString()
+        };
+        transactions.unshift(transaction);
+        saveTransactions();
+        document.getElementById('transactionAmount').value = '';
+        document.getElementById('transactionPrice').value = cryptoDetails[selectedCrypto].price.toString();
+        document.getElementById('transactionType').value = 'compra';
+        document.getElementById('transactionCrypto').value = 'BTC';
+        document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+        updateBalances();
+        updateChartData();
+        updateTransactionHistory();
+      } else {
+        showError('Por favor, completa la cantidad y el precio de la transacción.');
+      }
+    }
+
+    // Eliminar transacción
+    function deleteTransaction(id) {
+      transactions = transactions.filter(t => t.id !== id);
+      saveTransactions();
+      updateBalances();
+      updateChartData();
+      updateTransactionHistory();
+    }
+
+    // Actualizar historial de transacciones
+    function updateTransactionHistory() {
+      const transactionList = document.getElementById('transactionList');
+      transactionList.innerHTML = '';
+      if (transactions.length === 0) {
+        transactionList.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            <span class="h-12 w-12 mx-auto mb-4 opacity-50">🕒</span>
+            <p>No hay transacciones registradas.</p>
+          </div>
+        `;
+      } else {
+        transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'bg-slate-700 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-md';
+          div.innerHTML = `
+            <div class="flex items-center space-x-4 mb-2 sm:mb-0">
+              <div class="p-2 rounded-full ${
+                t.type === 'compra' || t.type === 'comision_compra' ? 'bg-red-600' :
+                t.type === 'venta' || t.type === 'comision_venta' ? 'bg-green-600' : 'bg-purple-600'
+              }">
+                ${t.type === 'compra' ? '➖' : t.type === 'venta' ? '➕' : '💵'}
+              </div>
+              <div>
+                <div class="font-semibold text-lg">${t.type.replace('_', ' ').toUpperCase()} ${t.crypto}</div>
+                <div class="text-sm text-slate-400">${t.amount} × ${formatCurrency(t.price, 'USD')}</div>
+              </div>
+            </div>
+            <div class="text-right flex items-center space-x-2">
+              <div>
+                <div class="font-semibold text-xl ${t.type === 'compra' || t.type === 'comision_compra' ? 'text-red-400' : 'text-green-400'}">
+                  ${t.type === 'compra' || t.type === 'comision_compra' ? '-' : '+'}${formatCurrency(t.total)}
+                </div>
+                <div class="text-sm text-slate-400 flex items-center justify-end">
+                  🗓️ ${new Date(t.date).toLocaleDateString('es-ES')}
+                </div>
+              </div>
+              <button class="delete-btn bg-red-600 hover:bg-red-700 text-white p-2 rounded-full" data-id="${t.id}">
+                🗑️
+              </button>
+            </div>
+          `;
+          transactionList.appendChild(div);
+        });
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-id'));
+            deleteTransaction(id);
+          });
+        });
+      }
+    }
+
+    // Event listeners
+    document.getElementById('trackerBtn').addEventListener('click', () => {
+      currentView = 'tracker';
+      document.getElementById('trackerView').classList.remove('hidden');
+      document.getElementById('historyView').classList.add('hidden');
+      document.getElementById('chartsView').classList.add('hidden');
+      document.getElementById('trackerBtn').classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('trackerBtn').classList.remove('bg-slate-700', 'hover:bg-slate-600');
+      document.getElementById('historyBtn').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('historyBtn').classList.add('bg-slate-700', 'hover:bg-slate-600');
+      document.getElementById('chartsBtn').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('chartsBtn').classList.add('bg-slate-700', 'hover:bg-slate-600');
+    });
+
+    document.getElementById('historyBtn').addEventListener('click', () => {
+      currentView = 'history';
+      document.getElementById('historyView').classList.remove('hidden');
+      document.getElementById('trackerView').classList.add('hidden');
+      document.getElementById('chartsView').classList.add('hidden');
+      document.getElementById('historyBtn').classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('historyBtn').classList.remove('bg-slate-700', 'hover:bg-slate-600');
+      document.getElementById('trackerBtn').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('trackerBtn').classList.add('bg-slate-700', 'hover:bg-slate-600');
+      document.getElementById('chartsBtn').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('chartsBtn').classList.add('bg-slate-700', 'hover:bg-slate-600');
+      updateTransactionHistory();
+    });
+
+    document.getElementById('chartsBtn').addEventListener('click', () => {
+      currentView = 'charts';
+      document.getElementById('chartsView').classList.remove('hidden');
+      document.getElementById('trackerView').classList.add('hidden');
+      document.getElementById('historyView').classList.add('hidden');
+      document.getElementById('chartsBtn').classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('chartsBtn').classList.remove('bg-slate-700', 'hover:bg-slate-600');
+      document.getElementById('trackerBtn').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('trackerBtn').classList.add('bg-slate-700', 'hover:bg-slate-600');
+      document.getElementById('historyBtn').classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+      document.getElementById('historyBtn').classList.add('bg-slate-700', 'hover:bg-slate-600');
+      updateCharts();
+    });
+
+    ['BTC', 'ETH', 'BNB', 'SOL'].forEach(crypto => {
+      document.getElementById(`select${crypto}`).addEventListener('click', () => {
+        selectedCrypto = crypto;
+        document.querySelectorAll('[id^="select"]').forEach(btn => {
+          btn.className = 'p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-slate-800 hover:bg-slate-700';
+        });
+        document.getElementById(`select${crypto}`).className = 'p-4 rounded-xl transition-all transform hover:scale-105 shadow-md bg-gradient-to-r from-blue-600 to-purple-600 ring-2 ring-blue-400';
+        updateTransactionFormPrice();
+      });
+    });
+
+    document.getElementById('currencySelect').addEventListener('change', (e) => {
+      currency = e.target.value;
+      updateBalances();
+      if (currentView === 'charts') {
+        updateCharts();
+      }
+    });
+
+    document.getElementById('transactionType').addEventListener('change', (e) => {
+      newTransaction.type = e.target.value;
+    });
+
+    document.getElementById('transactionCrypto').addEventListener('change', (e) => {
+      newTransaction.crypto = e.target.value;
+      updateTransactionFormPrice();
+    });
+
+    document.getElementById('transactionAmount').addEventListener('input', (e) => {
+      newTransaction.amount = e.target.value;
+    });
+
+    document.getElementById('transactionPrice').addEventListener('input', (e) => {
+      newTransaction.price = e.target.value;
+    });
+
+    document.getElementById('transactionDate').addEventListener('input', (e) => {
+      newTransaction.date = e.target.value;
+    });
+
+    document.getElementById('addTransaction').addEventListener('click', addTransaction);
+    document.getElementById('refreshPrices').addEventListener('click', fetchCryptoPrices);
+
+    // Registro de Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service Worker registrado'))
+          .catch(err => console.error('Error al registrar Service Worker:', err));
+      });
+    }
+
+    // Configuración inicial
+    loadTransactions();
+    document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+    fetchCryptoPrices();
+    setInterval(fetchCryptoPrices, 60000);
+  </script>
+</body>
+</html>
