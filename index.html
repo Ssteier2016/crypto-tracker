@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto & Assets Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Seguí tus transacciones y ganancias en criptomonedas y activos" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>₿</text></svg>" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to bottom right, #0f172a, #4c1d95, #0f172a);
+      color: white;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .chart-container {
+      width: 100%;
+      height: 300px;
+    }
+    #loadingBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #3B82F6;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease-in-out;
+      z-index: 1000; /* Ensure it's on top */
+    }
+    #loadingBar.active {
+      transform: scaleX(1);
+    }
+    #errorMessage {
+      display: none;
+      background: #ef4444;
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    /* Custom scrollbar for transaction list and profit list */
+    #transactionListContainer, #cryptoProfitList, #assetVisibilityList, #remuneratedAccountsList {
+        max-height: 500px; /* Limit height */
+        overflow-y: auto; /* Enable vertical scrolling */
+        padding-right: 10px; /* Space for scrollbar */
+    }
+    #transactionListContainer::-webkit-scrollbar, #cryptoProfitList::-webkit-scrollbar, #assetVisibilityList::-webkit-scrollbar, #remuneratedAccountsList::-webkit-scrollbar {
+        width: 8px;
+    }
+    #transactionListContainer::-webkit-scrollbar-track, #cryptoProfitList::-webkit-scrollbar-track, #assetVisibilityList::-webkit-scrollbar-track, #remuneratedAccountsList::-webkit-scrollbar-track {
+        background: #1f2937; /* Darker track */
+        border-radius: 10px;
+    }
+    #transactionListContainer::-webkit-scrollbar-thumb, #cryptoProfitList::-webkit-scrollbar-thumb, #assetVisibilityList::-webkit-scrollbar-thumb, #remuneratedAccountsList::-webkit-scrollbar-thumb {
+        background-color: #4c1d95; /* Purple thumb */
+        border-radius: 10px;
+        border: 2px solid #1f2937; /* Padding around thumb */
+    }
+
+    /* Calendar styles */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 15px;
+    }
+    .calendar-day {
+      background-color: #1f2937;
+      padding: 10px 5px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 70px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .calendar-day.empty {
+      background-color: #111827;
+      visibility: hidden; /* Hide empty days */
+    }
+    .calendar-day-number {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #cbd5e0;
+    }
+    .calendar-day-profit {
+      font-size: 0.75rem;
+      font-weight: 600;
+      word-break: break-all; /* Ensure long numbers break */
+    }
+    .calendar-day-profit.positive {
+      color: #10B981; /* Green */
+    }
+    .calendar-day-profit.negative {
+      color: #EF4444; /* Red */
+    }
+    .calendar-day-profit.zero {
+      color: #9CA3AF; /* Gray */
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #cbd5e0;
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      text-align: center;
+      font-weight: bold;
+      color: #9CA3AF;
+      margin-bottom: 5px;
+      font-size: 0.8rem;
+    }
+    .asset-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .asset-card-footer .graph-icon {
+        cursor: pointer;
+        font-size: 1.5rem;
+        transition: transform 0.2s ease;
+    }
+    .asset-card-footer .graph-icon:hover {
+        transform: scale(1.2);
+    }
+    /* Navigation buttons styling */
+    .nav-button {
+        @apply px-3 py-1 text-sm rounded-lg transition-all;
+    }
+    .nav-button.active {
+        @apply bg-blue-600 text-white shadow-lg;
+    }
+    .nav-button:not(.active) {
+        @apply bg-slate-700 hover:bg-slate-600;
+    }
+
+    /* Dropdown for profit display */
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #1f2937;
+        min-width: 120px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+        border-radius: 0.5rem;
+        right: 0; /* Align to the right of the parent */
+        top: 100%; /* Position below the parent */
+        padding: 0.5rem 0;
+    }
+
+    .dropdown-content button {
+        color: white;
+        padding: 0.5rem 1rem;
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        text-align: left;
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .dropdown-content button:hover {
+        background-color: #374151;
+    }
+
+    .dropdown.active .dropdown-content {
+        display: block;
+    }
+
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background-color: #1f2937;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        font-size: 1.5rem;
+        color: #9ca3af;
+        cursor: pointer;
+    }
+
+    .main-section-button {
+        @apply px-6 py-3 text-lg font-bold rounded-lg transition-all shadow-lg;
+    }
+    .main-section-button.active {
+        @apply bg-purple-600 text-white;
+    }
+    .main-section-button:not(.active) {
+        @apply bg-slate-700 hover:bg-slate-600 text-white;
+    }
+  </style>
+</head>
+<body>
+  <!-- Barra de carga -->
+  <div id="loadingBar"></div>
+
+  <div class="max-w-6xl mx-auto">
+    <!-- Mensaje de error -->
+    <div id="errorMessage"></div>
+
+    <!-- Encabezado con logo -->
+    <div class="text-center mb-8">
+      <span class="text-4xl">₿</span>
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+        FINANCE TRACKER
+      </h1>
+      <div class="flex justify-center gap-4 mt-4">
+        <button id="mainInvestmentsBtn" class="main-section-button active">
+          📈 Sección Inversiones
+        </button>
+        <button id="mainRemuneratedAccountsBtn" class="main-section-button">
+          💰 Cuentas Remuneradas
+        </button>
+      </div>
+    </div>
+
+    <!-- Sección Inversiones -->
+    <div id="investmentsSection" class="block">
+      <div class="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 mb-8">
+        <button id="dashboardBtn" class="nav-button active">
+          📊 Dashboard
+        </button>
+        <button id="assetsBtn" class="nav-button">
+          📈 Activos
+        </button>
+        <button id="profitBtn" class="nav-button">
+          💰 Profit
+        </button>
+        <button id="historyBtn" class="nav-button">
+          🕒 Historial
+        </button>
+        <button id="chartsBtn" class="nav-button">
+          📉 Gráficos
+        </button>
+      </div>
+
+      <!-- Vista Dashboard (anteriormente Tracker) -->
+      <div id="dashboardView" class="block">
+        <!-- Botón de actualización y fuente de API -->
+        <div class="flex justify-between items-center mb-4">
+          <button id="refreshPrices" class="px-4 py-2 rounded-lg transition-all bg-green-600 hover:bg-green-700 shadow-md text-white">
+            🔄 Actualizar Precios
+          </button>
+          <div class="text-sm text-slate-400">Precios de CoinGecko API (Criptos) / Simulados (Acciones)</div>
+        </div>
+
+        <!-- Tarjetas de saldo -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold opacity-90">Saldo Total USD</h3>
+                <p id="totalUSD" class="text-2xl font-bold">USD 0.00</p>
+              </div>
+              <button class="h-8 w-8 opacity-75 bg-yellow-700 rounded-full flex items-center justify-center text-white text-xl" onclick="openAdjustBalanceModal('totalUSD')">➕</button>
+            </div>
+          </div>
+          <div class="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold opacity-90">Saldo Total ARS</h3>
+                <p id="totalARS" class="text-2xl font-bold">$0</p>
+              </div>
+              <button class="h-8 w-8 opacity-75 bg-blue-700 rounded-full flex items-center justify-center text-white text-xl" onclick="openAdjustBalanceModal('totalARS')">➕</button>
+            </div>
+          </div>
+          <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold opacity-90">Saldo Total BTC</h3>
+                <p id="totalBTC" class="text-2xl font-bold">₿0.000000</p>
+              </div>
+              <button class="h-8 w-8 opacity-75 bg-orange-700 rounded-full flex items-center justify-center text-white text-xl" onclick="openAdjustBalanceModal('BTC')">➕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtrar por Cartera -->
+        <div class="mb-6 flex justify-center items-center gap-2">
+            <label for="walletFilterSelect" class="text-slate-300">Filtrar por Cartera:</label>
+            <select id="walletFilterSelect" class="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none shadow-md">
+                <!-- Options will be populated by JS -->
+            </select>
+            <button id="manageWalletsBtn" class="px-3 py-1 rounded-lg transition-all bg-purple-600 hover:bg-purple-700 shadow-md text-white">
+                ➕ Gestionar Carteras
+            </button>
+        </div>
+
+
+        <!-- Botones de selección de criptomonedas -->
+        <h3 class="text-xl font-semibold mb-4 text-blue-300">Mis Criptomonedas</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6" id="cryptoSelectionCards">
+          <!-- Crypto cards will be rendered here by JS -->
+        </div>
+        <button id="manageAssetsBtn" class="px-4 py-2 rounded-lg transition-all bg-purple-600 hover:bg-purple-700 shadow-md text-white mb-6">
+            ⚙️ Gestionar Activos
+        </button>
+
+        <!-- Selector de moneda (mantener para futuras expansiones si es necesario) -->
+        <div class="mb-6 flex justify-center">
+          <select id="currencySelect" class="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none shadow-md">
+            <option value="USD">USD - Dólar</option>
+            <option value="EUR">EUR - Euro</option>
+            <option value="ARS">ARS - Peso Argentino</option>
+            <option value="MXN">MXN - Peso Mexicano</option>
+            <option value="COP">COP - Peso Colombiano</option>
+            <option value="BRL">BRL - Real Brasileño</option>
+          </select>
+        </div>
+
+        <!-- Formulario de transacciones -->
+        <div class="bg-slate-800 rounded-xl p-6 mb-6 shadow-lg">
+          <h3 class="text-xl font-semibold mb-4 text-blue-300">Registrar Transacción</h3>
+          <input type="hidden" id="editingTransactionId" value=""> <!-- Hidden input for editing ID -->
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <select id="transactionType" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
+              <option value="compra">Compra</option>
+              <option value="venta">Venta</option>
+              <option value="comision_compra">Comisión Compra</option>
+              <option value="comision_venta">Comisión Venta</option>
+              <option value="ajuste_manual">Ajuste Manual</option>
+            </select>
+            <select id="transactionAsset" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
+              <!-- Options will be populated by JS -->
+            </select>
+            <input id="transactionAmount" type="number" placeholder="Cantidad" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+            <input id="transactionPrice" type="number" placeholder="Precio (USD)" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+            <input id="transactionDate" type="date" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" value="" />
+            <select id="transactionWallet" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none col-span-full md:col-span-1">
+                <!-- Wallets will be populated by JS -->
+            </select>
+            <textarea id="transactionNote" placeholder="Añade una nota (ej: 'Compra de BTC en Binance')" class="col-span-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" rows="2"></textarea>
+            <button id="addTransaction" class="col-span-full md:col-span-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 px-4 py-2 rounded-lg transition-all shadow-md">
+              ➕ Agregar
+            </button>
+            <button id="cancelEdit" class="col-span-full md:col-span-1 bg-gradient-to-r from-gray-500 to-gray-700 hover:from-gray-600 hover:to-gray-800 px-4 py-2 rounded-lg transition-all shadow-md hidden">
+              ❌ Cancelar Edición
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarjetas de profit -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-6 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold opacity-90">Profit Hoy</h3>
+                <p id="todayProfit" class="text-3xl font-bold">USD 0.00</p>
+              </div>
+              <div class="dropdown">
+                  <button class="text-xl opacity-75" onclick="toggleDropdown(this)">▼</button>
+                  <div class="dropdown-content">
+                      <button onclick="updateProfitDisplay('todayProfit', 'USD')">USD</button>
+                      <button onclick="updateProfitDisplay('todayProfit', 'ARS')">ARS</button>
+                      <button onclick="updateProfitDisplay('todayProfit', 'BTC')">BTC</button>
+                      <button onclick="updateProfitDisplay('todayProfit', 'ETH')">ETH</button>
+                      <button onclick="updateProfitDisplay('todayProfit', 'SOL')">SOL</button>
+                      <button onclick="updateProfitDisplay('todayProfit', 'BNB')">BNB</button>
+                      <button onclick="updateProfitDisplay('todayProfit', 'USDT')">USDT</button>
+                      <button onclick="openCustomProfitCurrencyModal('todayProfit')">+ Agregar</button>
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold opacity-90">Profit Total</h3>
+                <p id="totalProfit" class="text-3xl font-bold">USD 0.00</p>
+              </div>
+              <div class="dropdown">
+                  <button class="text-xl opacity-75" onclick="toggleDropdown(this)">▼</button>
+                  <div class="dropdown-content">
+                      <button onclick="updateProfitDisplay('totalProfit', 'USD')">USD</button>
+                      <button onclick="updateProfitDisplay('totalProfit', 'ARS')">ARS</button>
+                      <button onclick="updateProfitDisplay('totalProfit', 'BTC')">BTC</button>
+                      <button onclick="updateProfitDisplay('totalProfit', 'ETH')">ETH</button>
+                      <button onclick="updateProfitDisplay('totalProfit', 'SOL')">SOL</button>
+                      <button onclick="updateProfitDisplay('totalProfit', 'BNB')">BNB</button>
+                      <button onclick="openCustomProfitCurrencyModal('totalProfit')">+ Agregar</button>
+                  </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista Activos (Stocks/CEDEARs) -->
+      <div id="assetsView" class="hidden">
+          <h3 class="text-2xl font-semibold mb-6 text-blue-300">Mis Activos (Acciones / CEDEARs)</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6" id="stockSelectionCards">
+              <!-- Stock/CEDEAR cards will be rendered here by JS -->
+          </div>
+      </div>
+
+      <!-- Vista Profit por Criptomoneda y Activo -->
+      <div id="profitView" class="hidden">
+          <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+              <h3 class="text-2xl font-semibold mb-6 text-blue-300">Ganancias por Activo</h3>
+              <div id="cryptoProfitList" class="space-y-4">
+                  <!-- Crypto and Stock profit details will be rendered here -->
+              </div>
+          </div>
+      </div>
+
+      <!-- Vista Historial -->
+      <div id="historyView" class="hidden">
+        <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+          <h3 class="text-2xl font-semibold mb-6 text-blue-300">Historial de Transacciones</h3>
+          <div id="transactionListContainer" class="space-y-4">
+            <div id="transactionList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista Gráficos -->
+      <div id="chartsView" class="hidden">
+        <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+          <h3 class="text-2xl font-semibold mb-6 text-blue-300" id="chartsTitle">Gráficos de Profit</h3>
+
+          <button id="showOverallChartsBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white mb-4 hidden">
+              Ver Gráficos Generales
+          </button>
+
+          <div id="overallCharts" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h4 class="text-lg font-semibold mb-4 text-blue-300">Profit en USD vs Tiempo</h4>
+              <div class="chart-container">
+                <canvas id="usdChart"></canvas>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-lg font-semibold mb-4 text-blue-300">Profit en BTC vs Tiempo</h4>
+              <div class="chart-container">
+                <canvas id="btcChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div id="individualAssetChartContainer" class="hidden">
+              <h4 class="text-lg font-semibold mb-4 text-blue-300" id="individualAssetChartTitle"></h4>
+              <div class="chart-container">
+                  <canvas id="individualAssetChart"></canvas>
+              </div>
+          </div>
+
+
+          <h3 class="text-2xl font-semibold mb-6 text-blue-300">Almanaque de Ganancias Diarias</h3>
+          <div class="bg-slate-700 rounded-xl p-4 shadow-md">
+              <div class="calendar-header">
+                  <button id="prevMonthBtn" class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">‹</button>
+                  <span id="currentMonthYear"></span>
+                  <button id="nextMonthBtn" class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">›</button>
+              </div>
+              <div class="calendar-weekdays">
+                  <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+              </div>
+              <div id="calendarGrid" class="calendar-grid">
+                  <!-- Calendar days will be rendered here -->
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección Cuentas Remuneradas y Cashback -->
+    <div id="remuneratedAccountsSection" class="hidden">
+        <div class="bg-slate-800 rounded-xl p-6 shadow-lg mb-6">
+            <h3 class="text-2xl font-semibold mb-6 text-blue-300">Mis Cuentas Remuneradas</h3>
+            <div class="flex justify-end mb-4">
+                <button id="addRemuneratedAccountBtn" class="px-4 py-2 rounded-lg transition-all bg-green-600 hover:bg-green-700 shadow-md text-white">
+                    ➕ Añadir Cuenta
+                </button>
+            </div>
+            <div id="remuneratedAccountsList" class="space-y-4">
+                <!-- Remunerated account cards will be rendered here -->
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- New Modal for Managing Assets -->
+  <div id="manageAssetsModal" class="modal hidden">
+      <div class="modal-content bg-slate-800 text-white rounded-xl p-6 shadow-lg">
+          <button class="modal-close text-gray-400 hover:text-white" onclick="closeModal('manageAssetsModal')">×</button>
+          <h2 class="text-2xl font-semibold mb-4 text-blue-300">Gestionar Activos</h2>
+
+          <div class="mb-6 bg-slate-700 p-4 rounded-lg shadow-inner">
+              <h3 class="text-xl font-semibold mb-3">Añadir Nuevo Activo Personalizado</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <input type="text" id="newAssetSymbol" placeholder="Símbolo (ej: MYCOIN)" class="bg-slate-600 text-white px-3 py-2 rounded-lg border border-slate-500 focus:border-blue-500 focus:outline-none" />
+                  <input type="text" id="newAssetName" placeholder="Nombre (ej: Mi Cripto)" class="bg-slate-600 text-white px-3 py-2 rounded-lg border border-slate-500 focus:border-blue-500 focus:outline-none" />
+                  <select id="newAssetType" class="bg-slate-600 text-white px-3 py-2 rounded-lg border border-slate-500 focus:border-blue-500 focus:outline-none">
+                      <option value="crypto">Criptomoneda</option>
+                      <option value="stock">Acción / CEDEAR</option>
+                  </select>
+                  <input type="number" id="newAssetInitialPrice" placeholder="Precio Inicial (USD)" class="bg-slate-600 text-white px-3 py-2 rounded-lg border border-slate-500 focus:border-blue-500 focus:outline-none" min="0" step="0.01" />
+                  <input type="number" id="newAssetCedearRatio" placeholder="Ratio CEDEAR (solo acciones)" class="bg-slate-600 text-white px-3 py-2 rounded-lg border border-slate-500 focus:border-blue-500 focus:outline-none" min="1" value="1" step="0.1"/>
+                  <div class="col-span-full">
+                      <label for="newAssetLogoFile" class="block text-sm font-medium text-gray-300 mb-1">Subir Logo (opcional):</label>
+                      <input type="file" id="newAssetLogoFile" accept="image/*" class="block w-full text-sm text-slate-300
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-violet-50 file:text-violet-700
+                          hover:file:bg-violet-100" />
+                      <img id="newAssetLogoPreview" src="" alt="Vista previa del logo" class="mt-2 h-16 w-16 object-contain rounded-full border border-slate-500 hidden" />
+                  </div>
+              </div>
+              <button id="addNewAssetBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full">
+                  ➕ Añadir Activo
+              </button>
+          </div>
+
+          <h3 class="text-xl font-semibold mb-3">Activos Visibles en Dashboard/Activos</h3>
+          <div id="assetVisibilityList" class="space-y-2 max-h-60 overflow-y-auto bg-slate-700 p-3 rounded-lg border border-slate-600">
+              <!-- Asset checkboxes will be rendered here -->
+          </div>
+          <button id="saveAssetVisibilityBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full mt-4" onclick="closeModal('manageAssetsModal')">
+              Cerrar
+          </button>
+      </div>
+  </div>
+
+  <!-- Modal for Adjusting Balance Manually (for Investments) -->
+  <div id="adjustBalanceModal" class="modal hidden">
+      <div class="modal-content bg-slate-800 text-white rounded-xl p-6 shadow-lg">
+          <button class="modal-close text-gray-400 hover:text-white" onclick="closeModal('adjustBalanceModal')">×</button>
+          <h2 class="text-2xl font-semibold mb-4 text-blue-300">Ajustar Saldo Manualmente</h2>
+
+          <div class="mb-4">
+              <label for="adjustAssetSelect" class="block text-sm font-medium text-gray-300 mb-1">Activo:</label>
+              <select id="adjustAssetSelect" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full">
+                  <!-- Assets will be populated here -->
+              </select>
+          </div>
+          <div class="mb-4">
+              <label for="adjustAmount" class="block text-sm font-medium text-gray-300 mb-1">Cantidad a Ajustar:</label>
+              <input type="number" id="adjustAmount" placeholder="Ej: 0.5 (positivo para añadir, negativo para quitar)" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" step="0.000001" />
+          </div>
+          <div class="mb-6">
+              <label for="adjustNote" class="block text-sm font-medium text-gray-300 mb-1">Nota (opcional):</label>
+              <textarea id="adjustNote" placeholder="Ej: 'Depósito desde wallet externa'" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" rows="2"></textarea>
+          </div>
+          <button id="saveAdjustBalanceBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full">
+              Guardar Ajuste
+          </button>
+      </div>
+  </div>
+
+  <!-- Modal for Custom Profit Currency Selection -->
+  <div id="customProfitCurrencyModal" class="modal hidden">
+      <div class="modal-content bg-slate-800 text-white rounded-xl p-6 shadow-lg">
+          <button class="modal-close text-gray-400 hover:text-white" onclick="closeModal('customProfitCurrencyModal')">×</button>
+          <h2 class="text-2xl font-semibold mb-4 text-blue-300">Seleccionar Moneda/Activo para Profit</h2>
+
+          <div class="mb-4">
+              <label for="customProfitAssetSelect" class="block text-sm font-medium text-gray-300 mb-1">Ver profit en:</label>
+              <select id="customProfitAssetSelect" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full">
+                  <!-- Assets will be populated here -->
+              </select>
+          </div>
+          <button id="confirmCustomProfitCurrencyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full">
+              Confirmar
+          </button>
+      </div>
+  </div>
+
+  <!-- Modal for Adding/Editing Remunerated Account -->
+  <div id="remuneratedAccountModal" class="modal hidden">
+      <div class="modal-content bg-slate-800 text-white rounded-xl p-6 shadow-lg">
+          <button class="modal-close text-gray-400 hover:text-white" onclick="closeModal('remuneratedAccountModal')">×</button>
+          <h2 class="text-2xl font-semibold mb-4 text-blue-300" id="remuneratedModalTitle">Añadir Nueva Cuenta</h2>
+
+          <input type="hidden" id="editingRemuneratedAccountId" value="">
+
+          <div class="mb-4">
+              <label for="remuneratedAccountName" class="block text-sm font-medium text-gray-300 mb-1">Nombre de la Cuenta:</label>
+              <input type="text" id="remuneratedAccountName" placeholder="Ej: MercadoPago" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" />
+          </div>
+          <div class="mb-4">
+              <label for="remuneratedAccountLogo" class="block text-sm font-medium text-gray-300 mb-1">URL del Logo (opcional):</label>
+              <input type="text" id="remuneratedAccountLogo" placeholder="Ej: https://example.com/logo.png" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" />
+          </div>
+          <div class="mb-4">
+              <label for="remuneratedAccountBalanceARS" class="block text-sm font-medium text-gray-300 mb-1">Saldo Actual ARS:</label>
+              <input type="number" id="remuneratedAccountBalanceARS" placeholder="0" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" step="0.01" />
+          </div>
+          <div class="mb-4">
+              <label for="remuneratedAccountBalanceUSD" class="block text-sm font-medium text-gray-300 mb-1">Saldo Actual USD:</label>
+              <input type="number" id="remuneratedAccountBalanceUSD" placeholder="0" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" step="0.01" />
+          </div>
+          <div class="mb-6">
+              <label for="remuneratedAccountAPY" class="block text-sm font-medium text-gray-300 mb-1">APY Anual (%):</label>
+              <input type="number" id="remuneratedAccountAPY" placeholder="0.00" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none w-full" step="0.01" />
+          </div>
+          <button id="saveRemuneratedAccountBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full">
+              Guardar Cuenta
+          </button>
+      </div>
+  </div>
+
+  <!-- New Modal for Asset Details (on double click) -->
+  <div id="assetDetailsModal" class="modal hidden">
+      <div class="modal-content bg-slate-800 text-white rounded-xl p-6 shadow-lg max-w-3xl w-full">
+          <button class="modal-close text-gray-400 hover:text-white" onclick="closeModal('assetDetailsModal')">×</button>
+          <h2 class="text-2xl font-semibold mb-4 text-blue-300" id="assetDetailsModalTitle"></h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                  <h3 class="text-xl font-semibold mb-3">Detalles de Tenencia</h3>
+                  <div id="assetHoldingsDetails" class="bg-slate-700 p-4 rounded-lg space-y-2">
+                      <!-- Holdings details will be populated here -->
+                  </div>
+              </div>
+              <div>
+                  <h3 class="text-xl font-semibold mb-3">Gráfico de Precio</h3>
+                  <div class="chart-container">
+                      <canvas id="assetPriceChart"></canvas>
+                  </div>
+              </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                  <h3 class="text-xl font-semibold mb-3">Gráfico de Profit</h3>
+                  <div class="chart-container">
+                      <canvas id="assetProfitChart"></canvas>
+                  </div>
+              </div>
+              <div>
+                  <h3 class="text-xl font-semibold mb-3">Gráfico de Cantidad</h3>
+                  <div class="chart-container">
+                      <canvas id="assetQuantityChart"></canvas>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+
+  <script>
+    // --- Global State Variables ---
+    let selectedAsset = 'BTC'; // Currently selected asset (crypto or stock) for transaction form
+    let currency = 'USD'; // Currently selected display currency for overall balances (USD, ARS)
+    let currentInvestmentView = 'dashboard'; // Current active view within Investments section
+    let currentMainSection = 'investments'; // 'investments' or 'remunerated'
+
+    let transactions = []; // Array to store all investment transaction objects
+    let editingTransactionId = null; // Stores the ID of the investment transaction being edited
+
+    // Initial predefined assets with default colors and symbols for display
+    let predefinedAssets = {
+      BTC: { name: 'Bitcoin', symbol: '₿', price: 0, change: 0, type: 'crypto', color: 'bg-yellow-500' },
+      ETH: { name: 'Ethereum', symbol: '◊', price: 0, change: 0, type: 'crypto', color: 'bg-gray-500' },
+      BNB: { name: 'BNB', symbol: '⬢', price: 0, change: 0, type: 'crypto', color: 'bg-yellow-400' },
+      SOL: { name: 'Solana', symbol: 'S', price: 0, change: 0, type: 'crypto', color: 'bg-purple-500' },
+      USDT: { name: 'Tether', symbol: '₮', price: 0, change: 0, type: 'crypto', color: 'bg-green-500' },
+      AAPL: { name: 'Apple', symbol: 'AAPL', price: 0, change: 0, type: 'stock', cedearRatio: 10, color: 'bg-gray-400' }, // 10 CEDEARs per share
+      TSLA: { name: 'Tesla', symbol: 'TSLA', price: 0, change: 0, type: 'stock', cedearRatio: 15, color: 'bg-red-500' }, // 15 CEDEARs per share
+      AMZN: { name: 'Amazon', symbol: 'AMZN', price: 0, change: 0, type: 'stock', cedearRatio: 20, color: 'bg-orange-500' }, // 20 CEDEARs per share
+      MSFT: { name: 'Microsoft', symbol: 'MSFT', price: 0, change: 0, type: 'stock', cedearRatio: 10, color: 'bg-blue-500' },
+      META: { name: 'Meta', symbol: 'META', price: 0, change: 0, type: 'stock', cedearRatio: 10, color: 'bg-purple-600' },
+      NVDA: { name: 'NVIDIA', symbol: 'NVDA', price: 0, change: 0, type: 'stock', cedearRatio: 20, color: 'bg-green-600' },
+      INTC: { name: 'Intel', symbol: 'INTC', price: 0, change: 0, type: 'stock', cedearRatio: 5, color: 'bg-blue-400' },
+      MELI: { name: 'MercadoLibre', symbol: 'MELI', price: 0, change: 0, type: 'stock', cedearRatio: 6, color: 'bg-yellow-600' },
+      GLOB: { name: 'Globant', symbol: 'GLOB', price: 0, change: 0, type: 'stock', cedearRatio: 3, color: 'bg-cyan-500' }
+    };
+
+    let customAssets = {}; // Stores user-defined assets {symbol: {details}}
+    let allAssets = {}; // Combined object for all trackable assets (predefined + custom)
+    let visibleAssets = new Set(); // Stores symbols of assets the user wants to see in dashboard/assets view
+
+    let wallets = []; // Stores user-defined wallets/portfolios
+
+    let loading = false; // Flag to indicate if data is being loaded
+    let usdChart = null; // Chart.js instance for overall USD profit
+    let btcChart = null; // Chart.js instance for overall BTC profit
+    let individualAssetChart = null; // Chart.js instance for individual asset profit
+
+    let currentCalendarDate = new Date(); // For the daily profit calendar
+    let currentAssetChartSymbol = null; // Stores the symbol of the asset currently being charted
+
+    // State for profit display currency
+    let todayProfitDisplayCurrency = 'USD';
+    let totalProfitDisplayCurrency = 'USD';
+    let currentProfitElementId = null; // To track which profit element is being adjusted by custom modal
+
+    // Remunerated Accounts State
+    let remuneratedAccounts = [];
+    let editingRemuneratedAccountId = null; // For editing remunerated accounts
+    let currentRemuneratedAccountDisplayMode = {}; // Stores display mode for each remunerated account (ARS, USD, Daily, Weekly, Monthly)
+
+    // New Global Variables for Asset Details Modal
+    let assetPriceChart = null;
+    let assetProfitChart = null;
+    let assetQuantityChart = null;
+    let currentNewAssetLogoBase64 = ''; // To temporarily hold base64 string for new asset logo
+
+    // Exchange rates for various fiat currencies against USD.
+    const exchangeRates = {
+      USD: 1,
+      EUR: 0.92,
+      ARS: 1050, // Simulated Argentine Peso "blue dollar" rate (example, highly volatile)
+      MXN: 17.0,
+      COP: 3900,
+      BRL: 5.0,
+    };
+
+    // --- Utility Functions ---
+
+    // Load custom data from localStorage
+    function loadCustomData() {
+        const savedCustomAssets = localStorage.getItem('customAssets');
+        if (savedCustomAssets) {
+            customAssets = JSON.parse(savedCustomAssets);
+        }
+        const savedVisibleAssets = localStorage.getItem('visibleAssets');
+        if (savedVisibleAssets) {
+            visibleAssets = new Set(JSON.parse(savedVisibleAssets));
+        } else {
+            // If no visible assets saved, make all predefined crypto assets visible by default
+            visibleAssets = new Set(Object.keys(predefinedAssets).filter(symbol => predefinedAssets[symbol].type === 'crypto'));
+        }
+        // Combine predefined and custom assets
+        allAssets = { ...predefinedAssets, ...customAssets };
+
+        const savedWallets = localStorage.getItem('wallets');
+        if (savedWallets) {
+            wallets = JSON.parse(savedWallets);
+        } else {
+            wallets = [{ id: 'General', name: 'General', type: 'default' }];
+        }
+
+        const savedRemuneratedAccounts = localStorage.getItem('remuneratedAccounts');
+        if (savedRemuneratedAccounts) {
+            remuneratedAccounts = JSON.parse(savedRemuneratedAccounts);
+        } else {
+            // Predefined remunerated accounts with placeholder logos
+            remuneratedAccounts = [
+                { id: 'mp', name: 'MercadoPago', logo: 'https://placehold.co/40x40/FFD200/000000?text=MP', balanceARS: 0, balanceUSD: 0, apy: 0 },
+                { id: 'galicia', name: 'Banco Galicia', logo: 'https://placehold.co/40x40/FF0000/FFFFFF?text=BG', balanceARS: 0, balanceUSD: 0, apy: 0 },
+                { id: 'uala', name: 'Ualá', logo: 'https://placehold.co/40x40/C000FF/FFFFFF?text=U', balanceARS: 0, balanceUSD: 0, apy: 0 },
+                { id: 'nacion', name: 'Banco Nación', logo: 'https://placehold.co/40x40/0000FF/FFFFFF?text=BN', balanceARS: 0, balanceUSD: 0, apy: 0 },
+                { id: 'cuentadni', name: 'Cuenta DNI', logo: 'https://placehold.co/40x40/00BFFF/FFFFFF?text=DNI', balanceARS: 0, balanceUSD: 0, apy: 0 },
+                { id: 'letsbit', name: 'LetsBit', logo: 'https://placehold.co/40x40/00FF00/000000?text=LB', balanceARS: 0, balanceUSD: 0, apy: 0 },
+                { id: 'buenbit', name: 'Buenbit', logo: 'https://placehold.co/40x40/FFA500/000000?text=BB', balanceARS: 0, balanceUSD: 0, apy: 0 }
+            ];
+        }
+    }
+
+    // Save custom data to localStorage
+    function saveCustomData() {
+        localStorage.setItem('customAssets', JSON.stringify(customAssets));
+        localStorage.setItem('visibleAssets', JSON.stringify(Array.from(visibleAssets)));
+        localStorage.setItem('wallets', JSON.stringify(wallets));
+        localStorage.setItem('remuneratedAccounts', JSON.stringify(remuneratedAccounts));
+    }
+
+    // Load investment transactions from localStorage
+    function loadTransactions() {
+      const saved = localStorage.getItem('cryptoTransactions');
+      if (saved) {
+        transactions = JSON.parse(saved);
+        updateBalances();
+        updateCharts(); // For overall charts (will be called by view change)
+        updateTransactionHistory();
+        updateCryptoProfitList(); // Update profit list on load
+        renderCalendar(); // Render calendar on load
+      }
+    }
+
+    // Save investment transactions to localStorage
+    function saveTransactions() {
+      localStorage.setItem('cryptoTransactions', JSON.stringify(transactions));
+    }
+
+    // Format currency amount for display (USD, ARS, EUR, etc.)
+    function formatCurrency(amount, curr = currency) {
+      let convertedAmount = amount;
+      if (exchangeRates[curr]) {
+        convertedAmount = amount * exchangeRates[curr];
+      }
+
+      let prefix = '';
+      let options = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
+      if (curr === 'USD') {
+        prefix = 'USD ';
+      } else if (curr === 'ARS') {
+        prefix = '$';
+        convertedAmount = Math.floor(convertedAmount / 1000); // Remove last three digits
+        options = { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+      } else if (curr === 'EUR') {
+        prefix = '€';
+      } else if (curr === 'MXN' || curr === 'COP') {
+        prefix = '$';
+      } else if (curr === 'BRL') {
+        prefix = 'R$';
+      }
+
+      return `${prefix}${convertedAmount.toLocaleString('es-ES', options)}`;
+    }
+
+    // Format amount into units of a specific asset (crypto) or fiat
+    function formatAssetAmount(amountUSD, targetAssetSymbol) {
+        // Handle fiat currencies first
+        if (['USD', 'ARS', 'EUR', 'MXN', 'COP', 'BRL'].includes(targetAssetSymbol)) {
+            return formatCurrency(amountUSD, targetAssetSymbol);
+        }
+
+        // Handle crypto/stock assets
+        const targetAssetDetails = allAssets[targetAssetSymbol];
+        if (targetAssetDetails && targetAssetDetails.price > 0) {
+            const convertedAmount = amountUSD / targetAssetDetails.price;
+            let fixedDigits = 2; // Default for most assets
+            if (targetAssetDetails.type === 'crypto') {
+                if (targetAssetSymbol === 'BTC') fixedDigits = 6;
+                else if (targetAssetSymbol === 'ETH' || targetAssetSymbol === 'SOL' || targetAssetSymbol === 'BNB') fixedDigits = 4;
+                else if (targetAssetSymbol === 'USDT') fixedDigits = 2;
+            } else if (targetAssetDetails.type === 'stock') {
+                fixedDigits = 4; // For shares/CEDEARs
+            }
+            return `${convertedAmount.toFixed(fixedDigits)} ${targetAssetDetails.symbol || ''}`;
+        }
+
+        return formatCurrency(amountUSD, 'USD'); // Default to USD if conversion is not possible or price is 0
+    }
+
+    // Display error message to the user
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => { errorEl.style.display = 'none'; }, 5000); // Hide after 5 seconds
+    }
+
+    // --- Investment Section Functions ---
+
+    // Fetch crypto and stock prices (simulated for stocks)
+    async function fetchAssetPrices() {
+      if (loading) return; // Prevent multiple simultaneous fetches
+      loading = true;
+      document.getElementById('refreshPrices').textContent = 'Actualizando...';
+      document.getElementById('refreshPrices').disabled = true;
+      document.getElementById('loadingBar').classList.add('active'); // Show loading bar
+
+      try {
+        // Fetch crypto prices from CoinGecko
+        const cryptoResponse = await fetch(
+          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana,tether&vs_currencies=usd&include_24hr_change=true'
+        );
+        if (!cryptoResponse.ok) throw new Error('Error al obtener datos de CoinGecko para criptos');
+        const cryptoData = await cryptoResponse.json();
+
+        // Update predefined crypto details
+        Object.keys(predefinedAssets).forEach(symbol => {
+            if (predefinedAssets[symbol].type === 'crypto') {
+                const cgId = {
+                    BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin', SOL: 'solana', USDT: 'tether'
+                }[symbol];
+                if (cryptoData[cgId]) {
+                    predefinedAssets[symbol].price = cryptoData[cgId].usd || 0;
+                    predefinedAssets[symbol].change = cryptoData[cgId].usd_24h_change || 0;
+                }
+            }
+        });
+
+        // Simulate stock prices and changes for predefined stocks
+        Object.keys(predefinedAssets).forEach(symbol => {
+            if (predefinedAssets[symbol].type === 'stock') {
+                const currentPrice = predefinedAssets[symbol].price || (Math.random() * 200 + 50); // Base price
+                const dailyChange = (Math.random() - 0.5) * 10; // Random change between -5% and +5%
+                predefinedAssets[symbol].price = Math.max(0.01, currentPrice * (1 + dailyChange / 100)); // Ensure price is not zero
+                predefinedAssets[symbol].change = dailyChange;
+            }
+        });
+
+        // Update custom asset prices (if they are stocks, simulate; if crypto, keep initial price or add API if possible)
+        Object.keys(customAssets).forEach(symbol => {
+            if (customAssets[symbol].type === 'stock') {
+                const currentPrice = customAssets[symbol].price || (Math.random() * 200 + 50);
+                const dailyChange = (Math.random() - 0.5) * 10;
+                customAssets[symbol].price = Math.max(0.01, currentPrice * (1 + dailyChange / 100));
+                customAssets[symbol].change = dailyChange;
+            }
+            // For custom crypto, we assume the initial price is static unless a custom API is integrated
+        });
+
+        // Recombine all assets (predefined with updated prices + custom assets)
+        allAssets = { ...predefinedAssets, ...customAssets };
+
+        updateAssetDisplay(); // Update all asset cards
+        updateTransactionFormPrice();
+        updateBalances(); // Recalculate balances with new prices
+        updateProfitDisplay('todayProfit', todayProfitDisplayCurrency); // Update profit display with current currency
+        updateProfitDisplay('totalProfit', totalProfitDisplayCurrency);
+        updateCryptoProfitList(); // Update profit list with new prices
+      } catch (error) {
+        console.error('Error al obtener precios de activos:', error);
+        showError('No se pudieron actualizar los precios. Verifica tu conexión.');
+      } finally {
+        loading = false;
+        document.getElementById('refreshPrices').textContent = '🔄 Actualizar Precios';
+        document.getElementById('refreshPrices').disabled = false;
+        document.getElementById('loadingBar').classList.remove('active'); // Hide loading bar
+      }
+    }
+
+    // Calculates current holdings and their total cost basis
+    function calculateHoldingsAndCostBasis(filterWalletId = null) {
+        const holdings = {};
+        // Initialize all known assets
+        Object.keys(allAssets).forEach(symbol => {
+            holdings[symbol] = { quantity: 0, totalCost: 0 };
+        });
+
+        // Sort transactions by timestamp to ensure correct cost basis calculation
+        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        sortedTransactions.forEach(t => {
+            if (filterWalletId && t.wallet !== filterWalletId) return; // Skip if not in filtered wallet
+
+            const asset = t.asset;
+            const amount = parseFloat(t.amount);
+            const price = parseFloat(t.price); // Price at transaction time
+
+            if (!holdings[asset]) {
+                holdings[asset] = { quantity: 0, totalCost: 0 };
+            }
+
+            if (t.type === 'compra' || (t.type === 'ajuste_manual' && amount > 0)) {
+                holdings[asset].quantity += amount;
+                holdings[asset].totalCost += amount * price;
+            } else if (t.type === 'venta' || (t.type === 'ajuste_manual' && amount < 0)) {
+                const absAmount = Math.abs(amount);
+                if (holdings[asset].quantity > 0) {
+                    const costPerUnit = holdings[asset].totalCost / holdings[asset].quantity;
+                    holdings[asset].quantity -= absAmount;
+                    holdings[asset].totalCost -= costPerUnit * absAmount;
+                } else {
+                    // If selling more than held, or selling when nothing held,
+                    // quantity becomes negative, totalCost remains 0 (or becomes negative if it was already negative)
+                    holdings[asset].quantity -= absAmount;
+                    // For simplicity, if cost is already 0 or negative, don't reduce it further
+                    if (holdings[asset].totalCost > 0) {
+                        holdings[asset].totalCost = Math.max(0, holdings[asset].totalCost - (price * absAmount));
+                    }
+                }
+            }
+        });
+        return holdings;
+    }
+
+    // Update the display of all asset (crypto and stock) prices and 24h changes
+    function updateAssetDisplay() {
+      const cryptoCardsContainer = document.getElementById('cryptoSelectionCards');
+      const stockCardsContainer = document.getElementById('stockSelectionCards');
+      cryptoCardsContainer.innerHTML = '';
+      stockCardsContainer.innerHTML = '';
+
+      // Clear existing listeners to prevent duplicates (important for dynamic content)
+      document.querySelectorAll('[id^="select"]').forEach(btn => {
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+      });
+
+      const filterWalletId = document.getElementById('walletFilterSelect').value;
+      const currentAssetHoldings = calculateHoldingsAndCostBasis(filterWalletId === 'all' ? null : filterWalletId);
+
+      // Filter assets: show if visible OR if user has a positive quantity of it
+      const assetsToDisplay = Object.entries(allAssets).filter(([symbol]) =>
+          visibleAssets.has(symbol) || (currentAssetHoldings[symbol]?.quantity > 0)
+      );
+
+      assetsToDisplay.forEach(([symbol, details]) => {
+        const priceUSD = details.price;
+        let priceARS = priceUSD * exchangeRates.ARS;
+        if (details.type === 'stock') {
+            // CEDEAR price in ARS = (USD share price / CEDEAR ratio) * ARS_USD_exchange_rate
+            priceARS = (priceUSD / (details.cedearRatio || 1)) * exchangeRates.ARS;
+        }
+
+        const changeValue = details.change;
+        const changeClass = changeValue >= 0 ? 'text-green-400' : 'text-red-400';
+        const changeArrow = changeValue >= 0 ? '↑' : '↓';
+
+        const displayModeKey = `assetDisplayMode_${symbol}`;
+        let currentDisplayMode = localStorage.getItem(displayModeKey) || 'quantity';
+
+        const assetQuantity = currentAssetHoldings[symbol]?.quantity || 0;
+        const assetValueUSD = assetQuantity * priceUSD;
+        const assetValueARS = assetQuantity * priceARS;
+
+        let mainDisplayValue = '';
+        if (currentDisplayMode === 'quantity') {
+            mainDisplayValue = `Cantidad: ${assetQuantity.toFixed(details.type === 'crypto' ? 6 : 4)}`;
+        } else if (currentDisplayMode === 'USD') {
+            mainDisplayValue = formatCurrency(assetValueUSD, 'USD');
+        } else if (currentDisplayMode === 'ARS') {
+            mainDisplayValue = formatCurrency(assetValueARS, 'ARS');
+        }
+
+        // Use the logo URL (base64 or external URL) if available, otherwise a default placeholder
+        const logoSrc = details.logo || `https://placehold.co/32x32/374151/FFFFFF?text=${details.symbol}`;
+
+        const cardHtml = `
+            <button id="select${symbol}" class="p-4 rounded-xl transition-all transform hover:scale-105 shadow-md ${details.color || 'bg-slate-800'} hover:bg-opacity-80"
+                    ondblclick="openAssetDetailsModal('${symbol}')">
+              <div class="flex items-center justify-between mb-1">
+                <img src="${logoSrc}" alt="${details.name} Logo" class="w-8 h-8 rounded-full object-cover" onerror="this.src='https://placehold.co/32x32/374151/FFFFFF?text=?'">
+                <div class="text-2xl font-bold">${details.symbol}</div>
+              </div>
+              <div class="font-semibold text-left">${details.name}</div>
+              <div id="assetMainDisplay_${symbol}" class="text-sm opacity-75 cursor-pointer mt-1" onclick="toggleAssetDisplayMode('${symbol}', event)">
+                ${mainDisplayValue} <span class="text-xs text-slate-300">▼</span>
+              </div>
+              <div id="change${symbol}" class="text-xs flex items-center justify-center mt-1 ${changeClass}">${changeArrow}${changeValue.toFixed(2)}%</div>
+              <div class="asset-card-footer">
+                <span></span>
+                <span class="graph-icon" data-asset-symbol="${symbol}" title="Ver gráfico de ${details.name}" onclick="event.stopPropagation(); showAssetChart('${symbol}')">📉</span>
+              </div>
+            </button>
+        `;
+
+        if (details.type === 'crypto') {
+            cryptoCardsContainer.innerHTML += cardHtml;
+        } else if (details.type === 'stock') {
+            stockCardsContainer.innerHTML += cardHtml;
+        }
+      });
+
+      // Update the transaction asset dropdown
+      const transactionAssetSelect = document.getElementById('transactionAsset');
+      transactionAssetSelect.innerHTML = '';
+      Object.keys(allAssets).sort().forEach(symbol => { // Sort alphabetically
+          const option = document.createElement('option');
+          option.value = symbol;
+          option.textContent = allAssets[symbol].name;
+          transactionAssetSelect.appendChild(option);
+      });
+      // Set the selected value in the dropdown, or default to BTC if not found
+      transactionAssetSelect.value = allAssets[selectedAsset] ? selectedAsset : 'BTC';
+
+      // Update the transaction wallet dropdown
+      const transactionWalletSelect = document.getElementById('transactionWallet');
+      transactionWalletSelect.innerHTML = '';
+      wallets.forEach(wallet => {
+          const option = document.createElement('option');
+          option.value = wallet.id;
+          option.textContent = wallet.name;
+          transactionWalletSelect.appendChild(option);
+      });
+      transactionWalletSelect.value = 'General'; // Default to General wallet
+    }
+
+    // Function to toggle display mode for individual asset cards (quantity, USD, ARS)
+    // This function is now called from the onclick of the main display area within the card
+    function toggleAssetDisplayMode(symbol, event) {
+        event.stopPropagation(); // Prevent the parent button click (double click)
+        const displayModeKey = `assetDisplayMode_${symbol}`;
+        let currentMode = localStorage.getItem(displayModeKey) || 'quantity';
+
+        let nextMode;
+        if (currentMode === 'quantity') {
+            nextMode = 'USD';
+        } else if (currentMode === 'USD') {
+            nextMode = 'ARS';
+        } else {
+            nextMode = 'quantity';
+        }
+        localStorage.setItem(displayModeKey, nextMode);
+        updateAssetDisplay(); // Re-render the cards to reflect the change
+    }
+
+    // Update the price field in the transaction form based on the selected asset
+    function updateTransactionFormPrice() {
+      if (allAssets[selectedAsset]) {
+        document.getElementById('transactionPrice').value = allAssets[selectedAsset].price.toString();
+      } else {
+        document.getElementById('transactionPrice').value = '0'; // Default if asset not found
+      }
+    }
+
+    // Calculate total balance across all assets in USD, ARS, and BTC equivalent
+    function calculateTotalBalance() {
+      const currentHoldings = calculateHoldingsAndCostBasis(); // Get holdings across all wallets
+      const assetBalances = {};
+      Object.keys(allAssets).forEach(symbol => {
+          assetBalances[symbol] = currentHoldings[symbol]?.quantity || 0;
+      });
+
+      // Calculate total USD value of all asset holdings
+      const totalUSD = Object.entries(assetBalances).reduce((total, [assetSymbol, amount]) => {
+        const details = allAssets[assetSymbol];
+        if (details) {
+            return total + (amount * details.price); // Price is always in USD
+        }
+        return total;
+      }, 0);
+
+      return {
+        usd: totalUSD,
+        ars: totalUSD * exchangeRates.ARS, // Convert total USD to ARS
+        btc: allAssets.BTC && allAssets.BTC.price > 0 ? totalUSD / allAssets.BTC.price : 0, // Convert total USD to BTC equivalent
+        assetBalances // Return individual asset balances as well
+      };
+    }
+
+    // Update the display of total balances (USD, ARS, BTC)
+    function updateBalances() {
+      const balances = calculateTotalBalance();
+      document.getElementById('totalUSD').textContent = formatCurrency(balances.usd, 'USD');
+      document.getElementById('totalARS').textContent = formatCurrency(balances.ars, 'ARS');
+      document.getElementById('totalBTC').textContent = `₿${balances.btc.toFixed(6)}`;
+      updateProfitDisplay('todayProfit', todayProfitDisplayCurrency); // Update profit display with current currency
+      updateProfitDisplay('totalProfit', totalProfitDisplayCurrency);
+    }
+
+    // Calculate the total unrealized profit (current value - total cost)
+    function calculateTotalUnrealizedProfit(filterWalletId = null) {
+        const profitsPerAsset = calculateProfitPerAsset(filterWalletId);
+        return Object.values(profitsPerAsset).reduce((sum, profit) => sum + profit, 0);
+    }
+
+    // Calculate profit for today (change in total unrealized profit from yesterday)
+    function getTodayProfit() {
+        const today = new Date().toISOString().split('T')[0];
+        const dailyProfits = getDailyProfitsForCalendar(); // This already calculates daily *changes* in unrealized profit
+        return dailyProfits[today] || 0; // Return the profit for today, or 0 if no data
+    }
+
+    // Update the display of today's profit and total profit based on selected currency
+    function updateProfitDisplay(elementId, targetCurrency) {
+        const profitElement = document.getElementById(elementId);
+        let profitAmountUSD;
+
+        if (elementId === 'todayProfit') {
+            profitAmountUSD = getTodayProfit();
+            todayProfitDisplayCurrency = targetCurrency; // Save preference
+        } else if (elementId === 'totalProfit') {
+            profitAmountUSD = calculateTotalUnrealizedProfit();
+            totalProfitDisplayCurrency = targetCurrency; // Save preference
+        }
+
+        profitElement.textContent = formatAssetAmount(profitAmountUSD, targetCurrency);
+        // Close dropdown if open
+        const dropdown = profitElement.closest('.dropdown');
+        if (dropdown) dropdown.classList.remove('active');
+    }
+
+    // Calculate profit per asset (unrealized profit based on cost basis)
+    function calculateProfitPerAsset(filterWalletId = null) {
+        const holdings = calculateHoldingsAndCostBasis(filterWalletId);
+        const profits = {};
+
+        Object.keys(allAssets).forEach(symbol => {
+            const currentPrice = allAssets[symbol]?.price || 0;
+            const currentQuantity = holdings[symbol]?.quantity || 0;
+            const totalCost = holdings[symbol]?.totalCost || 0;
+
+            const currentValue = currentQuantity * currentPrice;
+            profits[symbol] = currentValue - totalCost; // Unrealized profit/loss
+        });
+
+        return profits;
+    }
+
+    // Update the display of profit per asset
+    function updateCryptoProfitList() {
+        const cryptoProfitList = document.getElementById('cryptoProfitList');
+        cryptoProfitList.innerHTML = ''; // Clear existing list
+
+        const filterWalletId = document.getElementById('walletFilterSelect').value;
+        const profits = calculateProfitPerAsset(filterWalletId === 'all' ? null : filterWalletId);
+
+        const sortedProfits = Object.entries(profits).sort(([,a], [,b]) => b - a); // Sort by profit descending
+
+        if (sortedProfits.length === 0 || sortedProfits.every(([,p]) => p === 0)) {
+            cryptoProfitList.innerHTML = `
+                <div class="text-center py-8 text-slate-400">
+                    <span class="text-5xl mb-4 block opacity-50">💰</span>
+                    <p>No hay ganancias registradas por activo aún.</p>
+                </div>
+            `;
+            return;
+        }
+
+        sortedProfits.forEach(([asset, profit]) => {
+            if (profit === 0) return; // Don't show assets with 0 profit
+
+            const div = document.createElement('div');
+            const profitClass = profit >= 0 ? 'text-green-400' : 'text-red-400';
+            const symbolDisplay = allAssets[asset]?.symbol || asset; // Use symbol or just the asset name
+            const nameDisplay = allAssets[asset]?.name || asset;
+
+            div.className = 'bg-slate-700 rounded-lg p-4 flex items-center justify-between shadow-md';
+            div.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <img src="${allAssets[asset]?.logo || `https://placehold.co/32x32/374151/FFFFFF?text=${symbolDisplay}`}" alt="${nameDisplay} Logo" class="w-8 h-8 rounded-full object-cover" onerror="this.src='https://placehold.co/32x32/374151/FFFFFF?text=?'">
+                    <div class="font-semibold text-xl">${nameDisplay}</div>
+                </div>
+                <div class="font-bold text-2xl ${profitClass}">
+                    ${formatCurrency(profit, 'USD')}
+                </div>
+            `;
+            cryptoProfitList.appendChild(div);
+        });
+    }
+
+
+    // Get chart data for overall profit or a specific asset (excluding manual adjustments)
+    function getChartData(assetSymbol = null, filterWalletId = null) {
+        const holdingsSnapshots = {}; // {date: {asset: {quantity: X, totalCost: Y}}}
+
+        // Replay transactions to get daily holdings and cost basis
+        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let currentHoldings = {}; // {asset: {quantity: X, totalCost: Y}}
+
+        // Initialize currentHoldings for all assets
+        Object.keys(allAssets).forEach(symbol => {
+            currentHoldings[symbol] = { quantity: 0, totalCost: 0 };
+        });
+
+        sortedTransactions.forEach(t => {
+            if (filterWalletId && t.wallet !== filterWalletId) return;
+
+            const date = t.date;
+            const asset = t.asset;
+            const amount = parseFloat(t.amount);
+            const price = parseFloat(t.price);
+
+            // Update holdings based on transaction
+            if (t.type === 'compra' || (t.type === 'ajuste_manual' && amount > 0)) {
+                currentHoldings[asset].quantity += amount;
+                currentHoldings[asset].totalCost += amount * price;
+            } else if (t.type === 'venta' || (t.type === 'ajuste_manual' && amount < 0)) {
+                const absAmount = Math.abs(amount);
+                if (currentHoldings[asset].quantity > 0) {
+                    const costPerUnit = currentHoldings[asset].totalCost / currentHoldings[asset].quantity;
+                    currentHoldings[asset].quantity -= absAmount;
+                    currentHoldings[asset].totalCost -= costPerUnit * absAmount;
+                } else {
+                    currentHoldings[asset].quantity -= absAmount;
+                    if (currentHoldings[asset].totalCost > 0) {
+                        currentHoldings[asset].totalCost = Math.max(0, currentHoldings[asset].totalCost - (price * absAmount));
+                    }
+                }
+            }
+
+            // Store a snapshot of holdings for this date
+            // Deep copy currentHoldings to avoid mutation issues
+            holdingsSnapshots[date] = JSON.parse(JSON.stringify(currentHoldings));
+        });
+
+        // Calculate cumulative unrealized profit from holdings snapshots
+        const sortedDates = Object.keys(holdingsSnapshots).sort();
+        const newChartData = [];
+
+        if (sortedDates.length > 0) {
+            const firstDate = new Date(sortedDates[0]);
+            let currentDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            // Add a point before the first transaction to start cumulative profit from 0
+            const dayBeforeFirst = new Date(currentDate);
+            dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
+            newChartData.push({ fecha: dayBeforeFirst.toISOString().split('T')[0], profit: 0 });
+
+            while (currentDate <= today) {
+                const dateString = currentDate.toISOString().split('T')[0];
+                let totalUnrealizedProfitForDay = 0;
+
+                // Find the latest holdings snapshot up to or on this date
+                let effectiveHoldings = {};
+                for (let i = sortedDates.length - 1; i >= 0; i--) {
+                    if (new Date(sortedDates[i]) <= currentDate) {
+                        effectiveHoldings = holdingsSnapshots[sortedDates[i]];
+                        break;
+                    }
+                }
+
+                Object.keys(effectiveHoldings).forEach(sym => {
+                    // If a specific asset is requested, only include its profit
+                    if (assetSymbol && sym !== assetSymbol) return;
+
+                    const currentPrice = allAssets[sym]?.price || 0; // Use current market price
+                    const quantity = effectiveHoldings[sym].quantity || 0;
+                    const totalCost = effectiveHoldings[sym].totalCost || 0;
+
+                    totalUnrealizedProfitForDay += (quantity * currentPrice - totalCost);
+                });
+
+                newChartData.push({ fecha: dateString, profit: totalUnrealizedProfitForDay });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        } else {
+            newChartData.push({ fecha: today.toISOString().split('T')[0], profit: 0 });
+        }
+        return newChartData;
+    }
+
+
+    // Update Chart.js graphs
+    function updateCharts() {
+      // Destroy all existing charts
+      if (usdChart) usdChart.destroy();
+      if (btcChart) btcChart.destroy();
+      if (individualAssetChart) individualAssetChart.destroy();
+
+      // Hide/show chart containers based on currentAssetChartSymbol
+      const overallChartsContainer = document.getElementById('overallCharts');
+      const individualAssetChartContainer = document.getElementById('individualAssetChartContainer');
+      const showOverallChartsBtn = document.getElementById('showOverallChartsBtn');
+      const chartsTitle = document.getElementById('chartsTitle');
+
+      const filterWalletId = document.getElementById('walletFilterSelect').value;
+      const walletFilterForCharts = filterWalletId === 'all' ? null : filterWalletId;
+
+      if (currentAssetChartSymbol) {
+          overallChartsContainer.classList.add('hidden');
+          individualAssetChartContainer.classList.remove('hidden');
+          showOverallChartsBtn.classList.remove('hidden');
+          chartsTitle.textContent = `Gráfico de Profit: ${allAssets[currentAssetChartSymbol]?.name || currentAssetChartSymbol}`;
+          document.getElementById('individualAssetChartTitle').textContent = `Profit en USD de ${allAssets[currentAssetChartSymbol]?.name || currentAssetChartSymbol} vs Tiempo`;
+
+          const assetChartData = getChartData(currentAssetChartSymbol, walletFilterForCharts);
+          const ctxIndividual = document.getElementById('individualAssetChart').getContext('2d');
+          individualAssetChart = new Chart(ctxIndividual, {
+              type: 'line',
+              data: {
+                  labels: assetChartData.map(d => d.fecha),
+                  datasets: [{
+                      label: `Profit ${allAssets[currentAssetChartSymbol]?.name || currentAssetChartSymbol} (USD)`,
+                      data: assetChartData.map(d => d.profit),
+                      borderColor: allAssets[currentAssetChartSymbol]?.color || '#3B82F6', // Use asset color if available
+                      borderWidth: 3,
+                      fill: false,
+                      pointRadius: 4,
+                      pointBackgroundColor: allAssets[currentAssetChartSymbol]?.color || '#3B82F6'
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                      x: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } },
+                      y: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } }
+                  },
+                  plugins: {
+                      tooltip: {
+                          backgroundColor: '#1F2937', borderColor: '#374151', borderWidth: 1, cornerRadius: 8,
+                          callbacks: { label: function(context) { return `Profit: ${formatCurrency(context.raw, 'USD')}`; } }
+                      },
+                      legend: { labels: { color: '#cbd5e0' } }
+                  }
+              }
+          });
+      } else {
+          overallChartsContainer.classList.remove('hidden');
+          individualAssetChartContainer.classList.add('hidden');
+          showOverallChartsBtn.classList.add('hidden');
+          chartsTitle.textContent = 'Gráficos de Profit';
+
+          const overallChartData = getChartData(null, walletFilterForCharts); // Get overall data
+
+          // USD Profit Chart
+          const ctxUSD = document.getElementById('usdChart').getContext('2d');
+          usdChart = new Chart(ctxUSD, {
+            type: 'line',
+            data: {
+              labels: overallChartData.map(d => d.fecha),
+              datasets: [{
+                label: 'Profit USD',
+                data: overallChartData.map(d => d.profit), // Data is already in USD
+                borderColor: '#10B981', // Green
+                borderWidth: 3,
+                fill: false,
+                pointRadius: 4,
+                pointBackgroundColor: '#10B981'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } },
+                y: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } }
+              },
+              plugins: {
+                tooltip: {
+                  backgroundColor: '#1F2937', borderColor: '#374151', borderWidth: 1, cornerRadius: 8,
+                  callbacks: { label: function(context) { return `Profit: ${formatCurrency(context.raw, 'USD')}`; } }
+                },
+                legend: { labels: { color: '#cbd5e0' } }
+              }
+            }
+          });
+
+          // BTC Profit Chart
+          const ctxBTC = document.getElementById('btcChart').getContext('2d');
+          btcChart = new Chart(ctxBTC, {
+            type: 'line',
+            data: {
+              labels: overallChartData.map(d => d.fecha),
+              datasets: [{
+                label: 'Profit BTC',
+                data: overallChartData.map(d => allAssets.BTC && allAssets.BTC.price > 0 ? d.profit / allAssets.BTC.price : 0),
+                borderColor: '#F59E0B', // Orange
+                borderWidth: 3,
+                fill: false,
+                pointRadius: 4,
+                pointBackgroundColor: '#F59E0B'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } },
+                y: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } }
+              },
+              plugins: {
+                tooltip: {
+                  backgroundColor: '#1F2937', borderColor: '#374151', borderWidth: 1, cornerRadius: 8,
+                  callbacks: { label: function(context) { return `Profit: ${formatAssetAmount(context.raw, 'BTC')}`; } }
+                },
+                legend: { labels: { color: '#cbd5e0' } }
+              }
+            }
+          });
+      }
+    }
+
+    // Function to show a specific asset's chart
+    function showAssetChart(assetSymbol) {
+        currentAssetChartSymbol = assetSymbol;
+        document.getElementById('chartsBtn').click(); // Navigate to charts view
+        // updateCharts() will be called by chartsBtn click, and it will render the specific chart
+    }
+
+    // Function to show overall charts
+    function showOverallCharts() {
+        currentAssetChartSymbol = null;
+        updateCharts(); // Re-render charts to show overall ones
+    }
+
+    // Add or update an investment transaction
+    function saveOrUpdateTransaction() {
+      const amount = document.getElementById('transactionAmount').value;
+      const price = document.getElementById('transactionPrice').value;
+      const note = document.getElementById('transactionNote').value;
+      const walletId = document.getElementById('transactionWallet').value;
+
+      if (!amount || !price || parseFloat(amount) <= 0 || parseFloat(price) <= 0) {
+        showError('Por favor, completa la cantidad y el precio con valores positivos.');
+        return;
+      }
+
+      const transactionData = {
+        type: document.getElementById('transactionType').value,
+        asset: document.getElementById('transactionAsset').value,
+        amount: parseFloat(amount),
+        price: parseFloat(price), // Price is always in USD
+        date: document.getElementById('transactionDate').value,
+        total: parseFloat(amount) * parseFloat(price), // Total value in USD
+        timestamp: new Date().toISOString(),
+        note: note,
+        wallet: walletId // Save the wallet ID
+      };
+
+      if (editingTransactionId) {
+        // Update existing transaction
+        const index = transactions.findIndex(t => t.id === editingTransactionId);
+        if (index !== -1) {
+          transactions[index] = { ...transactions[index], ...transactionData };
+        }
+        editingTransactionId = null;
+        document.getElementById('addTransaction').textContent = '➕ Agregar';
+        document.getElementById('cancelEdit').classList.add('hidden');
+      } else {
+        // Add new transaction
+        transactionData.id = Date.now();
+        transactions.unshift(transactionData);
+      }
+
+      saveTransactions();
+      // Clear form inputs
+      document.getElementById('transactionAmount').value = '';
+      document.getElementById('transactionPrice').value = allAssets[selectedAsset]?.price.toString() || '0';
+      document.getElementById('transactionType').value = 'compra';
+      document.getElementById('transactionAsset').value = selectedAsset;
+      document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('transactionNote').value = '';
+      document.getElementById('transactionWallet').value = 'General'; // Reset to default wallet
+
+      // Update all displays
+      updateBalances();
+      updateCharts();
+      updateTransactionHistory();
+      updateCryptoProfitList();
+      renderCalendar();
+      updateAssetDisplay(); // Re-render asset cards to show updated quantities
+    }
+
+    // Function to populate the form for editing an investment transaction
+    function editTransaction(id) {
+      const transactionToEdit = transactions.find(t => t.id === id);
+      if (transactionToEdit) {
+        document.getElementById('editingTransactionId').value = transactionToEdit.id;
+        editingTransactionId = transactionToEdit.id;
+
+        document.getElementById('transactionType').value = transactionToEdit.type;
+        document.getElementById('transactionAsset').value = transactionToEdit.asset;
+        document.getElementById('transactionAmount').value = transactionToEdit.amount;
+        document.getElementById('transactionPrice').value = transactionToEdit.price;
+        document.getElementById('transactionDate').value = transactionToEdit.date;
+        document.getElementById('transactionNote').value = transactionToEdit.note || '';
+        document.getElementById('transactionWallet').value = transactionToEdit.wallet || 'General';
+
+        document.getElementById('addTransaction').textContent = '✅ Actualizar';
+        document.getElementById('cancelEdit').classList.remove('hidden');
+
+        // Scroll to the top of the dashboard view to show the form
+        document.getElementById('dashboardView').scrollIntoView({ behavior: 'smooth' });
+        // Switch to dashboard view if not already there
+        document.getElementById('dashboardBtn').click();
+      }
+    }
+
+    // Function to cancel editing and reset the form
+    function cancelEdit() {
+        editingTransactionId = null;
+        document.getElementById('editingTransactionId').value = '';
+        document.getElementById('transactionAmount').value = '';
+        document.getElementById('transactionPrice').value = allAssets[selectedAsset]?.price.toString() || '0';
+        document.getElementById('transactionType').value = 'compra';
+        document.getElementById('transactionAsset').value = selectedAsset;
+        document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('transactionNote').value = '';
+        document.getElementById('transactionWallet').value = 'General';
+        document.getElementById('addTransaction').textContent = '➕ Agregar';
+        document.getElementById('cancelEdit').classList.add('hidden');
+    }
+
+    // Delete an investment transaction
+    function deleteTransaction(id) {
+      transactions = transactions.filter(t => t.id !== id);
+      saveTransactions();
+      updateBalances();
+      updateCharts();
+      updateTransactionHistory();
+      updateCryptoProfitList();
+      renderCalendar();
+      updateAssetDisplay(); // Re-render asset cards
+      if (editingTransactionId === id) {
+          cancelEdit();
+      }
+    }
+
+    // Update the investment transaction history list display
+    function updateTransactionHistory() {
+      const transactionList = document.getElementById('transactionList');
+      transactionList.innerHTML = ''; // Clear existing list
+
+      const filterWalletId = document.getElementById('walletFilterSelect').value;
+      const filteredTransactions = transactions.filter(t => filterWalletId === 'all' || t.wallet === filterWalletId);
+
+      if (filteredTransactions.length === 0) {
+        transactionList.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            <span class="text-5xl mb-4 block opacity-50">🕒</span>
+            <p>No hay transacciones registradas para la cartera seleccionada.</p>
+          </div>
+        `;
+      } else {
+        // Sort transactions by timestamp (most recent first) for display
+        filteredTransactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'bg-slate-700 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-md';
+          let transactionIcon = '';
+          let iconBgClass = '';
+          let amountSign = '';
+          let amountColorClass = '';
+
+          if (t.type === 'compra') {
+              transactionIcon = '➖'; iconBgClass = 'bg-red-600'; amountSign = '-'; amountColorClass = 'text-red-400';
+          } else if (t.type === 'venta') {
+              transactionIcon = '➕'; iconBgClass = 'bg-green-600'; amountSign = '+'; amountColorClass = 'text-green-400';
+          } else if (t.type === 'comision_compra' || t.type === 'comision_venta') {
+              transactionIcon = '💵'; iconBgClass = 'bg-purple-600'; amountSign = '-'; amountColorClass = 'text-red-400';
+          } else if (t.type === 'ajuste_manual') {
+              transactionIcon = '⚙️'; iconBgClass = 'bg-indigo-600';
+              if (t.amount >= 0) { amountSign = '+'; amountColorClass = 'text-green-400'; }
+              else { amountSign = '-'; amountColorClass = 'text-red-400'; }
+          }
+
+          const walletName = wallets.find(w => w.id === t.wallet)?.name || t.wallet;
+          const assetLogoSrc = allAssets[t.asset]?.logo || `https://placehold.co/32x32/374151/FFFFFF?text=${allAssets[t.asset]?.symbol || t.asset}`;
+
+
+          div.innerHTML = `
+            <div class="flex items-center space-x-4 mb-2 sm:mb-0">
+              <div class="p-2 rounded-full ${iconBgClass}">
+                <img src="${assetLogoSrc}" alt="${allAssets[t.asset]?.name || t.asset} Logo" class="w-6 h-6 object-contain rounded-full" onerror="this.src='https://placehold.co/24x24/374151/FFFFFF?text=?'">
+              </div>
+              <div>
+                <div class="font-semibold text-lg">${t.type.replace('_', ' ').toUpperCase()} ${allAssets[t.asset]?.name || t.asset}</div>
+                <div class="text-sm text-slate-400">${t.amount} × ${formatCurrency(t.price, 'USD')}</div>
+                <div class="text-xs text-slate-500 mt-1">Cartera: ${walletName}</div>
+                ${t.note ? `<div class="text-xs text-slate-500 mt-1">Nota: ${t.note}</div>` : ''}
+              </div>
+            </div>
+            <div class="text-right flex items-center space-x-2">
+              <div>
+                <div class="font-semibold text-xl ${amountColorClass}">
+                  ${amountSign}${formatCurrency(Math.abs(t.total), 'USD')}
+                </div>
+                <div class="text-sm text-slate-400 flex items-center justify-end">
+                  🗓️ ${new Date(t.date).toLocaleDateString('es-ES')}
+                </div>
+              </div>
+              <button class="edit-btn bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full mr-2" data-id="${t.id}" title="Editar">
+                ✏️
+              </button>
+              <button class="delete-btn bg-red-600 hover:bg-red-700 text-white p-2 rounded-full" data-id="${t.id}" title="Eliminar">
+                🗑️
+              </button>
+            </div>
+          `;
+          transactionList.appendChild(div);
+        });
+        // Add event listeners for delete and edit buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-id'));
+            deleteTransaction(id);
+          });
+        });
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-id'));
+            editTransaction(id);
+          });
+        });
+      }
+    }
+
+    // --- Calendar Functions ---
+
+    function getDailyProfitsForCalendar(filterWalletId = null) {
+        const dailyProfits = {};
+        const holdingsSnapshots = {}; // {date: {asset: {quantity: X, totalCost: Y}}}
+
+        // Replay transactions to get daily holdings and cost basis
+        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let currentHoldings = {}; // {asset: {quantity: X, totalCost: Y}}
+
+        // Initialize currentHoldings for all assets
+        Object.keys(allAssets).forEach(symbol => {
+            currentHoldings[symbol] = { quantity: 0, totalCost: 0 };
+        });
+
+        sortedTransactions.forEach(t => {
+            if (filterWalletId && t.wallet !== filterWalletId) return;
+
+            const date = t.date;
+            const asset = t.asset;
+            const amount = parseFloat(t.amount);
+            const price = parseFloat(t.price);
+
+            // Update holdings based on transaction
+            if (t.type === 'compra' || (t.type === 'ajuste_manual' && amount > 0)) {
+                currentHoldings[asset].quantity += amount;
+                currentHoldings[asset].totalCost += amount * price;
+            } else if (t.type === 'venta' || (t.type === 'ajuste_manual' && amount < 0)) {
+                const absAmount = Math.abs(amount);
+                if (currentHoldings[asset].quantity > 0) {
+                    const costPerUnit = currentHoldings[asset].totalCost / currentHoldings[asset].quantity;
+                    currentHoldings[asset].quantity -= absAmount;
+                    currentHoldings[asset].totalCost -= costPerUnit * absAmount;
+                } else {
+                    currentHoldings[asset].quantity -= absAmount;
+                    if (currentHoldings[asset].totalCost > 0) {
+                        currentHoldings[asset].totalCost = Math.max(0, currentHoldings[asset].totalCost - (price * absAmount));
+                    }
+                }
+            }
+
+            // Store a snapshot of holdings for this date
+            holdingsSnapshots[date] = JSON.parse(JSON.stringify(currentHoldings));
+        });
+
+        // Calculate daily change in unrealized profit
+        const allDatesInvolved = new Set(Object.keys(holdingsSnapshots));
+        transactions.forEach(t => allDatesInvolved.add(t.date)); // Ensure all transaction dates are covered
+
+        const sortedUniqueDates = Array.from(allDatesInvolved).sort();
+
+        let lastDayTotalUnrealizedProfit = 0; // Total unrealized profit at the end of the previous day
+
+        for (let i = 0; i < sortedUniqueDates.length; i++) {
+            const dateString = sortedUniqueDates[i];
+            const currentDate = new Date(dateString);
+            currentDate.setHours(0,0,0,0);
+
+            // Get the holdings for this date (or the most recent prior snapshot)
+            let effectiveHoldingsForToday = {};
+            for (let j = sortedDates.length - 1; j >= 0; j--) {
+                if (new Date(sortedDates[j]) <= currentDate) {
+                    effectiveHoldingsForToday = holdingsSnapshots[sortedDates[j]];
+                    break;
+                }
+            }
+
+            let totalUnrealizedProfitToday = 0;
+            Object.keys(effectiveHoldingsForToday).forEach(sym => {
+                const currentPrice = allAssets[sym]?.price || 0;
+                const quantity = effectiveHoldingsForToday[sym].quantity || 0;
+                const totalCost = effectiveHoldingsForToday[sym].totalCost || 0;
+                totalUnrealizedProfitToday += (quantity * currentPrice - totalCost);
+            });
+
+            // The daily profit is the change from the previous day's total unrealized profit
+            dailyProfits[dateString] = totalUnrealizedProfitToday - lastDayTotalUnrealizedProfit;
+            lastDayTotalUnrealizedProfit = totalUnrealizedProfitToday; // Update for next iteration
+        }
+
+        return dailyProfits;
+    }
+
+
+    function renderCalendar() {
+        const calendarGrid = document.getElementById('calendarGrid');
+        calendarGrid.innerHTML = ''; // Clear existing calendar
+        
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+        
+        document.getElementById('currentMonthYear').textContent = `${monthNames[month]} ${year}`;
+
+        // Get the first day of the month (0 = Sunday, 1 = Monday, ...)
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        // Get the number of days in the current month
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const filterWalletId = document.getElementById('walletFilterSelect').value;
+        const dailyProfits = getDailyProfitsForCalendar(filterWalletId === 'all' ? null : filterWalletId);
+
+        // Add empty cells for days before the 1st of the month
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'calendar-day empty';
+            calendarGrid.appendChild(emptyDiv);
+        }
+
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const profit = dailyProfits[dateString] || 0;
+            const profitClass = profit > 0 ? 'positive' : (profit < 0 ? 'negative' : 'zero');
+            const formattedProfit = formatCurrency(profit, 'USD'); // Display daily profit in USD
+
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'calendar-day';
+            dayDiv.innerHTML = `
+                <div class="calendar-day-number">${day}</div>
+                <div class="calendar-day-profit ${profitClass}">${formattedProfit}</div>
+            `;
+            calendarGrid.appendChild(dayDiv);
+        }
+    }
+
+    function changeMonth(delta) {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+        renderCalendar();
+    }
+
+    // --- Manage Assets Modal Functions ---
+    function renderManageAssetsList() {
+        const listContainer = document.getElementById('assetVisibilityList');
+        listContainer.innerHTML = ''; // Clear existing list
+
+        // Combine all assets and sort them alphabetically by name
+        const sortedAssets = Object.entries(allAssets).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+
+        sortedAssets.forEach(([symbol, details]) => {
+            const isChecked = visibleAssets.has(symbol);
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-2 bg-slate-600 rounded-lg';
+            div.innerHTML = `
+                <label for="toggle-${symbol}" class="flex items-center space-x-2 cursor-pointer flex-grow">
+                    <input type="checkbox" id="toggle-${symbol}" class="form-checkbox h-5 w-5 text-blue-600 rounded" ${isChecked ? 'checked' : ''} data-symbol="${symbol}">
+                    <span class="text-white">${details.name} (${symbol}) - ${details.type === 'crypto' ? 'Cripto' : 'Acción'}</span>
+                </label>
+            `;
+            listContainer.appendChild(div);
+        });
+
+        // Attach event listeners for checkboxes
+        listContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const symbol = e.target.dataset.symbol;
+                if (e.target.checked) {
+                    visibleAssets.add(symbol);
+                } else {
+                    visibleAssets.delete(symbol);
+                }
+                saveCustomData(); // Save changes immediately
+                updateAssetDisplay(); // Re-render dashboard/assets views
+            });
+        });
+    }
+
+    function addNewAsset() {
+        const symbol = document.getElementById('newAssetSymbol').value.toUpperCase().trim();
+        const name = document.getElementById('newAssetName').value.trim();
+        const type = document.getElementById('newAssetType').value;
+        const initialPrice = parseFloat(document.getElementById('newAssetInitialPrice').value);
+        const cedearRatio = parseFloat(document.getElementById('newAssetCedearRatio').value);
+        // Use the base64 string from the file input
+        const logo = currentNewAssetLogoBase64; 
+
+        if (!symbol || !name || isNaN(initialPrice) || initialPrice <= 0) {
+            showError('Por favor, completa Símbolo, Nombre y Precio Inicial válidos.');
+            return;
+        }
+        if (allAssets[symbol]) {
+            showError(`El activo con símbolo '${symbol}' ya existe.`);
+            return;
+        }
+
+        const newAsset = {
+            name: name,
+            symbol: symbol,
+            price: initialPrice,
+            change: 0,
+            type: type,
+            color: 'bg-indigo-500',
+            logo: logo // Store the base64 string
+        };
+
+        if (type === 'stock') {
+            newAsset.cedearRatio = isNaN(cedearRatio) || cedearRatio < 1 ? 1 : cedearRatio;
+        }
+
+        customAssets[symbol] = newAsset;
+        visibleAssets.add(symbol);
+        allAssets = { ...predefinedAssets, ...customAssets };
+
+        saveCustomData();
+        updateAssetDisplay();
+        updateTransactionFormPrice();
+        updateCryptoProfitList();
+        renderManageAssetsList();
+
+        // Clear form fields
+        document.getElementById('newAssetSymbol').value = '';
+        document.getElementById('newAssetName').value = '';
+        document.getElementById('newAssetInitialPrice').value = '';
+        document.getElementById('newAssetCedearRatio').value = '1';
+        document.getElementById('newAssetLogoFile').value = ''; // Clear file input
+        document.getElementById('newAssetLogoPreview').src = ''; // Clear preview
+        document.getElementById('newAssetLogoPreview').classList.add('hidden');
+        currentNewAssetLogoBase64 = ''; // Clear the global variable
+
+        showError(`Activo '${name}' (${symbol}) añadido con éxito.`);
+    }
+
+    // --- Adjust Balance Modal Functions ---
+    function openAdjustBalanceModal(targetAssetSymbol = null) {
+        const adjustAssetSelect = document.getElementById('adjustAssetSelect');
+        adjustAssetSelect.innerHTML = ''; // Clear existing options
+
+        Object.keys(allAssets).sort().forEach(symbol => {
+            const option = document.createElement('option');
+            option.value = symbol;
+            option.textContent = allAssets[symbol].name;
+            adjustAssetSelect.appendChild(option);
+        });
+
+        if (targetAssetSymbol && allAssets[targetAssetSymbol]) {
+            adjustAssetSelect.value = targetAssetSymbol;
+        } else if (targetAssetSymbol === 'totalUSD' || targetAssetSymbol === 'totalARS') {
+            adjustAssetSelect.value = 'USDT'; // Default to USDT for general currency adjustments
+        } else {
+            adjustAssetSelect.value = 'BTC'; // Default to BTC
+        }
+
+        document.getElementById('adjustAmount').value = '';
+        document.getElementById('adjustNote').value = '';
+        showModal('adjustBalanceModal');
+    }
+
+    function saveBalanceAdjustment() {
+        const asset = document.getElementById('adjustAssetSelect').value;
+        const amount = parseFloat(document.getElementById('adjustAmount').value);
+        const note = document.getElementById('adjustNote').value;
+
+        if (!asset || isNaN(amount) || amount === 0) {
+            showError('Por favor, selecciona un activo y una cantidad válida para ajustar.');
+            return;
+        }
+
+        const assetDetails = allAssets[asset];
+        if (!assetDetails) {
+            showError('Activo seleccionado no válido.');
+            return;
+        }
+
+        const priceAtAdjustment = assetDetails.price || 1; // Use 1 if price is 0 (e.g., for new custom assets)
+        const totalValue = Math.abs(amount) * priceAtAdjustment;
+
+        const transactionData = {
+            id: Date.now(),
+            type: 'ajuste_manual',
+            asset: asset,
+            amount: amount, // Can be positive or negative
+            price: priceAtAdjustment,
+            date: new Date().toISOString().split('T')[0],
+            total: totalValue, // Total value of the adjustment
+            timestamp: new Date().toISOString(),
+            note: note || `Ajuste manual de saldo (${amount > 0 ? 'añadido' : 'quitado'})`,
+            wallet: document.getElementById('walletFilterSelect').value === 'all' ? 'General' : document.getElementById('walletFilterSelect').value // Apply current wallet filter or default
+        };
+
+        transactions.unshift(transactionData);
+        saveTransactions();
+        updateBalances();
+        updateCharts();
+        updateTransactionHistory();
+        updateCryptoProfitList();
+        renderCalendar();
+        updateAssetDisplay(); // Re-render asset cards to show updated quantities
+        closeModal('adjustBalanceModal');
+        showError(`Saldo de ${assetDetails.name} ajustado con éxito.`);
+    }
+
+    // --- Custom Profit Currency Modal Functions ---
+    function openCustomProfitCurrencyModal(profitElementId) {
+        currentProfitElementId = profitElementId;
+        const customProfitAssetSelect = document.getElementById('customProfitAssetSelect');
+        customProfitAssetSelect.innerHTML = '';
+
+        // Add fiat options
+        ['USD', 'ARS', 'EUR', 'MXN', 'COP', 'BRL'].forEach(curr => {
+            const option = document.createElement('option');
+            option.value = curr;
+            option.textContent = curr;
+            customProfitAssetSelect.appendChild(option);
+        });
+
+        // Add all assets
+        Object.keys(allAssets).sort().forEach(symbol => {
+            const option = document.createElement('option');
+            option.value = symbol;
+            option.textContent = allAssets[symbol].name;
+            customProfitAssetSelect.appendChild(option);
+        });
+
+        // Pre-select current display currency if it's an asset
+        const currentCurrency = profitElementId === 'todayProfit' ? todayProfitDisplayCurrency : totalProfitDisplayCurrency;
+        customProfitAssetSelect.value = currentCurrency;
+
+        showModal('customProfitCurrencyModal');
+    }
+
+    function confirmCustomProfitCurrency() {
+        const selectedAssetSymbol = document.getElementById('customProfitAssetSelect').value;
+        if (currentProfitElementId) {
+            updateProfitDisplay(currentProfitElementId, selectedAssetSymbol);
+        }
+        closeModal('customProfitCurrencyModal');
+    }
+
+    // --- Wallet Management Functions ---
+    function renderWalletFilterAndTransactionDropdowns() {
+        const walletFilterSelect = document.getElementById('walletFilterSelect');
+        const transactionWalletSelect = document.getElementById('transactionWallet');
+
+        walletFilterSelect.innerHTML = '<option value="all">Todas las Carteras</option>';
+        transactionWalletSelect.innerHTML = '';
+
+        wallets.forEach(wallet => {
+            const filterOption = document.createElement('option');
+            filterOption.value = wallet.id;
+            filterOption.textContent = wallet.name;
+            walletFilterSelect.appendChild(filterOption);
+
+            const transactionOption = document.createElement('option');
+            transactionOption.value = wallet.id;
+            transactionOption.textContent = wallet.name;
+            transactionWalletSelect.appendChild(transactionOption);
+        });
+        walletFilterSelect.value = 'all'; // Default filter
+        transactionWalletSelect.value = 'General'; // Default transaction wallet
+    }
+
+    function openManageWalletsModal() {
+        // This modal will allow adding/removing wallets
+        const modalContent = document.querySelector('#manageAssetsModal .modal-content'); // Reusing the asset modal for simplicity
+        modalContent.innerHTML = `
+            <button class="modal-close text-gray-400 hover:text-white" onclick="closeModal('manageAssetsModal')">×</button>
+            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Gestionar Carteras</h2>
+
+            <div class="mb-6 bg-slate-700 p-4 rounded-lg shadow-inner">
+                <h3 class="text-xl font-semibold mb-3">Añadir Nueva Cartera</h3>
+                <input type="text" id="newWalletName" placeholder="Nombre de la Cartera (ej: Binance Wallet)" class="bg-slate-600 text-white px-3 py-2 rounded-lg border border-slate-500 focus:border-blue-500 focus:outline-none w-full mb-4" />
+                <button id="addNewWalletBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full">
+                    ➕ Añadir Cartera
+                </button>
+            </div>
+
+            <h3 class="text-xl font-semibold mb-3">Carteras Existentes</h3>
+            <div id="walletListForManagement" class="space-y-2 max-h-60 overflow-y-auto bg-slate-700 p-3 rounded-lg border border-slate-600">
+                <!-- Wallet list will be rendered here -->
+            </div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md w-full mt-4" onclick="closeModal('manageAssetsModal')">
+                Cerrar
+            </button>
+        `;
+        renderWalletListForManagement();
+        document.getElementById('addNewWalletBtn').addEventListener('click', addNewWallet);
+        showModal('manageAssetsModal');
+    }
+
+    function renderWalletListForManagement() {
+        const listContainer = document.getElementById('walletListForManagement');
+        listContainer.innerHTML = '';
+        wallets.forEach(wallet => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-2 bg-slate-600 rounded-lg';
+            div.innerHTML = `
+                <span class="text-white">${wallet.name}</span>
+                ${wallet.type !== 'default' ? `<button class="text-red-400 hover:text-red-200 ml-4" onclick="deleteWallet('${wallet.id}')">🗑️</button>` : ''}
+            `;
+            listContainer.appendChild(div);
+        });
+    }
+
+    function addNewWallet() {
+        const newWalletName = document.getElementById('newWalletName').value.trim();
+        if (!newWalletName) {
+            showError('Por favor, ingresa un nombre para la cartera.');
+            return;
+        }
+        if (wallets.some(w => w.name.toLowerCase() === newWalletName.toLowerCase())) {
+            showError('Ya existe una cartera con este nombre.');
+            return;
+        }
+        const newWalletId = `wallet_${Date.now()}`;
+        wallets.push({ id: newWalletId, name: newWalletName, type: 'custom' });
+        saveCustomData();
+        renderWalletFilterAndTransactionDropdowns(); // Update dropdowns
+        renderWalletListForManagement(); // Update list in modal
+        document.getElementById('newWalletName').value = ''; // Clear input
+        showError(`Cartera '${newWalletName}' añadida.`);
+    }
+
+    function deleteWallet(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar esta cartera? Las transacciones asociadas no se eliminarán, pero ya no estarán vinculadas a una cartera existente.')) {
+            wallets = wallets.filter(w => w.id !== id);
+            saveCustomData();
+            renderWalletFilterAndTransactionDropdowns();
+            renderWalletListForManagement();
+            showError('Cartera eliminada.');
+        }
+    }
+
+
+    // --- General Modal Functions ---
+    function showModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+        document.getElementById(modalId).classList.add('flex'); // Ensure it's flex for centering
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+        document.getElementById(modalId).classList.remove('flex');
+    }
+
+    // --- Dropdown Toggle Function ---
+    function toggleDropdown(button) {
+        const dropdown = button.closest('.dropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('active');
+        }
+    }
+
+    // Close dropdowns when clicking outside
+    window.addEventListener('click', function(event) {
+        document.querySelectorAll('.dropdown').forEach(dropdown => {
+            if (!dropdown.contains(event.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+    });
+
+    // --- Remunerated Accounts Section Functions ---
+    function renderRemuneratedAccounts() {
+        const listContainer = document.getElementById('remuneratedAccountsList');
+        listContainer.innerHTML = '';
+
+        if (remuneratedAccounts.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-8 text-slate-400">
+                    <span class="text-5xl mb-4 block opacity-50">💸</span>
+                    <p>No hay cuentas remuneradas registradas.</p>
+                </div>
+            `;
+            return;
+        }
+
+        remuneratedAccounts.forEach(account => {
+            const accountCard = document.createElement('div');
+            accountCard.className = 'bg-slate-700 rounded-xl p-4 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between';
+
+            // Get current display mode for this account
+            let displayMode = currentRemuneratedAccountDisplayMode[account.id] || 'ARS'; // Default to ARS
+
+            let balanceDisplay = '';
+            let dailyYieldDisplay = '';
+            let weeklyYieldDisplay = '';
+            let monthlyYieldDisplay = '';
+
+            // Calculate yields
+            const dailyYieldARS = (account.balanceARS * (account.apy / 100)) / 365;
+            const weeklyYieldARS = dailyYieldARS * 7;
+            const monthlyYieldARS = dailyYieldARS * (365 / 12);
+
+            const dailyYieldUSD = (account.balanceUSD * (account.apy / 100)) / 365;
+            const weeklyYieldUSD = dailyYieldUSD * 7;
+            const monthlyYieldUSD = dailyYieldUSD * (365 / 12);
+
+            if (displayMode === 'ARS') {
+                balanceDisplay = formatCurrency(account.balanceARS, 'ARS');
+                dailyYieldDisplay = formatCurrency(dailyYieldARS, 'ARS');
+                weeklyYieldDisplay = formatCurrency(weeklyYieldARS, 'ARS');
+                monthlyYieldDisplay = formatCurrency(monthlyYieldARS, 'ARS');
+            } else if (displayMode === 'USD') {
+                balanceDisplay = formatCurrency(account.balanceUSD, 'USD');
+                dailyYieldDisplay = formatCurrency(dailyYieldUSD, 'USD');
+                weeklyYieldDisplay = formatCurrency(weeklyYieldUSD, 'USD');
+                monthlyYieldDisplay = formatCurrency(monthlyYieldUSD, 'USD');
+            } else if (displayMode === 'Daily') {
+                balanceDisplay = `Diario: ${formatCurrency(dailyYieldARS, 'ARS')} / ${formatCurrency(dailyYieldUSD, 'USD')}`;
+            } else if (displayMode === 'Weekly') {
+                balanceDisplay = `Semanal: ${formatCurrency(weeklyYieldARS, 'ARS')} / ${formatCurrency(weeklyYieldUSD, 'USD')}`;
+            } else if (displayMode === 'Monthly') {
+                balanceDisplay = `Mensual: ${formatCurrency(monthlyYieldARS, 'ARS')} / ${formatCurrency(monthlyYieldUSD, 'USD')}`;
+            }
+
+            accountCard.innerHTML = `
+                <div class="flex items-center space-x-4 mb-2 sm:mb-0">
+                    <img src="${account.logo}" alt="${account.name} Logo" class="w-10 h-10 rounded-full object-cover" onerror="this.src='https://placehold.co/40x40/374151/FFFFFF?text=?'">
+                    <div>
+                        <div class="font-semibold text-xl">${account.name}</div>
+                        <div class="text-sm text-slate-400">APY: ${account.apy}%</div>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col items-end space-y-1">
+                    <div class="font-bold text-2xl text-blue-300">
+                        ${balanceDisplay}
+                    </div>
+                    <div class="text-sm text-slate-400">
+                        <button class="text-xs text-slate-300 hover:text-white px-1 py-0.5 rounded" onclick="toggleRemuneratedAccountDisplayMode('${account.id}', event)">
+                            ${displayMode === 'ARS' ? 'USD' : (displayMode === 'USD' ? 'Diario' : (displayMode === 'Daily' ? 'Semanal' : (displayMode === 'Weekly' ? 'Mensual' : 'ARS')))} ▼
+                        </button>
+                    </div>
+                    <div class="flex space-x-2 mt-2">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full text-sm" onclick="openRemuneratedAccountModal('${account.id}')">✏️ Editar</button>
+                        <button class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full text-sm" onclick="deleteRemuneratedAccount('${account.id}')">🗑️ Eliminar</button>
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(accountCard);
+        });
+    }
+
+    function toggleRemuneratedAccountDisplayMode(accountId, event) {
+        event.stopPropagation();
+        let currentMode = currentRemuneratedAccountDisplayMode[accountId] || 'ARS';
+        let nextMode;
+
+        if (currentMode === 'ARS') nextMode = 'USD';
+        else if (currentMode === 'USD') nextMode = 'Daily';
+        else if (currentMode === 'Daily') nextMode = 'Weekly';
+        else if (currentMode === 'Weekly') nextMode = 'Monthly';
+        else nextMode = 'ARS';
+
+        currentRemuneratedAccountDisplayMode[accountId] = nextMode;
+        renderRemuneratedAccounts(); // Re-render to update display
+    }
+
+    function openRemuneratedAccountModal(accountId = null) {
+        document.getElementById('remuneratedModalTitle').textContent = accountId ? 'Editar Cuenta' : 'Añadir Nueva Cuenta';
+        document.getElementById('editingRemuneratedAccountId').value = accountId || '';
+
+        if (accountId) {
+            const account = remuneratedAccounts.find(acc => acc.id === accountId);
+            if (account) {
+                document.getElementById('remuneratedAccountName').value = account.name;
+                document.getElementById('remuneratedAccountLogo').value = account.logo || '';
+                document.getElementById('remuneratedAccountBalanceARS').value = account.balanceARS;
+                document.getElementById('remuneratedAccountBalanceUSD').value = account.balanceUSD;
+                document.getElementById('remuneratedAccountAPY').value = account.apy;
+            }
+        } else {
+            // Clear form for new account
+            document.getElementById('remuneratedAccountName').value = '';
+            document.getElementById('remuneratedAccountLogo').value = '';
+            document.getElementById('remuneratedAccountBalanceARS').value = '0';
+            document.getElementById('remuneratedAccountBalanceUSD').value = '0';
+            document.getElementById('remuneratedAccountAPY').value = '0';
+        }
+        showModal('remuneratedAccountModal');
+    }
+
+    function saveRemuneratedAccount() {
+        const id = document.getElementById('editingRemuneratedAccountId').value;
+        const name = document.getElementById('remuneratedAccountName').value.trim();
+        const logo = document.getElementById('remuneratedAccountLogo').value.trim();
+        const balanceARS = parseFloat(document.getElementById('remuneratedAccountBalanceARS').value);
+        const balanceUSD = parseFloat(document.getElementById('remuneratedAccountBalanceUSD').value);
+        const apy = parseFloat(document.getElementById('remuneratedAccountAPY').value);
+
+        if (!name || isNaN(balanceARS) || isNaN(balanceUSD) || isNaN(apy)) {
+            showError('Por favor, completa todos los campos con valores válidos.');
+            return;
+        }
+
+        if (id) {
+            // Edit existing
+            const index = remuneratedAccounts.findIndex(acc => acc.id === id);
+            if (index !== -1) {
+                remuneratedAccounts[index] = { ...remuneratedAccounts[index], name, logo, balanceARS, balanceUSD, apy };
+            }
+            showError('Cuenta actualizada.');
+        } else {
+            // Add new
+            const newId = `rem_${Date.now()}`;
+            remuneratedAccounts.push({ id: newId, name, logo, balanceARS, balanceUSD, apy });
+            showError('Cuenta añadida.');
+        }
+        saveCustomData();
+        renderRemuneratedAccounts();
+        closeModal('remuneratedAccountModal');
+    }
+
+    function deleteRemuneratedAccount(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar esta cuenta remunerada?')) {
+            remuneratedAccounts = remuneratedAccounts.filter(acc => acc.id !== id);
+            saveCustomData();
+            renderRemuneratedAccounts();
+            showError('Cuenta eliminada.');
+        }
+    }
+
+
+    // --- New functions for Asset Details Modal ---
+
+    function openAssetDetailsModal(symbol) {
+        currentAssetChartSymbol = symbol; // Set for potential chart navigation
+        const assetDetails = allAssets[symbol];
+        if (!assetDetails) {
+            showError('Detalles del activo no encontrados.');
+            return;
+        }
+
+        document.getElementById('assetDetailsModalTitle').textContent = `${assetDetails.name} (${assetDetails.symbol})`;
+
+        // Populate Holdings Details
+        const holdings = calculateHoldingsAndCostBasis(document.getElementById('walletFilterSelect').value === 'all' ? null : document.getElementById('walletFilterSelect').value);
+        const assetHolding = holdings[symbol] || { quantity: 0, totalCost: 0 };
+        const currentPrice = assetDetails.price || 0;
+        const currentValue = assetHolding.quantity * currentPrice;
+        const unrealizedProfit = currentValue - assetHolding.totalCost;
+
+        const holdingsDetailsDiv = document.getElementById('assetHoldingsDetails');
+        holdingsDetailsDiv.innerHTML = `
+            <p><strong>Cantidad:</strong> ${assetHolding.quantity.toFixed(assetDetails.type === 'crypto' ? 6 : 4)} ${assetDetails.symbol}</p>
+            <p><strong>Costo Promedio:</strong> ${formatCurrency(assetHolding.totalCost > 0 && assetHolding.quantity > 0 ? assetHolding.totalCost / assetHolding.quantity : 0, 'USD')}</p>
+            <p><strong>Costo Total:</strong> ${formatCurrency(assetHolding.totalCost, 'USD')}</p>
+            <p><strong>Valor Actual:</strong> ${formatCurrency(currentValue, 'USD')}</p>
+            <p><strong>Profit No Realizado:</strong> <span class="${unrealizedProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${formatCurrency(unrealizedProfit, 'USD')}</span></p>
+        `;
+
+        // Fetch and render charts
+        const historicalPriceData = getHistoricalPriceData(symbol);
+        const historicalProfitData = getChartData(symbol, document.getElementById('walletFilterSelect').value === 'all' ? null : document.getElementById('walletFilterSelect').value);
+        const historicalQuantityData = getHistoricalQuantityData(symbol, document.getElementById('walletFilterSelect').value === 'all' ? null : document.getElementById('walletFilterSelect').value);
+
+        renderAssetCharts(symbol, historicalPriceData, historicalProfitData, historicalQuantityData);
+
+        showModal('assetDetailsModal');
+    }
+
+    // Simulate historical price data (for demonstration purposes)
+    function getHistoricalPriceData(symbol) {
+        const data = [];
+        const today = new Date();
+        const asset = allAssets[symbol];
+        if (!asset || asset.price === 0) return []; // Cannot simulate if no current price
+
+        let currentPrice = asset.price;
+        for (let i = 30; i >= 0; i--) { // Last 30 days
+            const date = new Date(today);
+            date.setDate(today.getDate() - i);
+            // Simple random walk for price
+            currentPrice = currentPrice * (1 + (Math.random() - 0.5) * 0.05); // +/- 2.5% daily fluctuation
+            currentPrice = Math.max(0.01, currentPrice); // Ensure price doesn't go below zero
+            data.push({ date: date.toISOString().split('T')[0], price: currentPrice });
+        }
+        return data;
+    }
+
+    // Calculate historical quantity data from transactions
+    function getHistoricalQuantityData(symbol, filterWalletId = null) {
+        const quantitySnapshots = {}; // {date: quantity}
+        const sortedTransactions = [...transactions].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let currentQuantity = 0;
+
+        sortedTransactions.forEach(t => {
+            if (t.asset !== symbol) return;
+            if (filterWalletId && t.wallet !== filterWalletId) return;
+
+            const date = t.date;
+            const amount = parseFloat(t.amount);
+
+            if (t.type === 'compra' || (t.type === 'ajuste_manual' && amount > 0)) {
+                currentQuantity += amount;
+            } else if (t.type === 'venta' || (t.type === 'ajuste_manual' && amount < 0)) {
+                currentQuantity -= Math.abs(amount);
+            }
+            quantitySnapshots[date] = currentQuantity;
+        });
+
+        const chartData = [];
+        const today = new Date();
+        const allDates = new Set(Object.keys(quantitySnapshots));
+        transactions.forEach(t => allDates.add(t.date)); // Ensure all transaction dates are considered
+
+        const sortedUniqueDates = Array.from(allDates).sort();
+
+        if (sortedUniqueDates.length > 0) {
+            const firstDate = new Date(sortedUniqueDates[0]);
+            let currentDate = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+            today.setHours(0,0,0,0);
+
+            let lastKnownQuantity = 0;
+            // Find the quantity on the day before the first transaction to start the chart from 0
+            const dayBeforeFirst = new Date(currentDate);
+            dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
+            chartData.push({ date: dayBeforeFirst.toISOString().split('T')[0], quantity: 0 });
+
+
+            while (currentDate <= today) {
+                const dateString = currentDate.toISOString().split('T')[0];
+                if (quantitySnapshots[dateString] !== undefined) {
+                    lastKnownQuantity = quantitySnapshots[dateString];
+                }
+                chartData.push({ date: dateString, quantity: lastKnownQuantity });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        } else {
+            chartData.push({ date: today.toISOString().split('T')[0], quantity: 0 });
+        }
+        return chartData;
+    }
+
+
+    function renderAssetCharts(symbol, priceHistory, profitHistory, quantityHistory) {
+        // Destroy previous charts if they exist
+        if (assetPriceChart) assetPriceChart.destroy();
+        if (assetProfitChart) assetProfitChart.destroy();
+        if (assetQuantityChart) assetQuantityChart.destroy();
+
+        const assetColor = allAssets[symbol]?.color || '#3B82F6';
+
+        // Price Chart
+        const ctxPrice = document.getElementById('assetPriceChart').getContext('2d');
+        assetPriceChart = new Chart(ctxPrice, {
+            type: 'line',
+            data: {
+                labels: priceHistory.map(d => d.date),
+                datasets: [{
+                    label: 'Precio (USD)',
+                    data: priceHistory.map(d => d.price),
+                    borderColor: assetColor,
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } },
+                    y: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } }
+                },
+                plugins: {
+                    tooltip: {
+                        backgroundColor: '#1F2937', borderColor: '#374151', borderWidth: 1, cornerRadius: 8,
+                        callbacks: { label: function(context) { return `Precio: ${formatCurrency(context.raw, 'USD')}`; } }
+                    },
+                    legend: { labels: { color: '#cbd5e0' } }
+                }
+            }
+        });
+
+        // Profit Chart
+        const ctxProfit = document.getElementById('assetProfitChart').getContext('2d');
+        assetProfitChart = new Chart(ctxProfit, {
+            type: 'line',
+            data: {
+                labels: profitHistory.map(d => d.fecha),
+                datasets: [{
+                    label: 'Profit (USD)',
+                    data: profitHistory.map(d => d.profit),
+                    borderColor: '#10B981', // Green for profit
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } },
+                    y: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } }
+                },
+                plugins: {
+                    tooltip: {
+                        backgroundColor: '#1F2937', borderColor: '#374151', borderWidth: 1, cornerRadius: 8,
+                        callbacks: { label: function(context) { return `Profit: ${formatCurrency(context.raw, 'USD')}`; } }
+                    },
+                    legend: { labels: { color: '#cbd5e0' } }
+                }
+            }
+        });
+
+        // Quantity Chart
+        const ctxQuantity = document.getElementById('assetQuantityChart').getContext('2d');
+        assetQuantityChart = new Chart(ctxQuantity, {
+            type: 'line',
+            data: {
+                labels: quantityHistory.map(d => d.date),
+                datasets: [{
+                    label: 'Cantidad',
+                    data: quantityHistory.map(d => d.quantity),
+                    borderColor: '#60A5FA', // Blue for quantity
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } },
+                    y: { grid: { color: '#374151' }, ticks: { color: '#cbd5e0' } }
+                },
+                plugins: {
+                    tooltip: {
+                        backgroundColor: '#1F2937', borderColor: '#374151', borderWidth: 1, cornerRadius: 8,
+                        callbacks: { label: function(context) { return `Cantidad: ${context.raw.toFixed(allAssets[symbol]?.type === 'crypto' ? 6 : 4)}`; } }
+                    },
+                    legend: { labels: { color: '#cbd5e0' } }
+                }
+            }
+        });
+    }
+
+
+    // --- Event Listeners ---
+
+    // Main Section Navigation
+    document.getElementById('mainInvestmentsBtn').addEventListener('click', () => {
+        currentMainSection = 'investments';
+        document.getElementById('investmentsSection').classList.remove('hidden');
+        document.getElementById('remuneratedAccountsSection').classList.add('hidden');
+        document.getElementById('mainInvestmentsBtn').classList.add('active');
+        document.getElementById('mainRemuneratedAccountsBtn').classList.remove('active');
+        // Ensure investment sub-view is correct
+        document.getElementById(`${currentInvestmentView}View`).classList.remove('hidden');
+    });
+
+    document.getElementById('mainRemuneratedAccountsBtn').addEventListener('click', () => {
+        currentMainSection = 'remunerated';
+        document.getElementById('remuneratedAccountsSection').classList.remove('hidden');
+        document.getElementById('investmentsSection').classList.add('hidden');
+        document.getElementById('mainRemuneratedAccountsBtn').classList.add('active');
+        document.getElementById('mainInvestmentsBtn').classList.remove('active');
+        renderRemuneratedAccounts(); // Render accounts when switching to this section
+    });
+
+
+    // Investment Section Navigation buttons
+    document.getElementById('dashboardBtn').addEventListener('click', () => {
+      currentInvestmentView = 'dashboard';
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('assetsView').classList.add('hidden');
+      document.getElementById('profitView').classList.add('hidden');
+      document.getElementById('historyView').classList.add('hidden');
+      document.getElementById('chartsView').classList.add('hidden');
+      // Update button styles
+      document.querySelectorAll('#investmentsSection .nav-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('dashboardBtn').classList.add('active');
+    });
+
+    document.getElementById('assetsBtn').addEventListener('click', () => {
+      currentInvestmentView = 'assets';
+      document.getElementById('assetsView').classList.remove('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('profitView').classList.add('hidden');
+      document.getElementById('historyView').classList.add('hidden');
+      document.getElementById('chartsView').classList.add('hidden');
+      // Update button styles
+      document.querySelectorAll('#investmentsSection .nav-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('assetsBtn').classList.add('active');
+      updateAssetDisplay(); // Re-render asset cards
+    });
+
+    document.getElementById('profitBtn').addEventListener('click', () => {
+      currentInvestmentView = 'profit';
+      document.getElementById('profitView').classList.remove('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('assetsView').classList.add('hidden');
+      document.getElementById('historyView').classList.add('hidden');
+      document.getElementById('chartsView').classList.add('hidden');
+      // Update button styles
+      document.querySelectorAll('#investmentsSection .nav-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('profitBtn').classList.add('active');
+      updateCryptoProfitList(); // Ensure profit list is up-to-date
+    });
+
+    document.getElementById('historyBtn').addEventListener('click', () => {
+      currentInvestmentView = 'history';
+      document.getElementById('historyView').classList.remove('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('assetsView').classList.add('hidden');
+      document.getElementById('profitView').classList.add('hidden');
+      document.getElementById('chartsView').classList.add('hidden');
+      // Update button styles
+      document.querySelectorAll('#investmentsSection .nav-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('historyBtn').classList.add('active');
+      updateTransactionHistory(); // Ensure history is up-to-date
+    });
+
+    document.getElementById('chartsBtn').addEventListener('click', () => {
+      currentInvestmentView = 'charts';
+      document.getElementById('chartsView').classList.remove('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('assetsView').classList.add('hidden');
+      document.getElementById('profitView').classList.add('hidden');
+      document.getElementById('historyView').classList.add('hidden');
+      // Update button styles
+      document.querySelectorAll('#investmentsSection .nav-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('chartsBtn').classList.add('active');
+      updateCharts(); // Ensure charts are up-to-date (will show overall by default or specific if set)
+      renderCalendar(); // Ensure calendar is up-to-date
+    });
+
+    // Investment Section specific listeners
+    document.getElementById('walletFilterSelect').addEventListener('change', () => {
+        updateAssetDisplay();
+        updateTransactionHistory();
+        updateCryptoProfitList();
+        renderCalendar();
+        updateCharts(); // Re-render charts with new wallet filter
+    });
+
+    document.getElementById('transactionAsset').addEventListener('change', (e) => {
+      selectedAsset = e.target.value;
+      updateTransactionFormPrice();
+    });
+
+    document.getElementById('transactionType').addEventListener('change', (e) => {
+      // No specific logic needed here for newTransaction.type, it's read directly on save.
+    });
+
+    document.getElementById('transactionAmount').addEventListener('input', (e) => {
+      // No specific logic needed here for newTransaction.amount, it's read directly on save.
+    });
+
+    document.getElementById('transactionPrice').addEventListener('input', (e) => {
+      // No specific logic needed here for newTransaction.price, it's read directly on save.
+    });
+
+    document.getElementById('transactionDate').addEventListener('input', (e) => {
+      // No specific logic needed here for newTransaction.date, it's read directly on save.
+    });
+
+    document.getElementById('transactionNote').addEventListener('input', (e) => {
+        // No specific logic needed here for newTransaction.note, it's read directly on save.
+    });
+
+    document.getElementById('transactionWallet').addEventListener('change', (e) => {
+        // No specific logic needed here, wallet is read directly on save.
+    });
+
+    document.getElementById('addTransaction').addEventListener('click', saveOrUpdateTransaction);
+    document.getElementById('cancelEdit').addEventListener('click', cancelEdit);
+    document.getElementById('refreshPrices').addEventListener('click', fetchAssetPrices);
+    document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+    document.getElementById('showOverallChartsBtn').addEventListener('click', showOverallCharts);
+    document.getElementById('manageAssetsBtn').addEventListener('click', () => {
+        renderManageAssetsList();
+        showModal('manageAssetsModal');
+    });
+    document.getElementById('addNewAssetBtn').addEventListener('click', addNewAsset);
+    document.getElementById('saveAdjustBalanceBtn').addEventListener('click', saveBalanceAdjustment);
+    document.getElementById('confirmCustomProfitCurrencyBtn').addEventListener('click', confirmCustomProfitCurrency);
+    document.getElementById('manageWalletsBtn').addEventListener('click', openManageWalletsModal);
+
+    // Remunerated Accounts Section Listeners
+    document.getElementById('addRemuneratedAccountBtn').addEventListener('click', () => openRemuneratedAccountModal(null));
+    document.getElementById('saveRemuneratedAccountBtn').addEventListener('click', saveRemuneratedAccount);
+
+    // Event listener for newAssetLogoFile input
+    document.addEventListener('DOMContentLoaded', () => {
+        const newAssetLogoFileInput = document.getElementById('newAssetLogoFile');
+        if (newAssetLogoFileInput) {
+            newAssetLogoFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        currentNewAssetLogoBase64 = e.target.result;
+                        const preview = document.getElementById('newAssetLogoPreview');
+                        preview.src = currentNewAssetLogoBase64;
+                        preview.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    const preview = document.getElementById('newAssetLogoPreview');
+                    preview.src = '';
+                    preview.classList.add('hidden');
+                    currentNewAssetLogoBase64 = '';
+                }
+            });
+        }
+    });
+
+
+    // --- PWA Service Worker Registration (kept as is) ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service Worker registrado'))
+          .catch(err => console.error('Error al registrar Service Worker:', err));
+      });
+    }
+
+    // --- Initial Setup on Page Load ---
+    window.onload = function() {
+        loadCustomData(); // Load custom assets, visibility, wallets, and remunerated accounts
+        loadTransactions(); // Load investment transactions
+        document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0]; // Set default date
+        fetchAssetPrices(); // Fetch initial prices for all assets
+        setInterval(fetchAssetPrices, 60000); // Refresh prices every 60 seconds
+        updateAssetDisplay(); // Initial render of asset cards
+        renderCalendar(); // Initial render of the calendar
+        updateProfitDisplay('todayProfit', todayProfitDisplayCurrency); // Initial profit display
+        updateProfitDisplay('totalProfit', totalProfitDisplayCurrency);
+        renderWalletFilterAndTransactionDropdowns(); // Populate wallet dropdowns
+
+        // Ensure the correct main section is shown on load
+        if (currentMainSection === 'investments') {
+            document.getElementById('mainInvestmentsBtn').click();
+            document.getElementById('dashboardBtn').click(); // Default to dashboard view within investments
+        } else {
+            document.getElementById('mainRemuneratedAccountsBtn').click();
+        }
+    };
+  </script>
+</body>
+</html>
+
