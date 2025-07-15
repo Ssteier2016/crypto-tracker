@@ -893,8 +893,13 @@
                 }
             }
             holdings[t.crypto].transactions.push(t);
-        });
 
+            // [DEBUG] Snap amount to zero if it's very close to zero due to floating point inaccuracies
+            if (Math.abs(holdings[t.crypto].amount) < 0.000000000000000001) {
+                holdings[t.crypto].amount = 0;
+            }
+        });
+        console.log('[DEBUG] Holdings calculados:', holdings); // Debugging line
         return holdings;
     }
 
@@ -965,20 +970,14 @@
         let hasHoldings = false;
         Object.entries(holdings).forEach(([coingeckoId, data]) => {
             // Only display if there's a positive amount or if there are transactions for it (even if amount is 0)
-            if (data.amount > 0 || (transactions.some(t => t.crypto === coingeckoId && (filterWalletId === 'all' || t.wallet === filterWalletId)))) {
+            console.log(`[DEBUG] Procesando ${coingeckoId}: data.amount = ${data.amount}, data.transactions.length = ${data.transactions.length}`); // Debugging line
+            if (data.amount > 0 || data.transactions.length > 0) { // Simplified condition for clarity
                 hasHoldings = true;
                 const crypto = userCryptos.find(c => c.coingeckoId === coingeckoId);
                 const currentPrice = cryptoPrices[coingeckoId]?.usd || 0;
                 const valueUSD = data.amount * currentPrice;
 
-                // Profit calculation: (Current Price - Average Purchase Price) * Quantity
-                // For unrealized profit, we need to consider the original amount and leverage
-                // We need to re-calculate average cost based on the "real" amount that went into holdings
-                const averagePurchasePrice = data.amount > 0 ? data.totalInvested / data.amount : 0;
-                
-                // The profit calculation needs to be based on the *original* amount and leverage,
-                // not the adjusted `data.amount` which is the real holding.
-                // We need to iterate through transactions to get the effective "exposure"
+                // Profit calculation for display in card (Unrealized Profit)
                 let totalEffectiveExposure = 0; // The sum of originalAmount * leverage for buys
                 let totalEffectiveInvested = 0; // The sum of (originalAmount * price) for buys, adjusted by leverage
                 
@@ -995,7 +994,6 @@
                         totalEffectiveInvested += (t.originalAmount * t.originalPrice); // Total USD spent on the "notional" amount
                     } else if (t.type === 'venta') {
                         // For sales, we need to reduce the effective exposure and invested amount
-                        // This is a simplified approach; a full P&L system would match buys and sells
                         if (totalEffectiveExposure > 0) {
                             const avgCostPerNotionalUnit = totalEffectiveInvested / totalEffectiveExposure;
                             totalEffectiveExposure -= t.originalAmount * t.leverage;
@@ -1006,39 +1004,47 @@
 
                 let profit = 0;
                 if (totalEffectiveExposure > 0) {
-                    const averageEntryPrice = totalEffectiveInvested / (totalEffectiveExposure / (relevantTransactions.find(t => t.crypto === coingeckoId)?.leverage || 1)); // Average price per original unit
-                    profit = (currentPrice - averageEntryPrice) * totalEffectiveExposure;
-                } else if (totalEffectiveExposure < 0.000000000000000001 && totalEffectiveExposure > -0.000000000000000001) { // Near zero
+                    const averageEntryPricePerNotionalUnit = totalEffectiveInvested / totalEffectiveExposure; // Corrected calculation
+                    profit = (currentPrice - averageEntryPricePerNotionalUnit) * totalEffectiveExposure;
+                } else if (Math.abs(totalEffectiveExposure) < 0.000000000000000001) { // Snap to zero if very close
                     profit = 0;
                 }
 
                 const profitClass = profit >= 0 ? 'text-green-400' : 'text-red-400';
                 const profitSymbol = profit >= 0 ? '▲' : '▼'; // Triangle for profit direction
 
-                div.innerHTML = `
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            ${crypto?.imageUrl ? `<img src="${crypto.imageUrl}" class="crypto-card-image" alt="${crypto.name}">` : `<span class="text-3xl">${crypto?.symbol || '?'}</span>`}
-                            <div class="font-semibold text-xl">${crypto?.name || coingeckoId.toUpperCase()}</div>
+                try {
+                    const div = document.createElement('div');
+                    div.className = 'bg-slate-700 rounded-xl p-4 shadow-md transition-transform transform hover:scale-105 cursor-pointer';
+                    div.setAttribute('data-coingecko-id', coingeckoId); // Store ID for click
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                ${crypto?.imageUrl ? `<img src="${crypto.imageUrl}" class="crypto-card-image" alt="${crypto.name}">` : `<span class="text-3xl">${crypto?.symbol || '?'}</span>`}
+                                <div class="font-semibold text-xl">${crypto?.name || coingeckoId.toUpperCase()}</div>
+                            </div>
+                            <div class="text-xs text-slate-400">
+                                USD ${currentPrice.toFixed(2)}
+                                <span class="${(cryptoPrices[coingeckoId]?.change || 0) >= 0 ? 'text-green-400' : 'text-red-400'}">
+                                    ${(cryptoPrices[coingeckoId]?.change || 0).toFixed(2)}%
+                                </span>
+                            </div>
                         </div>
-                        <div class="text-xs text-slate-400">
-                            USD ${currentPrice.toFixed(2)}
-                            <span class="${(cryptoPrices[coingeckoId]?.change || 0) >= 0 ? 'text-green-400' : 'text-red-400'}">
-                                ${(cryptoPrices[coingeckoId]?.change || 0).toFixed(2)}%
-                            </span>
+                        <div class="text-xl font-bold mb-1" id="holding-quantity-${coingeckoId}">
+                            Cantidad Real: ${formatCrypto(data.amount, crypto?.symbol || '?')}
                         </div>
-                    </div>
-                    <div class="text-xl font-bold mb-1" id="holding-quantity-${coingeckoId}">
-                        Cantidad Real: ${formatCrypto(data.amount, crypto?.symbol || '?')}
-                    </div>
-                    <div class="text-base text-slate-300">
-                        Valor Real: ${formatCurrency(valueUSD, 'USD', false)}
-                    </div>
-                    <div class="text-base font-bold ${profitClass} mt-2">
-                        Profit No Realizado: ${profitSymbol} ${formatCurrency(profit, 'USD', true)}
-                    </div>
-                `;
-                cryptoHoldingsGrid.appendChild(div);
+                        <div class="text-base text-slate-300">
+                            Valor Real: ${formatCurrency(valueUSD, 'USD', false)}
+                        </div>
+                        <div class="text-base font-bold ${profitClass} mt-2">
+                            Profit No Realizado: ${profitSymbol} ${formatCurrency(profit, 'USD', true)}
+                        </div>
+                    `;
+                    cryptoHoldingsGrid.appendChild(div);
+                    console.log(`[DEBUG] Tarjeta para ${coingeckoId} creada y añadida.`); // Debugging line
+                } catch (e) {
+                    console.error("Error al crear la tarjeta de activo de cripto:", e, "ID de cripto:", coingeckoId, "Datos:", data); // Debugging line
+                }
             }
         });
 
@@ -1049,6 +1055,7 @@
                     <p>No tienes activos registrados en la cartera seleccionada. ¡Registra una transacción!</p>
                 </div>
             `;
+            console.log('[DEBUG] No hay activos para mostrar, se muestra el mensaje de vacío.'); // Debugging line
         }
 
         // Add event listeners for single and double click
@@ -1124,7 +1131,7 @@
                     currentNotionalHolding.notionalAmount -= effectiveAmount;
                     currentNotionalHolding.notionalInvested -= (effectiveAmount * averagePurchasePricePerNotionalUnit);
 
-                    if (currentNotionalHolding.notionalAmount < 0.000000000000000001 && currentNotionalHolding.notionalAmount > -0.000000000000000001) {
+                    if (Math.abs(currentNotionalHolding.notionalAmount) < 0.000000000000000001) { // Snap to zero if very close
                         currentNotionalHolding.notionalAmount = 0;
                         currentNotionalHolding.notionalInvested = 0;
                     }
@@ -1157,8 +1164,7 @@
                         const avgCostPerNotionalUnit = currentNotionalInvested / currentNotionalAmount;
                         currentNotionalAmount -= effectiveAmount;
                         currentNotionalInvested -= (effectiveAmount * avgCostPerNotionalUnit);
-
-                        if (currentNotionalAmount < 0.000000000000000001 && currentNotionalAmount > -0.000000000000000001) {
+                        if (Math.abs(currentNotionalAmount) < 0.000000000000000001) { // Snap to zero if very close
                             currentNotionalAmount = 0;
                             currentNotionalInvested = 0;
                         }
@@ -1175,6 +1181,8 @@
             totalUnrealizedProfit += profit;
         });
 
+        console.log('[DEBUG] Profit total no realizado:', totalUnrealizedProfit); // Debugging line
+        console.log('[DEBUG] Profit total realizado:', totalRealizedProfit); // Debugging line
         return {
             totalUnrealizedProfit: totalUnrealizedProfit,
             totalRealizedProfit: totalRealizedProfit,
@@ -1219,7 +1227,7 @@
                         const avgCostPerNotionalUnit = currentNotionalInvested / currentNotionalAmount;
                         currentNotionalAmount -= effectiveAmount;
                         currentNotionalInvested -= (effectiveAmount * avgCostPerNotionalUnit);
-                        if (currentNotionalAmount < 0.000000000000000001 && currentNotionalAmount > -0.000000000000000001) {
+                        if (Math.abs(currentNotionalAmount) < 0.000000000000000001) { // Snap to zero if very close
                             currentNotionalAmount = 0;
                             currentNotionalInvested = 0;
                         }
@@ -1461,11 +1469,15 @@
             }
         }
 
-        // Ensure netAmount doesn't go below zero
-        if (netAmount < 0) {
+        // Ensure netAmount doesn't go below zero (or very close to zero)
+        if (netAmount < 0 && Math.abs(netAmount) > 0.000000000000000001) { // Allow very small negative due to precision, but warn if significant
             showError('La cantidad neta de cripto no puede ser negativa después de la comisión. Ajusta los valores.');
             return;
         }
+        if (Math.abs(netAmount) < 0.000000000000000001) { // Snap to zero if very close
+            netAmount = 0;
+        }
+
 
         const transactionData = {
             type: transactionType,
@@ -1502,6 +1514,7 @@
         saveState(); // Save to localStorage
         clearTransactionForm(); // Clear form inputs
         updateAllUI(); // Update all displays
+        console.log('[DEBUG] Transacción guardada:', transactionData); // Debugging line
     }
 
     // Clears the transaction form inputs
@@ -1704,7 +1717,7 @@
         }
 
         manualBalances[normalizedName] -= amount;
-        if (manualBalances[normalizedName] < 0.000001 && manualBalances[normalizedName] > -0.000001) { // Handle floating point precision for near zero
+        if (Math.abs(manualBalances[normalizedName]) < 0.000001) { // Handle floating point precision for near zero
             delete manualBalances[normalizedName];
         }
         saveState(); // Save updated list
@@ -1776,13 +1789,9 @@
             let profitContribution = 0;
             
             // Calculate profit contribution considering leverage
-            const currentPrice = cryptoPrices[t.crypto]?.usd || 0;
-            const effectiveAmount = t.originalAmount * t.leverage;
-            const effectiveInvested = t.originalAmount * t.originalPrice;
-
+            // For a buy, the 'profit' on that day is negative, representing the cost
+            // We use the 'total' field which already includes commission in USD.
             if (t.type === 'compra') {
-                // For a buy, the 'profit' on that day is negative, representing the cost
-                // We use the 'total' field which already includes commission in USD.
                 profitContribution = -t.total; 
             } else if (t.type === 'venta') {
                 // For a sale, the 'profit' is the revenue, adjusted by commission if in USD.
@@ -2133,7 +2142,7 @@
                     const avgCostPerNotionalUnit = totalInvestedNotional / currentNotionalAmount;
                     currentNotionalAmount -= effectiveAmount;
                     totalInvestedNotional -= (effectiveAmount * avgCostPerNotionalUnit);
-                    if (currentNotionalAmount < 0.000000000000000001 && currentNotionalAmount > -0.000000000000000001) {
+                    if (Math.abs(currentNotionalAmount) < 0.000000000000000001) { // Snap to zero if very close
                         currentNotionalAmount = 0;
                         totalInvestedNotional = 0;
                     }
@@ -2282,7 +2291,7 @@
                             const avgCostPerNotionalUnit = tempNotionalInvested / tempNotionalAmount;
                             tempNotionalAmount -= effectiveAmount;
                             tempNotionalInvested -= (effectiveAmount * avgCostPerNotionalUnit);
-                            if (tempNotionalAmount < 0.000000000000000001 && tempNotionalAmount > -0.000000000000000001) {
+                            if (Math.abs(tempNotionalAmount) < 0.000000000000000001) {
                                 tempNotionalAmount = 0;
                                 tempNotionalInvested = 0;
                             }
