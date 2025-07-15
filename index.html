@@ -315,7 +315,7 @@
           <select id="transactionCrypto" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
             <!-- Cryptos will be added here dynamically -->
           </select>
-          <input id="transactionAmount" type="number" placeholder="Cantidad" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
+          <input id="transactionAmount" type="number" placeholder="Cantidad (Nocional)" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
           <input id="transactionPrice" type="number" placeholder="Precio (USD)" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" min="0" />
           <input id="transactionDate" type="date" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none" value="" />
           <select id="transactionWallet" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
@@ -624,7 +624,7 @@
         // Backfill originalAmount, originalPrice and leverage for old transactions if they don't exist
         transactions = transactions.map(t => ({
             ...t,
-            originalAmount: t.originalAmount !== undefined ? t.originalAmount : t.amount,
+            originalAmount: t.originalAmount !== undefined ? t.originalAmount : t.amount, // originalAmount is now the NOTIONAL amount
             originalPrice: t.originalPrice !== undefined ? t.originalPrice : t.price,
             leverage: t.leverage !== undefined ? t.leverage : 1 // Default leverage to 1 if not present
         }));
@@ -852,7 +852,7 @@
         userCryptos.forEach(crypto => {
             holdings[crypto.coingeckoId] = {
                 amount: 0,
-                totalInvested: 0, // Total USD invested in this crypto
+                totalInvested: 0, // Total USD invested in this crypto (real capital)
                 transactions: [], // All transactions related to this crypto
                 symbol: crypto.symbol,
                 name: crypto.name,
@@ -873,15 +873,13 @@
                 holdings[t.crypto] = { amount: 0, totalInvested: 0, transactions: [], symbol: '?', name: t.crypto, imageUrl: '', description: '' };
             }
 
-            // Use the 'amount' and 'total' fields directly, as they now represent the net values
-            // Note: t.amount here is the *net* amount after leverage and commission
+            // t.amount is the real amount, t.total is the real USD capital moved
             if (t.type === 'compra') {
                 holdings[t.crypto].amount += t.amount;
                 holdings[t.crypto].totalInvested += t.total;
             } else if (t.type === 'venta') {
                 holdings[t.crypto].amount -= t.amount;
-                // Adjust total invested proportionally for sales
-                // Use the original totalInvested before this sale to calculate the average cost
+                // Adjust total invested proportionally for sales based on average real cost
                 const originalTotalInvested = holdings[t.crypto].totalInvested;
                 const originalAmount = holdings[t.crypto].amount + t.amount; // Amount before this sale
 
@@ -899,7 +897,7 @@
                 holdings[t.crypto].amount = 0;
             }
         });
-        console.log('[DEBUG] Holdings calculados:', holdings); // Debugging line
+        console.log('[DEBUG] Holdings calculados (cantidad real y capital real):', holdings); // Debugging line
         return holdings;
     }
 
@@ -975,38 +973,44 @@
                 hasHoldings = true;
                 const crypto = userCryptos.find(c => c.coingeckoId === coingeckoId);
                 const currentPrice = cryptoPrices[coingeckoId]?.usd || 0;
-                const valueUSD = data.amount * currentPrice;
+                const valueUSD = data.amount * currentPrice; // Value based on real amount
 
                 // Profit calculation for display in card (Unrealized Profit)
-                let totalEffectiveExposure = 0; // The sum of originalAmount * leverage for buys
-                let totalEffectiveInvested = 0; // The sum of (originalAmount * price) for buys, adjusted by leverage
+                // This needs to be based on the NOTIONAL exposure and NOTIONAL cost
+                let currentNotionalExposure = 0; // Sum of originalAmount for remaining "open" notional positions
+                let currentNotionalCost = 0; // Sum of (originalAmount * originalPrice) for remaining "open" notional positions
                 
-                // Filter transactions relevant to this crypto and wallet
                 const relevantTransactions = transactions.filter(t => 
                     t.crypto === coingeckoId && 
                     (filterWalletId === 'all' || t.wallet === filterWalletId)
-                );
+                ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // Sort chronologically
 
-                // Calculate effective exposure for unrealized profit
                 relevantTransactions.forEach(t => {
+                    // Here, t.originalAmount is the NOTIONAL amount the user intended to trade with.
+                    const transactionNotionalExposure = t.originalAmount; 
+                    const transactionNotionalCost = t.originalAmount * t.originalPrice;
+
                     if (t.type === 'compra') {
-                        totalEffectiveExposure += t.originalAmount * t.leverage;
-                        totalEffectiveInvested += (t.originalAmount * t.originalPrice); // Total USD spent on the "notional" amount
+                        currentNotionalExposure += transactionNotionalExposure;
+                        currentNotionalCost += transactionNotionalCost;
                     } else if (t.type === 'venta') {
-                        // For sales, we need to reduce the effective exposure and invested amount
-                        if (totalEffectiveExposure > 0) {
-                            const avgCostPerNotionalUnit = totalEffectiveInvested / totalEffectiveExposure;
-                            totalEffectiveExposure -= t.originalAmount * t.leverage;
-                            totalEffectiveInvested -= (t.originalAmount * t.leverage * avgCostPerNotionalUnit);
+                        if (currentNotionalExposure > 0) {
+                            const avgCostPerNotionalExposureUnit = currentNotionalCost / currentNotionalExposure;
+                            currentNotionalExposure -= transactionNotionalExposure;
+                            currentNotionalCost -= (transactionNotionalExposure * avgCostPerNotionalExposureUnit);
+                            if (Math.abs(currentNotionalExposure) < 0.000000000000000001) { // Snap to zero if very close
+                                currentNotionalExposure = 0;
+                                currentNotionalCost = 0;
+                            }
                         }
                     }
                 });
 
                 let profit = 0;
-                if (totalEffectiveExposure > 0) {
-                    const averageEntryPricePerNotionalUnit = totalEffectiveInvested / totalEffectiveExposure; // Corrected calculation
-                    profit = (currentPrice - averageEntryPricePerNotionalUnit) * totalEffectiveExposure;
-                } else if (Math.abs(totalEffectiveExposure) < 0.000000000000000001) { // Snap to zero if very close
+                if (currentNotionalExposure > 0) {
+                    const averageEntryPricePerNotionalExposureUnit = currentNotionalCost / currentNotionalExposure;
+                    profit = (currentPrice - averageEntryPricePerNotionalExposureUnit) * currentNotionalExposure;
+                } else if (Math.abs(currentNotionalExposure) < 0.000000000000000001) { // Snap to zero if very close
                     profit = 0;
                 }
 
@@ -1041,7 +1045,7 @@
                         </div>
                     `;
                     cryptoHoldingsGrid.appendChild(div);
-                    console.log(`[DEBUG] Tarjeta para ${coingeckoId} creada y añadida.`); // Debugging line
+                    console.log(`[DEBUG] Tarjeta para ${coingeckoId} creada y añadida. Profit No Realizado: ${profit}`); // Debugging line
                 } catch (e) {
                     console.error("Error al crear la tarjeta de activo de cripto:", e, "ID de cripto:", coingeckoId, "Datos:", data); // Debugging line
                 }
@@ -1084,13 +1088,13 @@
         let totalRealizedProfit = 0;
         let cryptoRealizedProfits = {}; // { coingeckoId: realizedProfit }
 
-        // Temporary holdings to calculate average cost chronologically, considering leverage for profit
-        let tempNotionalHoldings = {}; // { coingeckoId: { notionalAmount: X, notionalInvested: Y } }
+        // Temporary holdings to calculate average notional cost chronologically for realized profit
+        let tempNotionalExposureTracker = {}; // { coingeckoId: { exposure: X, cost: Y } }
 
-        // Initialize cryptoRealizedProfits and tempNotionalHoldings for all user cryptos
+        // Initialize cryptoRealizedProfits and tempNotionalExposureTracker for all user cryptos
         userCryptos.forEach(crypto => {
             cryptoRealizedProfits[crypto.coingeckoId] = 0;
-            tempNotionalHoldings[crypto.coingeckoId] = { notionalAmount: 0, notionalInvested: 0 };
+            tempNotionalExposureTracker[crypto.coingeckoId] = { exposure: 0, cost: 0 };
         });
 
         // Sort transactions chronologically
@@ -1105,68 +1109,69 @@
 
         sortedTransactions.forEach(t => {
             const cryptoId = t.crypto;
-            const currentNotionalHolding = tempNotionalHoldings[cryptoId];
+            const currentExposureTracker = tempNotionalExposureTracker[cryptoId];
 
-            if (!currentNotionalHolding) {
+            if (!currentExposureTracker) {
                 return; // Skip if crypto not found (e.g., removed)
             }
 
-            // The effective amount for profit calculation is originalAmount * leverage
-            const effectiveAmount = t.originalAmount * t.leverage;
-            // The effective invested amount for profit calculation is originalAmount * originalPrice
-            const effectiveInvested = t.originalAmount * t.originalPrice;
+            // The effective notional exposure for profit calculation is t.originalAmount
+            const transactionNotionalExposure = t.originalAmount;
+            // The cost associated with that notional exposure
+            const transactionNotionalCost = t.originalAmount * t.originalPrice;
 
             if (t.type === 'compra') {
-                currentNotionalHolding.notionalAmount += effectiveAmount;
-                currentNotionalHolding.notionalInvested += effectiveInvested;
+                currentExposureTracker.exposure += transactionNotionalExposure;
+                currentExposureTracker.cost += transactionNotionalCost;
             } else if (t.type === 'venta') {
-                if (currentNotionalHolding.notionalAmount > 0) {
-                    const averagePurchasePricePerNotionalUnit = currentNotionalHolding.notionalInvested / currentNotionalHolding.notionalAmount;
-                    // Realized profit is (Sale Price per unit - Average Purchase Price per unit) * Effective Amount Sold
-                    const profitFromSale = (t.originalPrice - averagePurchasePricePerNotionalUnit) * effectiveAmount;
+                if (currentExposureTracker.exposure > 0) {
+                    const averageCostPerNotionalExposureUnit = currentExposureTracker.cost / currentExposureTracker.exposure;
+                    // Realized profit is (Sale Price per unit - Average Notional Purchase Price per unit) * Notional Exposure Sold
+                    const profitFromSale = (t.originalPrice - averageCostPerNotionalExposureUnit) * transactionNotionalExposure;
                     totalRealizedProfit += profitFromSale;
                     cryptoRealizedProfits[cryptoId] += profitFromSale;
 
-                    // Adjust notional holdings after sale
-                    currentNotionalHolding.notionalAmount -= effectiveAmount;
-                    currentNotionalHolding.notionalInvested -= (effectiveAmount * averagePurchasePricePerNotionalUnit);
+                    // Adjust notional exposure tracker after sale
+                    currentExposureTracker.exposure -= transactionNotionalExposure;
+                    currentExposureTracker.cost -= (transactionNotionalExposure * averageCostPerNotionalExposureUnit);
 
-                    if (Math.abs(currentNotionalHolding.notionalAmount) < 0.000000000000000001) { // Snap to zero if very close
-                        currentNotionalHolding.notionalAmount = 0;
-                        currentNotionalHolding.notionalInvested = 0;
+                    if (Math.abs(currentExposureTracker.exposure) < 0.000000000000000001) { // Snap to zero if very close
+                        currentExposureTracker.exposure = 0;
+                        currentExposureTracker.cost = 0;
                     }
                 } else {
-                    console.warn(`Attempted to sell ${effectiveAmount} of ${cryptoId} (notional) but notional holding was 0 at the time of sale.`);
+                    console.warn(`Attempted to sell ${transactionNotionalExposure} of ${cryptoId} (notional) but notional exposure was 0 at the time of sale.`);
                 }
             }
         });
 
-        // Now, calculate total unrealized profit based on current holdings (latest state)
+        // Now, calculate total unrealized profit based on current notional exposures (latest state)
         let totalUnrealizedProfit = 0;
-        const currentHoldings = calculateAssetHoldings(); // This uses the latest state from localStorage (real amount)
-        
-        Object.entries(currentHoldings).forEach(([coingeckoId, data]) => {
-            const cryptoRelevantTransactions = transactions.filter(t => t.crypto === coingeckoId);
+        userCryptos.forEach(crypto => {
+            const coingeckoId = crypto.coingeckoId;
             
-            let currentNotionalAmount = 0;
-            let currentNotionalInvested = 0;
+            let currentNotionalExposure = 0;
+            let currentNotionalCost = 0;
 
-            // Re-calculate notional holdings for unrealized profit based on all relevant transactions
-            cryptoRelevantTransactions.forEach(t => {
-                const effectiveAmount = t.originalAmount * t.leverage;
-                const effectiveInvested = t.originalAmount * t.originalPrice;
+            // Re-calculate notional exposure and cost for unrealized profit based on all relevant transactions
+            const relevantTransactions = transactions.filter(t => t.crypto === coingeckoId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            relevantTransactions.forEach(t => {
+                // Here, t.originalAmount is the NOTIONAL amount the user intended to trade with.
+                const transactionNotionalExposure = t.originalAmount;
+                const transactionNotionalCost = t.originalAmount * t.originalPrice;
 
                 if (t.type === 'compra') {
-                    currentNotionalAmount += effectiveAmount;
-                    currentNotionalInvested += effectiveInvested;
+                    currentNotionalExposure += transactionNotionalExposure;
+                    currentNotionalCost += transactionNotionalCost;
                 } else if (t.type === 'venta') {
-                    if (currentNotionalAmount > 0) {
-                        const avgCostPerNotionalUnit = currentNotionalInvested / currentNotionalAmount;
-                        currentNotionalAmount -= effectiveAmount;
-                        currentNotionalInvested -= (effectiveAmount * avgCostPerNotionalUnit);
-                        if (Math.abs(currentNotionalAmount) < 0.000000000000000001) { // Snap to zero if very close
-                            currentNotionalAmount = 0;
-                            currentNotionalInvested = 0;
+                    if (currentNotionalExposure > 0) {
+                        const avgCostPerNotionalExposureUnit = currentNotionalCost / currentNotionalExposure;
+                        currentNotionalExposure -= transactionNotionalExposure;
+                        currentNotionalCost -= (transactionNotionalExposure * avgCostPerNotionalExposureUnit);
+                        if (Math.abs(currentNotionalExposure) < 0.000000000000000001) { // Snap to zero if very close
+                            currentNotionalExposure = 0;
+                            currentNotionalCost = 0;
                         }
                     }
                 }
@@ -1174,15 +1179,15 @@
 
             const currentPrice = cryptoPrices[coingeckoId]?.usd || 0;
             let profit = 0;
-            if (currentNotionalAmount > 0) {
-                const averagePurchasePricePerNotionalUnit = currentNotionalInvested / currentNotionalAmount;
-                profit = (currentPrice - averagePurchasePricePerNotionalUnit) * currentNotionalAmount;
+            if (currentNotionalExposure > 0) {
+                const averageEntryPricePerNotionalExposureUnit = currentNotionalCost / currentNotionalExposure;
+                profit = (currentPrice - averageEntryPricePerNotionalExposureUnit) * currentNotionalExposure;
             }
             totalUnrealizedProfit += profit;
         });
 
-        console.log('[DEBUG] Profit total no realizado:', totalUnrealizedProfit); // Debugging line
-        console.log('[DEBUG] Profit total realizado:', totalRealizedProfit); // Debugging line
+        console.log('[DEBUG] Profit total no realizado (basado en exposición nocional):', totalUnrealizedProfit); // Debugging line
+        console.log('[DEBUG] Profit total realizado (basado en exposición nocional):', totalRealizedProfit); // Debugging line
         return {
             totalUnrealizedProfit: totalUnrealizedProfit,
             totalRealizedProfit: totalRealizedProfit,
@@ -1208,28 +1213,28 @@
 
         userCryptos.forEach(crypto => {
             const coingeckoId = crypto.coingeckoId;
-            const data = holdings[coingeckoId]; // This data is for the real amount
             
-            const cryptoRelevantTransactions = transactions.filter(t => t.crypto === coingeckoId);
-            
-            let currentNotionalAmount = 0;
-            let currentNotionalInvested = 0;
+            let currentNotionalExposure = 0;
+            let currentNotionalCost = 0;
 
-            cryptoRelevantTransactions.forEach(t => {
-                const effectiveAmount = t.originalAmount * t.leverage;
-                const effectiveInvested = t.originalAmount * t.originalPrice;
+            const relevantTransactions = transactions.filter(t => t.crypto === coingeckoId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            relevantTransactions.forEach(t => {
+                // Here, t.originalAmount is the NOTIONAL amount the user intended to trade with.
+                const transactionNotionalExposure = t.originalAmount;
+                const transactionNotionalCost = t.originalAmount * t.originalPrice;
 
                 if (t.type === 'compra') {
-                    currentNotionalAmount += effectiveAmount;
-                    currentNotionalInvested += effectiveInvested;
+                    currentNotionalExposure += transactionNotionalExposure;
+                    currentNotionalCost += transactionNotionalCost;
                 } else if (t.type === 'venta') {
-                    if (currentNotionalAmount > 0) {
-                        const avgCostPerNotionalUnit = currentNotionalInvested / currentNotionalAmount;
-                        currentNotionalAmount -= effectiveAmount;
-                        currentNotionalInvested -= (effectiveAmount * avgCostPerNotionalUnit);
-                        if (Math.abs(currentNotionalAmount) < 0.000000000000000001) { // Snap to zero if very close
-                            currentNotionalAmount = 0;
-                            currentNotionalInvested = 0;
+                    if (currentNotionalExposure > 0) {
+                        const avgCostPerNotionalExposureUnit = currentNotionalCost / currentNotionalExposure;
+                        currentNotionalExposure -= transactionNotionalExposure;
+                        currentNotionalCost -= (transactionNotionalExposure * avgCostPerNotionalExposureUnit);
+                        if (Math.abs(currentNotionalExposure) < 0.000000000000000001) { // Snap to zero if very close
+                            currentNotionalExposure = 0;
+                            currentNotionalCost = 0;
                         }
                     }
                 }
@@ -1237,9 +1242,9 @@
 
             const currentPrice = cryptoPrices[coingeckoId]?.usd || 0;
             let profit = 0;
-            if (currentNotionalAmount > 0) {
-                const averagePurchasePricePerNotionalUnit = currentNotionalInvested / currentNotionalAmount;
-                profit = (currentPrice - averagePurchasePricePerNotionalUnit) * currentNotionalAmount;
+            if (currentNotionalExposure > 0) {
+                const averageEntryPricePerNotionalExposureUnit = currentNotionalCost / currentNotionalExposure;
+                profit = (currentPrice - averageEntryPricePerNotionalExposureUnit) * currentNotionalExposure;
             }
             profits[coingeckoId] = profit;
         });
@@ -1414,7 +1419,7 @@
 
     // Adds a new transaction or updates an existing one
     function saveOrUpdateTransaction() {
-        const originalAmount = parseFloat(document.getElementById('transactionAmount').value);
+        const originalAmount = parseFloat(document.getElementById('transactionAmount').value); // This is the NOTIONAL amount
         const originalPrice = parseFloat(document.getElementById('transactionPrice').value);
         const notes = document.getElementById('transactionNotes').value;
         const walletId = document.getElementById('transactionWallet').value;
@@ -1425,7 +1430,7 @@
         const leverage = parseFloat(document.getElementById('transactionLeverage').value) || 1; // Get leverage, default to 1
 
         if (isNaN(originalAmount) || originalAmount <= 0 || isNaN(originalPrice) || originalPrice <= 0) {
-            showError('Por favor, completa la cantidad y el precio con valores positivos.');
+            showError('Por favor, completa la cantidad (nocional) y el precio con valores positivos.');
             return;
         }
         if (isNaN(leverage) || leverage < 1) {
@@ -1439,8 +1444,11 @@
         }
 
         // Calculate the real amount that affects holdings (original amount / leverage)
-        let netAmount = originalAmount / leverage;
-        let netTotalUSD = originalAmount * originalPrice; // This is the notional value, before commission adjustment
+        let realAmountForHoldings = originalAmount / leverage;
+
+        // Calculate the actual USD value of the transaction (capital invested/received)
+        // This is the USD value of the REAL amount that moves in/out of your balance
+        let actualUSDValue = realAmountForHoldings * originalPrice;
 
         // Find the crypto object for the transaction crypto
         const transactionCrypto = userCryptos.find(c => c.coingeckoId === transactionCryptoId);
@@ -1453,43 +1461,44 @@
             if (isCommissionInSameCrypto) {
                 // Commission is in the same crypto, subtract from the *real* quantity
                 if (transactionType === 'compra') {
-                    netAmount = (originalAmount / leverage) - commissionAmount;
+                    realAmountForHoldings -= commissionAmount;
                 } else if (transactionType === 'venta') {
-                    netAmount = (originalAmount / leverage) - commissionAmount;
+                    realAmountForHoldings -= commissionAmount;
                 }
-                // netTotalUSD remains based on originalAmount * originalPrice for profit calculation purposes
+                // actualUSDValue is NOT affected by crypto commission here, as it's a cost in crypto.
+                // The profit calculation will implicitly account for this as the real amount is lower.
             } else {
-                // Commission is in a different currency (fiat or other crypto), adjust USD total
+                // Commission is in a different currency (fiat or other crypto), adjust actual USD value
                 const commissionUSD = getCommissionAmountInUSD(commissionAmount, commissionCurrency);
                 if (transactionType === 'compra') {
-                    netTotalUSD += commissionUSD; // Commission increases total cost for purchase
+                    actualUSDValue += commissionUSD; // Commission increases actual capital invested for purchase
                 } else if (transactionType === 'venta') {
-                    netTotalUSD -= commissionUSD; // Commission reduces total revenue for sale
+                    actualUSDValue -= commissionUSD; // Commission reduces actual revenue for sale
                 }
             }
         }
 
-        // Ensure netAmount doesn't go below zero (or very close to zero)
-        if (netAmount < 0 && Math.abs(netAmount) > 0.000000000000000001) { // Allow very small negative due to precision, but warn if significant
-            showError('La cantidad neta de cripto no puede ser negativa después de la comisión. Ajusta los valores.');
+        // Ensure realAmountForHoldings doesn't go below zero (or very close to zero)
+        if (realAmountForHoldings < 0 && Math.abs(realAmountForHoldings) > 0.000000000000000001) { // Allow very small negative due to precision, but warn if significant
+            showError('La cantidad real de cripto no puede ser negativa después de la comisión. Ajusta los valores.');
             return;
         }
-        if (Math.abs(netAmount) < 0.000000000000000001) { // Snap to zero if very close
-            netAmount = 0;
+        if (Math.abs(realAmountForHoldings) < 0.000000000000000001) { // Snap to zero if very close
+            realAmountForHoldings = 0;
         }
 
 
         const transactionData = {
             type: transactionType,
             crypto: transactionCryptoId,
-            originalAmount: originalAmount, // Store original input amount
-            originalPrice: originalPrice,   // Store original input price
-            amount: netAmount,              // Net amount of crypto affecting holdings (original / leverage - commission if in crypto)
-            price: originalPrice,           // Price per unit (still USD) - remains original price as it's per unit
-            total: netTotalUSD,             // Net USD value of the transaction (originalAmount * originalPrice +/- commission if in USD/fiat)
+            originalAmount: originalAmount, // User input (NOTIONAL quantity)
+            originalPrice: originalPrice,   // Price per unit at transaction time
+            leverage: leverage,             // Leverage multiplier
+            amount: realAmountForHoldings,  // Real quantity affecting holdings (originalAmount / leverage - crypto_commission)
+            total: actualUSDValue,          // Actual USD cost/revenue of the transaction (realAmountForHoldings * originalPrice + fiat_commission)
+                                            // This is the actual cash flow / capital movement.
             commissionAmount: commissionAmount,
             commissionCurrency: commissionCurrency,
-            leverage: leverage,             // Store leverage
             date: document.getElementById('transactionDate').value,
             notes: notes,
             wallet: walletId,
@@ -1543,7 +1552,7 @@
 
             document.getElementById('transactionType').value = transactionToEdit.type;
             document.getElementById('transactionCrypto').value = transactionToEdit.crypto;
-            document.getElementById('transactionAmount').value = transactionToEdit.originalAmount; // Use originalAmount for editing
+            document.getElementById('transactionAmount').value = transactionToEdit.originalAmount; // Use originalAmount (notional) for editing
             document.getElementById('transactionPrice').value = transactionToEdit.originalPrice; // Use originalPrice for editing
             document.getElementById('transactionDate').value = transactionToEdit.date;
             document.getElementById('transactionNotes').value = transactionToEdit.notes || '';
@@ -1603,10 +1612,10 @@
                     commissionDisplay = `<div class="text-xs text-slate-500">Comisión: ${formatCurrency(t.commissionAmount, t.commissionCurrency, false)}</div>`;
                 }
 
-                let netAmountDisplay = '';
-                // Only show net amount if it's different from original (i.e., commission was in same crypto or leverage applied)
-                if (t.amount !== t.originalAmount || t.leverage > 1) {
-                    netAmountDisplay = `<div class="text-xs text-slate-500">Real en Saldo: ${formatCrypto(t.amount, crypto?.symbol || '?')}</div>`;
+                let realAmountDisplay = '';
+                // Show real amount if it's different from original (due to leverage or crypto commission)
+                if (t.amount !== t.originalAmount) {
+                    realAmountDisplay = `<div class="text-xs text-slate-500">Real en Saldo: ${formatCrypto(t.amount, crypto?.symbol || '?')}</div>`;
                 }
                 
                 let leverageDisplay = '';
@@ -1625,9 +1634,9 @@
                         <div>
                             <div class="font-semibold text-lg">${t.type.toUpperCase()} ${crypto?.name || t.crypto}</div>
                             <div class="text-sm text-slate-400">
-                                Cantidad Ingresada: ${formatCrypto(t.originalAmount, crypto?.symbol || '?')} @ ${formatCurrency(t.originalPrice, 'USD', false)}
+                                Cantidad Nocional: ${formatCrypto(t.originalAmount, crypto?.symbol || '?')} @ ${formatCurrency(t.originalPrice, 'USD', false)}
                             </div>
-                            ${netAmountDisplay}
+                            ${realAmountDisplay}
                             ${leverageDisplay}
                             ${wallet ? `<div class="text-xs text-slate-500">Cartera: ${wallet.name}</div>` : ''}
                             ${commissionDisplay}
@@ -1781,24 +1790,18 @@
 
     // --- Calendar Functions ---
 
-    // Calculates daily profit/loss based on transaction totals
+    // Calculates daily profit/loss based on transaction totals (actual capital movement)
     function getDailyProfits() {
         const dailyProfits = {};
         transactions.forEach(t => {
             const date = t.date; // Date in YYYY-MM-DD format
             let profitContribution = 0;
             
-            // Calculate profit contribution considering leverage
-            // For a buy, the 'profit' on that day is negative, representing the cost
-            // We use the 'total' field which already includes commission in USD.
+            // t.total represents the actual USD capital moved in the transaction
             if (t.type === 'compra') {
-                profitContribution = -t.total; 
+                profitContribution = -t.total; // Spending capital
             } else if (t.type === 'venta') {
-                // For a sale, the 'profit' is the revenue, adjusted by commission if in USD.
-                // To calculate true realized profit for the day, we need to compare sale price to average cost.
-                // This is a simplified daily profit for the calendar, focusing on the transaction's USD impact.
-                // For a full realized profit calculation, refer to calculatePortfolioProfits().
-                profitContribution = t.total;
+                profitContribution = t.total; // Receiving capital
             }
 
             dailyProfits[date] = (dailyProfits[date] || 0) + profitContribution;
@@ -2112,55 +2115,56 @@
         // Filter transactions for this crypto and potentially by wallet
         const cryptoTransactions = transactions.filter(t => t.crypto === coingeckoId && (filterWalletId === 'all' || t.wallet === filterWalletId));
 
-        let currentAmount = 0; // Real amount in holdings
-        let totalInvestedReal = 0; // Real USD invested in real holdings
-        let currentNotionalAmount = 0; // Notional amount (originalAmount * leverage)
-        let totalInvestedNotional = 0; // USD invested for notional amount (originalAmount * originalPrice)
+        let currentRealAmount = 0; // Real amount in holdings
+        let totalRealInvested = 0; // Real USD invested in real holdings
+        let currentNotionalExposure = 0; // Notional exposure for profit calculation
+        let totalNotionalCost = 0; // USD cost for notional exposure
 
         // Calculate current holding, total invested, and notional values for profit
         cryptoTransactions.forEach(t => {
-            const effectiveAmount = t.originalAmount * t.leverage;
-            const effectiveInvested = t.originalAmount * t.originalPrice;
+            // Here, t.originalAmount is the NOTIONAL amount the user intended to trade with.
+            const transactionNotionalExposure = t.originalAmount;
+            const transactionNotionalCost = t.originalAmount * t.originalPrice;
 
             if (t.type === 'compra') {
-                currentAmount += t.amount; // t.amount is already net of leverage and crypto commission
-                totalInvestedReal += t.total; // t.total is already net of all commissions
+                currentRealAmount += t.amount; // t.amount is already net of leverage and crypto commission
+                totalRealInvested += t.total; // t.total is actual USD spent
 
-                currentNotionalAmount += effectiveAmount;
-                totalInvestedNotional += effectiveInvested;
+                currentNotionalExposure += transactionNotionalExposure;
+                totalNotionalCost += transactionNotionalCost;
             } else if (t.type === 'venta') {
-                currentAmount -= t.amount;
-                // Adjust totalInvestedReal proportionally for sales
-                 if (currentAmount + t.amount > 0) { // Avoid division by zero if all was sold
-                    const averageCostPerRealUnit = totalInvestedReal / (currentAmount + t.amount);
-                    totalInvestedReal -= (t.amount * averageCostPerRealUnit);
+                currentRealAmount -= t.amount;
+                // Adjust totalRealInvested proportionally for sales based on average real cost
+                 if (currentRealAmount + t.amount > 0) { // Avoid division by zero if all was sold
+                    const averageCostPerRealUnit = totalRealInvested / (currentRealAmount + t.amount);
+                    totalRealInvested -= (t.amount * averageCostPerRealUnit);
                 } else {
-                     totalInvestedReal = 0;
+                     totalRealInvested = 0;
                 }
 
-                if (currentNotionalAmount > 0) {
-                    const avgCostPerNotionalUnit = totalInvestedNotional / currentNotionalAmount;
-                    currentNotionalAmount -= effectiveAmount;
-                    totalInvestedNotional -= (effectiveAmount * avgCostPerNotionalUnit);
-                    if (Math.abs(currentNotionalAmount) < 0.000000000000000001) { // Snap to zero if very close
-                        currentNotionalAmount = 0;
-                        totalInvestedNotional = 0;
+                if (currentNotionalExposure > 0) {
+                    const avgCostPerNotionalExposureUnit = totalNotionalCost / currentNotionalExposure;
+                    currentNotionalExposure -= transactionNotionalExposure;
+                    totalNotionalCost -= (transactionNotionalExposure * avgCostPerNotionalExposureUnit);
+                    if (Math.abs(currentNotionalExposure) < 0.000000000000000001) { // Snap to zero if very close
+                        currentNotionalExposure = 0;
+                        totalNotionalCost = 0;
                     }
                 }
             }
         });
 
         const currentPrice = cryptoPrices[coingeckoId]?.usd || 0;
-        const currentValueUSD = currentAmount * currentPrice;
+        const currentValueUSD = currentRealAmount * currentPrice; // Value based on real amount
         
-        // Unrealized profit calculation based on notional amounts
+        // Unrealized profit calculation based on notional exposures
         let unrealizedProfit = 0;
-        if (currentNotionalAmount > 0) {
-            const averagePurchasePricePerNotionalUnit = totalInvestedNotional / currentNotionalAmount;
-            unrealizedProfit = (currentPrice - averagePurchasePricePerNotionalUnit) * currentNotionalAmount;
+        if (currentNotionalExposure > 0) {
+            const averageEntryPricePerNotionalExposureUnit = totalNotionalCost / currentNotionalExposure;
+            unrealizedProfit = (currentPrice - averageEntryPricePerNotionalExposureUnit) * currentNotionalExposure;
         }
 
-        document.getElementById('modalCryptoQuantity').textContent = formatCrypto(currentAmount, crypto.symbol);
+        document.getElementById('modalCryptoQuantity').textContent = formatCrypto(currentRealAmount, crypto.symbol);
         document.getElementById('modalCryptoValue').textContent = `Valor Actual: ${formatCurrency(currentValueUSD, 'USD', false)}`;
         
         document.getElementById('modalCryptoUnrealizedProfit').textContent = `${unrealizedProfit >= 0 ? '▲' : '▼'} ${formatCurrency(unrealizedProfit, 'USD', true)}`;
@@ -2189,9 +2193,9 @@
                     commissionDisplay = `<div class="text-xs text-slate-500">Comisión: ${formatCurrency(t.commissionAmount, t.commissionCurrency, false)}</div>`;
                 }
                 
-                let netAmountDisplay = '';
-                if (t.amount !== (t.originalAmount / t.leverage) || t.leverage > 1) { // Check if real amount differs due to leverage or crypto commission
-                    netAmountDisplay = `<div class="text-xs text-slate-500">Real en Saldo: ${formatCrypto(t.amount, crypto.symbol)}</div>`;
+                let realAmountDisplay = '';
+                if (t.amount !== t.originalAmount) { // Show real amount if it differs from notional
+                    realAmountDisplay = `<div class="text-xs text-slate-500">Real en Saldo: ${formatCrypto(t.amount, crypto.symbol)}</div>`;
                 }
 
                 let leverageDisplay = '';
@@ -2201,9 +2205,9 @@
 
                 div.innerHTML = `
                     <div>
-                        <div class="font-semibold">${t.type.toUpperCase()} Cantidad Ingresada: ${formatCrypto(t.originalAmount, crypto.symbol)}</div>
+                        <div class="font-semibold">${t.type.toUpperCase()} Cantidad Nocional: ${formatCrypto(t.originalAmount, crypto.symbol)}</div>
                         <div class="text-xs text-slate-400">@ ${formatCurrency(t.originalPrice, 'USD', false)} ${wallet ? `(${wallet.name})` : ''}</div>
-                        ${netAmountDisplay}
+                        ${realAmountDisplay}
                         ${leverageDisplay}
                         ${commissionDisplay}
                         ${t.notes ? `<div class="text-xs text-slate-500 italic">Notas: ${t.notes}</div>` : ''}
@@ -2244,10 +2248,10 @@
         const quantityData = []; // Real quantity
         const unrealizedProfitData = [];
 
-        let cumulativeAmount = 0; // Real amount
-        let cumulativeInvestedReal = 0; // Real USD invested for real amount
-        let cumulativeNotionalAmount = 0; // Notional amount
-        let cumulativeInvestedNotional = 0; // USD invested for notional amount
+        let cumulativeRealAmount = 0; // Real amount
+        let cumulativeRealInvested = 0; // Real USD invested for real amount
+        let cumulativeNotionalExposure = 0; // Notional exposure for profit
+        let cumulativeNotionalCost = 0; // USD cost for notional exposure
 
         const currentLivePrice = cryptoPrices[coingeckoId]?.usd || 0; // Get the latest live price
 
@@ -2266,18 +2270,19 @@
 
                 let tempRealAmount = 0;
                 let tempRealInvested = 0;
-                let tempNotionalAmount = 0;
-                let tempNotionalInvested = 0;
+                let tempNotionalExposure = 0;
+                let tempNotionalCost = 0;
 
                 transactionsUpToDate.forEach(t => {
-                    const effectiveAmount = t.originalAmount * t.leverage;
-                    const effectiveInvested = t.originalAmount * t.originalPrice;
+                    // Here, t.originalAmount is the NOTIONAL amount the user intended to trade with.
+                    const transactionNotionalExposure = t.originalAmount;
+                    const transactionNotionalCost = t.originalAmount * t.originalPrice;
 
                     if (t.type === 'compra') {
                         tempRealAmount += t.amount;
                         tempRealInvested += t.total;
-                        tempNotionalAmount += effectiveAmount;
-                        tempNotionalInvested += effectiveInvested;
+                        tempNotionalExposure += transactionNotionalExposure;
+                        tempNotionalCost += transactionNotionalCost;
                     } else if (t.type === 'venta') {
                         tempRealAmount -= t.amount;
                         if (tempRealAmount + t.amount > 0) {
@@ -2287,21 +2292,21 @@
                             tempRealInvested = 0;
                         }
 
-                        if (tempNotionalAmount > 0) {
-                            const avgCostPerNotionalUnit = tempNotionalInvested / tempNotionalAmount;
-                            tempNotionalAmount -= effectiveAmount;
-                            tempNotionalInvested -= (effectiveAmount * avgCostPerNotionalUnit);
-                            if (Math.abs(tempNotionalAmount) < 0.000000000000000001) {
-                                tempNotionalAmount = 0;
-                                tempNotionalInvested = 0;
+                        if (tempNotionalExposure > 0) {
+                            const avgCostPerNotionalExposureUnit = tempNotionalCost / tempNotionalExposure;
+                            tempNotionalExposure -= transactionNotionalExposure;
+                            tempNotionalCost -= (transactionNotionalExposure * avgCostPerNotionalExposureUnit);
+                            if (Math.abs(tempNotionalExposure) < 0.000000000000000001) {
+                                tempNotionalExposure = 0;
+                                tempNotionalCost = 0;
                             }
                         }
                     }
                 });
-                cumulativeAmount = tempRealAmount;
-                cumulativeInvestedReal = tempRealInvested;
-                cumulativeNotionalAmount = tempNotionalAmount;
-                cumulativeInvestedNotional = tempNotionalInvested;
+                cumulativeRealAmount = tempRealAmount;
+                cumulativeRealInvested = tempRealInvested;
+                cumulativeNotionalExposure = tempNotionalExposure;
+                cumulativeNotionalCost = tempNotionalCost;
 
 
                 // For Price Evolution: Use the price of the *latest transaction* on or before this date, or the current live price if no transactions yet.
@@ -2310,12 +2315,12 @@
                 const priceForDate = latestTransactionOnDate ? latestTransactionOnDate.originalPrice : (priceData.length > 0 ? priceData[priceData.length - 1] : currentLivePrice);
                 priceData.push(priceForDate);
 
-                quantityData.push(cumulativeAmount);
+                quantityData.push(cumulativeRealAmount);
 
                 let profit = 0;
-                if (cumulativeNotionalAmount > 0) {
-                    const averagePurchasePricePerNotionalUnit = cumulativeInvestedNotional / cumulativeNotionalAmount;
-                    profit = (currentLivePrice - averagePurchasePricePerNotionalUnit) * cumulativeNotionalAmount;
+                if (cumulativeNotionalExposure > 0) {
+                    const averageEntryPricePerNotionalExposureUnit = cumulativeNotionalCost / cumulativeNotionalExposure;
+                    profit = (currentLivePrice - averageEntryPricePerNotionalExposureUnit) * cumulativeNotionalExposure;
                 }
                 unrealizedProfitData.push(profit);
 
