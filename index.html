@@ -311,7 +311,6 @@
           <select id="transactionType" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
             <option value="compra">Compra</option>
             <option value="venta">Venta</option>
-            <!-- Removed comision_compra and comision_venta as commissions are now integrated -->
           </select>
           <select id="transactionCrypto" class="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none">
             <!-- Cryptos will be added here dynamically -->
@@ -613,11 +612,18 @@
             userCryptos = [...defaultCryptos];
             saveState(); // Save default cryptos
         }
-        // Ensure new properties (like description) are added to existing loaded cryptos if they are missing
+        // Ensure new properties (like description, originalAmount, originalPrice) are added to existing loaded cryptos if they are missing
         userCryptos = userCryptos.map(crypto => ({
             ...crypto,
             description: crypto.description || '', // Add default empty string if description is missing
             imageUrl: crypto.imageUrl || '' // Ensure imageUrl is also initialized
+        }));
+
+        // Backfill originalAmount and originalPrice for old transactions if they don't exist
+        transactions = transactions.map(t => ({
+            ...t,
+            originalAmount: t.originalAmount !== undefined ? t.originalAmount : t.amount,
+            originalPrice: t.originalPrice !== undefined ? t.originalPrice : t.price
         }));
     }
 
@@ -818,7 +824,7 @@
         // Add all user cryptos as options
         userCryptos.forEach(crypto => {
             const option = document.createElement('option');
-            option.value = crypto.coingeckoId;
+            option.value = crypto.coingeckoId; // Use coingeckoId as value for cryptos
             option.textContent = `${crypto.name} (${crypto.symbol})`;
             select.appendChild(option);
         });
@@ -859,9 +865,10 @@
                 holdings[t.crypto] = { amount: 0, totalInvested: 0, transactions: [], symbol: '?', name: t.crypto, imageUrl: '', description: '' };
             }
 
+            // Use the 'amount' and 'total' fields directly, as they now represent the net values
             if (t.type === 'compra') {
                 holdings[t.crypto].amount += t.amount;
-                holdings[t.crypto].totalInvested += t.total; // total already includes commission
+                holdings[t.crypto].totalInvested += t.total;
             } else if (t.type === 'venta') {
                 holdings[t.crypto].amount -= t.amount;
                 // Adjust total invested proportionally for sales
@@ -876,7 +883,6 @@
                      holdings[t.crypto].totalInvested = 0; // If all sold, invested amount becomes 0
                 }
             }
-            // Commissions are now integrated into 'compra'/'venta' totals, no separate handling here.
             holdings[t.crypto].transactions.push(t);
         });
 
@@ -1062,7 +1068,8 @@
             } else if (t.type === 'venta') {
                 if (currentHolding.amount > 0) {
                     const averagePurchasePrice = currentHolding.totalInvested / currentHolding.amount;
-                    const profitFromSale = (t.total / t.amount - averagePurchasePrice) * t.amount; // t.total is already net of commission
+                    // Profit from sale is (Sale Price per unit - Average Purchase Price per unit) * Net Amount Sold
+                    const profitFromSale = (t.total / t.amount - averagePurchasePrice) * t.amount;
                     totalRealizedProfit += profitFromSale;
                     cryptoRealizedProfits[cryptoId] += profitFromSale;
 
@@ -1080,8 +1087,6 @@
                     console.warn(`Attempted to sell ${t.amount} of ${cryptoId} but holding was 0 at the time of sale.`);
                 }
             }
-            // Commissions are now embedded in 'compra' and 'venta' totals.
-            // No separate handling for 'comision_compra'/'comision_venta' here.
         });
 
         // Now, calculate total unrealized profit based on current holdings (latest state)
@@ -1089,7 +1094,7 @@
         const currentHoldings = calculateAssetHoldings(); // This uses the latest state from localStorage
         Object.entries(currentHoldings).forEach(([coingeckoId, data]) => {
             const currentPrice = cryptoPrices[coingeckoId]?.usd || 0;
-            const averagePurchasePrice = data.totalInvested / data.amount || 0;
+            const averagePurchasePrice = data.amount > 0 ? data.totalInvested / data.amount : 0;
             const profit = data.amount > 0 ? (currentPrice - averagePurchasePrice) * data.amount : 0;
             totalUnrealizedProfit += profit;
         });
@@ -1300,8 +1305,8 @@
 
     // Adds a new transaction or updates an existing one
     function saveOrUpdateTransaction() {
-        const amount = parseFloat(document.getElementById('transactionAmount').value);
-        const price = parseFloat(document.getElementById('transactionPrice').value);
+        const originalAmount = parseFloat(document.getElementById('transactionAmount').value);
+        const originalPrice = parseFloat(document.getElementById('transactionPrice').value);
         const notes = document.getElementById('transactionNotes').value;
         const walletId = document.getElementById('transactionWallet').value;
         const commissionAmount = parseFloat(document.getElementById('commissionAmount').value) || 0;
@@ -1309,7 +1314,7 @@
         const transactionType = document.getElementById('transactionType').value;
         const transactionCryptoId = document.getElementById('transactionCrypto').value;
 
-        if (isNaN(amount) || amount <= 0 || isNaN(price) || price <= 0) {
+        if (isNaN(originalAmount) || originalAmount <= 0 || isNaN(originalPrice) || originalPrice <= 0) {
             showError('Por favor, completa la cantidad y el precio con valores positivos.');
             return;
         }
@@ -1319,27 +1324,57 @@
             return;
         }
 
-        const commissionUSD = getCommissionAmountInUSD(commissionAmount, commissionCurrency);
-        let transactionTotalUSD = amount * price; // Base total before commission adjustment
+        let netAmount = originalAmount;
+        let netTotalUSD = originalAmount * originalPrice;
 
-        if (transactionType === 'compra') {
-            transactionTotalUSD += commissionUSD; // Commission increases total cost for purchase
-        } else if (transactionType === 'venta') {
-            transactionTotalUSD -= commissionUSD; // Commission reduces total revenue for sale
+        // Find the crypto object for the transaction crypto
+        const transactionCrypto = userCryptos.find(c => c.coingeckoId === transactionCryptoId);
+        // Check if commission currency is the same as the transaction crypto (by coingeckoId or symbol)
+        const isCommissionInSameCrypto = transactionCrypto && 
+                                         (transactionCrypto.coingeckoId === commissionCurrency || 
+                                          transactionCrypto.symbol.toUpperCase() === commissionCurrency.toUpperCase());
+
+        if (commissionAmount > 0) {
+            if (isCommissionInSameCrypto) {
+                // Commission is in the same crypto, subtract from quantity
+                if (transactionType === 'compra') {
+                    netAmount = originalAmount - commissionAmount;
+                } else if (transactionType === 'venta') {
+                    netAmount = originalAmount - commissionAmount;
+                }
+                // Update netTotalUSD based on the new netAmount
+                netTotalUSD = netAmount * originalPrice;
+            } else {
+                // Commission is in a different currency (fiat or other crypto), adjust USD total
+                const commissionUSD = getCommissionAmountInUSD(commissionAmount, commissionCurrency);
+                if (transactionType === 'compra') {
+                    netTotalUSD += commissionUSD; // Commission increases total cost for purchase
+                } else if (transactionType === 'venta') {
+                    netTotalUSD -= commissionUSD; // Commission reduces total revenue for sale
+                }
+            }
+        }
+
+        // Ensure netAmount doesn't go below zero
+        if (netAmount < 0) {
+            showError('La cantidad neta de cripto no puede ser negativa después de la comisión. Ajusta los valores.');
+            return;
         }
 
         const transactionData = {
             type: transactionType,
-            crypto: transactionCryptoId, // This is now coingeckoId
-            amount: amount,
-            price: price, // Price is always in USD per unit of crypto
+            crypto: transactionCryptoId,
+            originalAmount: originalAmount, // Store original input amount
+            originalPrice: originalPrice,   // Store original input price
+            amount: netAmount,              // Net amount of crypto affecting holdings
+            price: originalPrice,           // Price per unit (still USD) - remains original price as it's per unit
+            total: netTotalUSD,             // Net USD value of the transaction
+            commissionAmount: commissionAmount,
+            commissionCurrency: commissionCurrency,
             date: document.getElementById('transactionDate').value,
             notes: notes,
-            wallet: walletId, // Store wallet ID
-            total: transactionTotalUSD, // Total value in USD, adjusted for commission
-            commissionAmount: commissionAmount, // Store original commission amount
-            commissionCurrency: commissionCurrency, // Store original commission currency
-            timestamp: new Date().toISOString() // Timestamp for sorting
+            wallet: walletId,
+            timestamp: new Date().toISOString()
         };
 
         if (editingTransactionId) {
@@ -1387,8 +1422,8 @@
 
             document.getElementById('transactionType').value = transactionToEdit.type;
             document.getElementById('transactionCrypto').value = transactionToEdit.crypto;
-            document.getElementById('transactionAmount').value = transactionToEdit.amount;
-            document.getElementById('transactionPrice').value = transactionToEdit.price;
+            document.getElementById('transactionAmount').value = transactionToEdit.originalAmount; // Use originalAmount for editing
+            document.getElementById('transactionPrice').value = transactionToEdit.originalPrice; // Use originalPrice for editing
             document.getElementById('transactionDate').value = transactionToEdit.date;
             document.getElementById('transactionNotes').value = transactionToEdit.notes || '';
             document.getElementById('transactionWallet').value = transactionToEdit.wallet || '';
@@ -1446,6 +1481,12 @@
                     commissionDisplay = `<div class="text-xs text-slate-500">Comisión: ${formatCurrency(t.commissionAmount, t.commissionCurrency, false)}</div>`;
                 }
 
+                let netAmountDisplay = '';
+                // Only show net amount if it's different from original (i.e., commission was in same crypto)
+                if (t.amount !== t.originalAmount) {
+                    netAmountDisplay = `<div class="text-xs text-slate-500">Neto: ${formatCrypto(t.amount, crypto?.symbol || '?')}</div>`;
+                }
+
                 div.innerHTML = `
                     <div class="flex items-center space-x-4 mb-2 sm:mb-0">
                         <div class="p-2 rounded-full ${
@@ -1457,8 +1498,9 @@
                         <div>
                             <div class="font-semibold text-lg">${t.type.toUpperCase()} ${crypto?.name || t.crypto}</div>
                             <div class="text-sm text-slate-400">
-                                ${formatCrypto(t.amount, crypto?.symbol || '?')} × ${formatCurrency(t.price, 'USD', false)}
+                                ${formatCrypto(t.originalAmount, crypto?.symbol || '?')} × ${formatCurrency(t.originalPrice, 'USD', false)}
                             </div>
+                            ${netAmountDisplay}
                             ${wallet ? `<div class="text-xs text-slate-500">Cartera: ${wallet.name}</div>` : ''}
                             ${commissionDisplay}
                             ${t.notes ? `<div class="text-xs text-slate-500 italic">Notas: ${t.notes}</div>` : ''}
@@ -1942,7 +1984,7 @@
         cryptoTransactions.forEach(t => {
             if (t.type === 'compra') {
                 currentAmount += t.amount;
-                totalInvested += t.total; // total already includes commission
+                totalInvested += t.total;
             } else if (t.type === 'venta') {
                 currentAmount -= t.amount;
                 // Adjust total invested proportionally for sales
@@ -1988,11 +2030,17 @@
                 if (t.commissionAmount && t.commissionCurrency) {
                     commissionDisplay = `<div class="text-xs text-slate-500">Comisión: ${formatCurrency(t.commissionAmount, t.commissionCurrency, false)}</div>`;
                 }
+                
+                let netAmountDisplay = '';
+                if (t.amount !== t.originalAmount) {
+                    netAmountDisplay = `<div class="text-xs text-slate-500">Neto: ${formatCrypto(t.amount, crypto.symbol)}</div>`;
+                }
 
                 div.innerHTML = `
                     <div>
-                        <div class="font-semibold">${t.type.toUpperCase()} ${formatCrypto(t.amount, crypto.symbol)}</div>
-                        <div class="text-xs text-slate-400">@ ${formatCurrency(t.price, 'USD', false)} ${wallet ? `(${wallet.name})` : ''}</div>
+                        <div class="font-semibold">${t.type.toUpperCase()} ${formatCrypto(t.originalAmount, crypto.symbol)}</div>
+                        <div class="text-xs text-slate-400">@ ${formatCurrency(t.originalPrice, 'USD', false)} ${wallet ? `(${wallet.name})` : ''}</div>
+                        ${netAmountDisplay}
                         ${commissionDisplay}
                         ${t.notes ? `<div class="text-xs text-slate-500 italic">Notas: ${t.notes}</div>` : ''}
                     </div>
@@ -2052,7 +2100,7 @@
                 cryptoTransactions.filter(t => new Date(t.date) <= currentDate).forEach(t => {
                     if (t.type === 'compra') {
                         tempAmount += t.amount;
-                        tempInvested += t.total; // total includes commission
+                        tempInvested += t.total;
                     } else if (t.type === 'venta') {
                         tempAmount -= t.amount;
                         if (tempAmount + t.amount > 0) {
@@ -2069,7 +2117,7 @@
                 // For Price Evolution: Use the price of the *latest transaction* on or before this date, or the current live price if no transactions yet.
                 // This is a simplification; a real historical price API would be better.
                 const latestTransactionOnDate = cryptoTransactions.filter(t => t.date === dateString).pop();
-                const priceForDate = latestTransactionOnDate ? latestTransactionOnDate.price : (priceData.length > 0 ? priceData[priceData.length - 1] : currentLivePrice);
+                const priceForDate = latestTransactionOnDate ? latestTransactionOnDate.originalPrice : (priceData.length > 0 ? priceData[priceData.length - 1] : currentLivePrice);
                 priceData.push(priceForDate);
 
                 quantityData.push(cumulativeAmount);
@@ -2293,16 +2341,6 @@
         });
     }
 
-    // Removes a staking entry
-    function removeStakingEntry(idToRemove) {
-        // Using a custom modal for confirmation instead of alert/confirm
-        showCustomConfirm('¿Estás seguro de que quieres eliminar esta entrada de staking?', () => {
-            stakingEntries = stakingEntries.filter(entry => entry.id !== idToRemove);
-            saveState();
-            renderStakingEntries();
-            updateBalances(); // Update total balance
-        });
-    }
 
     // --- Custom Modal/Confirmation Functions (to replace alert/confirm) ---
     function showCustomConfirm(message, onConfirm) {
