@@ -661,7 +661,8 @@
             const crypto = userCryptos.find(c => c.coingeckoId.toUpperCase() === curr.toUpperCase() || c.symbol.toUpperCase() === curr.toUpperCase());
             if (crypto) {
                 prefix = crypto.symbol;
-                options = { minimumFractionDigits: 6, maximumFractionDigits: 6 }; // More decimals for crypto
+                // For crypto currencies used as commission currency, use 6 decimals by default
+                options = { minimumFractionDigits: 6, maximumFractionDigits: 6 };
             } else {
                 prefix = curr + ' '; // Fallback for unknown currencies/cryptos
             }
@@ -679,7 +680,11 @@
 
     // Formats cryptocurrency amounts for display (specifically for crypto holdings)
     function formatCrypto(amount, symbol) {
-        return `${symbol}${amount.toFixed(10)}`;
+        let decimals = 6; // Default decimals for most cryptos
+        if (symbol === '₿') { // Check if it's Bitcoin
+            decimals = 18; // 18 decimals for Bitcoin
+        }
+        return `${symbol}${amount.toFixed(decimals)}`;
     }
 
     // Displays an error message to the user
