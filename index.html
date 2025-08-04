@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+           !DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -6,26 +6,6 @@
     <title>GuiarCapital - Portafolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase Imports for Gemini API calls -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
-        // This is a minimal Firebase setup needed for the Canvas environment's API calls.
-        window.initFirebase = async () => {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            
-            if (initialAuthToken) {
-                await signInWithCustomToken(auth, initialAuthToken);
-            } else {
-                await signInAnonymously(auth);
-            }
-            window.auth = auth;
-        };
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
@@ -85,10 +65,6 @@
             animation-name: animatetop;
             animation-duration: 0.4s
         }
-        
-        .modal-content-lg {
-            max-width: 800px;
-        }
 
         @keyframes animatetop {
             from { top: -300px; opacity: 0 }
@@ -130,7 +106,7 @@
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             opacity: 0;
             transform: translateY(10px);
-        }
+        }<
 
         .notification.success {
             background-color: #10B981;
@@ -243,10 +219,6 @@
                     <button onclick="showPortfolioAnalysisModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">
                         Análisis de Portafolio ✨
                     </button>
-                    <!-- NEW: Button to trigger the Investment Strategy Assistant -->
-                    <button onclick="showInvestmentStrategyModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">
-                        Generar Estrategia ✨
-                    </button>
                     <button onclick="exportData()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Exportar Datos</button>
                     <button onclick="importData()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Importar Datos</button>
                     <button onclick="showClearAllModal()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Limpiar Todo</button>
@@ -279,9 +251,8 @@
                         <option value="venta">Venta</option>
                     </select>
                 </div>
-                <div class="lg:col-span-4 mt-4 relative">
+                <div class="lg:col-span-4 mt-4">
                     <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors">Registrar Transacción</button>
-                     <i id="logoLoadingIndicator" class="fas fa-spinner fa-spin absolute right-4 top-1/2 -translate-y-1/2 text-white hidden"></i>
                 </div>
             </form>
         </section>
@@ -375,39 +346,14 @@
             </div>
         </div>
     </div>
-    
-    <!-- NEW: Modal for Investment Strategy from Gemini LLM -->
-    <div id="strategyModal" class="modal">
-        <div class="modal-content modal-content-lg">
-            <span class="close-btn" onclick="closeModal('strategyModal')">&times;</span>
-            <h3 class="text-xl font-bold mb-4 text-blue-400">Generador de Estrategia de Inversión ✨</h3>
-            <div class="flex flex-col space-y-4">
-                <textarea id="strategyPromptInput"
-                    class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px]"
-                    placeholder="Describe tus objetivos de inversión, por ejemplo: 'Quiero una estrategia de bajo riesgo para un horizonte de 10 años, enfocada en la jubilación.'"></textarea>
-                <button onclick="generateInvestmentStrategy()" id="generateStrategyBtn" class="w-full p-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors flex items-center justify-center">
-                    <span id="strategyBtnText">Generar Estrategia</span>
-                    <i id="strategyLoadingIndicator" class="fas fa-spinner fa-spin ml-2 hidden"></i>
-                </button>
-                <div id="strategyResult" class="hidden p-4 bg-gray-700 rounded-lg whitespace-pre-wrap mt-4">
-                    <!-- The generated strategy will be inserted here -->
-                </div>
-            </div>
-            <div class="flex justify-end mt-8">
-                <button onclick="closeModal('strategyModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Notification Container -->
     <div id="notificationContainer" class="notification-container"></div>
     
     <script>
-        // Data and Configuration
         let transactions = [];
         let exchangeRate = 1000;
-        const DEFAULT_COLUMNS = ['stockLogo', 'stockName', 'currentPrice', 'quantity', 'entryPrice', 'holdingValueUSD', 'pnlTotal'];
+        const DEFAULT_COLUMNS = ['stockName', 'currentPrice', 'quantity', 'entryPrice', 'holdingValueUSD', 'pnlTotal'];
         let activeColumns = [...DEFAULT_COLUMNS];
 
         // API Key for Alpha Vantage - provided by user
@@ -416,7 +362,6 @@
 
         // Column definitions for configuration
         const allColumns = [
-            { id: 'stockLogo', name: 'Logo' },
             { id: 'stockName', name: 'Acción' },
             { id: 'currentPrice', name: 'Precio Actual' },
             { id: 'quantity', name: 'Cantidad' },
@@ -429,9 +374,7 @@
             { id: 'date', name: 'Fecha' },
             { id: 'time', name: 'Hora' }
         ];
-
-        let companyLogos = {}; // Cache for generated logos
-
+        
         // --- Core Functions ---
         
         async function fetchStockPrice(symbol) {
@@ -570,7 +513,6 @@
                 const priceChangePercent = transaction.entryPrice > 0 ? (priceChange / transaction.entryPrice) * 100 : 0;
 
                 const columnData = {
-                    stockLogo: `<img src="${companyLogos[transaction.stockName] || 'https://placehold.co/40x40/374151/d1d5db?text=GA'}" alt="Logo" class="h-10 w-10 object-contain rounded-full">`,
                     stockName: `<div class="font-bold text-gray-100">${transaction.stockName}</div><span class="text-xs text-gray-400">${transaction.transactionType}</span>`,
                     currentPrice: `$${transaction.currentPrice.toFixed(2)}`,
                     quantity: transaction.quantity,
@@ -629,55 +571,6 @@
             pnlElement.className = `text-2xl md:text-3xl font-bold mt-2 ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`;
         }
 
-        // --- NEW: Logo Generation and Company Details ---
-        async function getCompanyLogo(companyName) {
-            if (companyLogos[companyName]) {
-                return companyLogos[companyName];
-            }
-
-            document.getElementById('logoLoadingIndicator').classList.remove('hidden');
-            
-            const prompt = `Un logo minimalista y elegante para la empresa ${companyName}. Estilo de ícono plano y simple, fondo de color claro.`;
-            const payload = { instances: { prompt: prompt }, parameters: { "sampleCount": 1 } };
-            
-            let retries = 0;
-            const maxRetries = 5;
-            let delay = 1000;
-
-            while (retries < maxRetries) {
-                try {
-                    const apiKey = "";
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Error de la API: ${response.statusText}`);
-                    }
-
-                    const result = await response.json();
-                    const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
-                    if (base64Data) {
-                        const imageUrl = `data:image/png;base64,${base64Data}`;
-                        companyLogos[companyName] = imageUrl;
-                        saveData();
-                        return imageUrl;
-                    }
-                } catch (e) {
-                    console.error("Error al generar la imagen:", e);
-                    retries++;
-                    await new Promise(res => setTimeout(res, delay));
-                    delay *= 2;
-                }
-            }
-
-            showNotification('No se pudo generar el logo, usando un marcador de posición.', 'error');
-            return 'https://placehold.co/40x40/374151/d1d5db?text=GA';
-        }
-
         document.getElementById('transactionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -690,19 +583,14 @@
             const quantity = parseInt(quantityInput.value);
             const entryPrice = parseFloat(entryPriceInput.value);
             const transactionType = transactionTypeInput.value;
-            
+
             if (quantity <= 0 || entryPrice <= 0) {
                 showNotification('Por favor, ingresa valores válidos para cantidad y precio de entrada.', 'error');
                 return;
             }
 
-            document.getElementById('logoLoadingIndicator').classList.remove('hidden');
             document.getElementById('loadingIndicator').classList.remove('hidden');
-
             const currentPrice = await fetchStockPrice(stockName);
-            const logoUrl = await getCompanyLogo(stockName);
-
-            document.getElementById('logoLoadingIndicator').classList.add('hidden');
             document.getElementById('loadingIndicator').classList.add('hidden');
 
             if (currentPrice === null) {
@@ -770,7 +658,6 @@
                 if (newStockName !== transactions[index].stockName) {
                     document.getElementById('loadingIndicator').classList.remove('hidden');
                     const newPrice = await fetchStockPrice(newStockName);
-                    await getCompanyLogo(newStockName);
                     document.getElementById('loadingIndicator').classList.add('hidden');
                     if (newPrice === null) {
                         showNotification('No se pudo obtener el nuevo precio. Los cambios no se han guardado.', 'error');
@@ -807,7 +694,6 @@
 
         function clearAllData() {
             transactions = [];
-            companyLogos = {};
             updateUI();
             closeModal('confirmClearModal');
             showNotification('Todos los datos han sido eliminados', 'error');
@@ -852,7 +738,6 @@
         function createPortfolio() {
             showConfirmationModal('¿Estás seguro de que quieres crear un nuevo portafolio? Esto borrará el actual.', () => {
                 transactions = [];
-                companyLogos = {};
                 updateUI();
                 showNotification('Nuevo portafolio creado', 'success');
             });
@@ -930,14 +815,12 @@
             localStorage.setItem('guiarcapital_transactions', JSON.stringify(transactions));
             localStorage.setItem('guiarcapital_exchangeRate', exchangeRate.toString());
             localStorage.setItem('guiarcapital_activeColumns', JSON.stringify(activeColumns));
-            localStorage.setItem('guiarcapital_companyLogos', JSON.stringify(companyLogos));
         }
 
         function loadData() {
             const savedTransactions = localStorage.getItem('guiarcapital_transactions');
             const savedExchangeRate = localStorage.getItem('guiarcapital_exchangeRate');
             const savedColumns = localStorage.getItem('guiarcapital_activeColumns');
-            const savedLogos = localStorage.getItem('guiarcapital_companyLogos');
             
             if (savedTransactions) {
                 transactions = JSON.parse(savedTransactions);
@@ -948,9 +831,6 @@
             }
             if (savedColumns) {
                 activeColumns = JSON.parse(savedColumns);
-            }
-            if (savedLogos) {
-                companyLogos = JSON.parse(savedLogos);
             }
         }
         
@@ -971,7 +851,6 @@
                 transactions,
                 exchangeRate,
                 activeColumns,
-                companyLogos,
                 exportDate: new Date().toISOString()
             };
             const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -1001,7 +880,6 @@
                                     transactions = importedData.transactions;
                                     exchangeRate = importedData.exchangeRate || 1000;
                                     activeColumns = importedData.activeColumns || DEFAULT_COLUMNS;
-                                    companyLogos = importedData.companyLogos || {};
                                     document.getElementById('exchangeRateValue').textContent = exchangeRate.toFixed(2);
                                     updateUI();
                                     showNotification('Datos importados exitosamente', 'success');
@@ -1145,104 +1023,6 @@
             analysisResult.classList.remove('hidden');
         }
 
-        // --- NEW: Gemini API Integration for Investment Strategy ---
-        async function getGeminiStrategy(prompt) {
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-
-            let retries = 0;
-            const maxRetries = 3;
-            let delay = 1000;
-
-            while (retries < maxRetries) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) {
-                        throw new Error(`API call failed with status: ${response.status}`);
-                    }
-                    const result = await response.json();
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        return result.candidates[0].content.parts[0].text;
-                    } else {
-                        throw new Error('Respuesta de la API de Gemini inesperada o vacía.');
-                    }
-                } catch (error) {
-                    console.error(`Error al llamar a la API de Gemini: ${error.message}`);
-                    retries++;
-                    if (retries < maxRetries) {
-                        console.log(`Reintentando en ${delay / 1000} segundos...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    } else {
-                        showNotification('Error al generar la estrategia. Por favor, inténtalo de nuevo más tarde.', 'error');
-                        return null;
-                    }
-                }
-            }
-            return null;
-        }
-
-        async function showInvestmentStrategyModal() {
-            document.getElementById('strategyModal').style.display = 'block';
-            document.getElementById('strategyResult').classList.add('hidden');
-            document.getElementById('strategyPromptInput').value = '';
-        }
-        
-        async function generateInvestmentStrategy() {
-            const promptInput = document.getElementById('strategyPromptInput');
-            const promptText = promptInput.value.trim();
-            const strategyResultDiv = document.getElementById('strategyResult');
-            const generateBtn = document.getElementById('generateStrategyBtn');
-            const loadingIndicator = document.getElementById('strategyLoadingIndicator');
-            const btnText = document.getElementById('strategyBtnText');
-
-            if (!promptText) {
-                showNotification('Por favor, describe tus objetivos de inversión.', 'error');
-                return;
-            }
-
-            // Show loading state
-            generateBtn.disabled = true;
-            btnText.textContent = 'Generando...';
-            loadingIndicator.classList.remove('hidden');
-            strategyResultDiv.classList.add('hidden');
-            strategyResultDiv.innerHTML = '';
-            
-            const fullPrompt = `Actúa como un asesor financiero experto. Genera una estrategia de inversión detallada y bien estructurada para un portafolio basado en los siguientes objetivos: "${promptText}". La respuesta debe incluir:
-            1. Un resumen ejecutivo.
-            2. Recomendación de asignación de activos (ej. renta variable, renta fija, bienes raíces, etc.).
-            3. Consideraciones clave y riesgos.
-            4. Un plan de acción sugerido.
-            Responde en español y utiliza formato Markdown para una fácil lectura.`;
-
-            const strategyText = await getGeminiStrategy(fullPrompt);
-            
-            // Hide loading state
-            generateBtn.disabled = false;
-            btnText.textContent = 'Generar Estrategia';
-            loadingIndicator.classList.add('hidden');
-
-            if (strategyText) {
-                strategyResultDiv.innerHTML = strategyText.split('\n').map(line => {
-                    if (line.startsWith('###')) return `<h4 class="text-lg font-bold mt-4 text-blue-300">${line.substring(4)}</h4>`;
-                    if (line.startsWith('**')) return `<p class="font-bold mt-2">${line.replace(/\*\*/g, '')}</p>`;
-                    return `<p>${line}</p>`;
-                }).join('');
-                strategyResultDiv.classList.remove('hidden');
-            } else {
-                strategyResultDiv.innerHTML = '<p class="text-red-400">No se pudo generar la estrategia.</p>';
-                strategyResultDiv.classList.remove('hidden');
-            }
-        }
-        
         // --- Main Initialization ---
         function updateUI() {
             updateTable();
@@ -1251,11 +1031,6 @@
         }
 
         window.addEventListener('load', async () => {
-            // Initialize Firebase for API calls
-            if (window.initFirebase) {
-                await window.initFirebase();
-            }
-
             loadData();
             await fetchExchangeRate();
             updateUI();
@@ -1267,5 +1042,3 @@
     </script>
 </body>
 </html>
-
-
