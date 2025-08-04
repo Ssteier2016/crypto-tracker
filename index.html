@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuiarCapital - Portafolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1f2937;
+            color: #d1d5db;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .ga-logo-svg {
+            width: 48px;
+            height: 48px;
+            margin-right: 12px;
+        }
+        
+        /* New custom SVG logo styles */
+        .ga-logo-svg .g-path {
+            fill: #34D399; /* Green color for the G */
+        }
+        .ga-logo-svg .a-path {
+            fill: #60A5FA; /* Blue color for the A */
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #374151;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 95%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            animation-name: animatetop;
+            animation-duration: 0.4s
+        }
+
+        @keyframes animatetop {
+            from { top: -300px; opacity: 0 }
+            to { top: 0; opacity: 1 }
+        }
+
+        .close-btn {
+            color: #a1a1aa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #e5e7eb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .notification-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+        }
+
+        .notification {
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .notification.success {
+            background-color: #10B981;
+        }
+
+        .notification.error {
+            background-color: #EF4444;
+        }
+
+        .notification.info {
+            background-color: #3B82F6;
+        }
+
+        .dropdown-menu {
+            display: none;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <header class="bg-gray-800 shadow-xl sticky top-0 z-50 p-4">
+        <div class="container mx-auto flex justify-between items-center flex-wrap">
+            <div class="flex items-center">
+                <!-- Custom SVG Logo for GuiarCapital based on user's request -->
+                <svg class="ga-logo-svg" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="gradG" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#34D399;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="gradA" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <!-- Path for the G -->
+                    <path class="g-path" d="M25,5 C12.5,5 2.5,15 2.5,27.5 C2.5,40 12.5,50 25,50 C30,50 35,47.5 37.5,42.5 L30,42.5 C28.75,45 26.25,47.5 25,47.5 C15,47.5 5,37.5 5,27.5 C5,17.5 15,7.5 25,7.5 C35,7.5 42.5,17.5 42.5,27.5 L42.5,35 L27.5,35 C20,35 15,30 15,22.5 C15,15 20,10 27.5,10 L37.5,10 L37.5,17.5 L40,17.5 L40,10 L45,10 L45,17.5 L47.5,17.5 L47.5,10 C47.5,7.5 46.25,5 42.5,5 L25,5 Z" style="fill:url(#gradG);" transform="scale(0.8) translate(5, 5)"/>
+                    <!-- Path for the A -->
+                    <path class="a-path" d="M35,2.5 L45,22.5 L38.75,22.5 L36.25,12.5 L23.75,12.5 L21.25,22.5 L15,22.5 L25,2.5 L35,2.5 Z M25,17.5 L35,17.5 L33.75,22.5 L26.25,22.5 L25,17.5 Z" style="fill:url(#gradA);" transform="scale(0.8) translate(-5, 5)"/>
+                </svg>
+                <div class="text-3xl font-extrabold tracking-tight">
+                    <span class="text-teal-400">Guiar</span><span class="text-blue-400">Capital</span>
+                </div>
+            </div>
+            
+            <!-- Dropdown Menu -->
+            <div class="relative inline-block text-left mt-4 md:mt-0">
+                <button onclick="toggleDropdown()" class="inline-flex justify-center w-full rounded-md border border-gray-700 shadow-sm px-4 py-2 bg-gray-700 text-sm font-medium text-gray-200 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 transition-colors">
+                    Menú <i class="fas fa-chevron-down ml-2"></i>
+                </button>
+                <div id="dropdown-menu" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none dropdown-menu">
+                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                        <button onclick="createPortfolio()" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white transition-colors" role="menuitem">
+                            <i class="fas fa-plus-circle mr-2"></i> Crear Portafolio
+                        </button>
+                        <button onclick="showEditPortfolioModal()" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white transition-colors" role="menuitem">
+                            <i class="fas fa-edit mr-2"></i> Editar Portafolio
+                        </button>
+                        <button onclick="showConfigModal()" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white transition-colors" role="menuitem">
+                            <i class="fas fa-cog mr-2"></i> Configuración
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- Summary Cards Section -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-teal-400">Saldo Total USD</h3>
+                <div id="totalUSD" class="text-2xl md:text-3xl font-bold mt-2 text-teal-400">$0.00</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-blue-400">Saldo Total ARS</h3>
+                <div id="totalARS" class="text-2xl md:text-3xl font-bold mt-2 text-blue-400">$0.00</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-amber-400">P&L Total</h3>
+                <div id="totalPnL" class="text-2xl md:text-3xl font-bold mt-2 text-amber-400">+$0.00</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-gray-400">Transacciones</h3>
+                <div id="totalTransactions" class="text-2xl md:text-3xl font-bold mt-2 text-gray-400">0</div>
+            </div>
+        </section>
+
+        <!-- Controls Section -->
+        <section class="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg border border-gray-700">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <label for="exchangeRateDisplay" class="text-gray-400 font-semibold text-sm">USD/ARS:</label>
+                    <div id="exchangeRateDisplay" class="flex items-center text-lg font-bold text-gray-200">
+                        <span id="exchangeRateValue">...</span>
+                        <i id="rateLoadingIndicator" class="fas fa-spinner fa-spin text-teal-400 ml-2 hidden"></i>
+                    </div>
+                    <button onclick="fetchExchangeRate()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Actualizar</button>
+                    <!-- Manual input as a fallback or override, initially hidden -->
+                    <input type="number" id="exchangeRateInput" value="1000" step="0.01" class="w-24 px-3 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500 hidden">
+                    <button onclick="updateManualExchangeRate()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm hidden">Manual</button>
+                </div>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <button onclick="updateAllPrices()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Actualizar Precios</button>
+                    <!-- NEW: Button to trigger the Gemini LLM analysis -->
+                    <button onclick="showPortfolioAnalysisModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">
+                        Análisis de Portafolio ✨
+                    </button>
+                    <button onclick="exportData()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Exportar Datos</button>
+                    <button onclick="importData()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Importar Datos</button>
+                    <button onclick="showClearAllModal()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Limpiar Todo</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transaction Form Section -->
+        <section class="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg border border-gray-700">
+            <h2 class="text-2xl font-bold text-amber-400 mb-6">Nueva Transacción</h2>
+            <form id="transactionForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="flex flex-col">
+                    <label for="stockName" class="text-gray-400 text-sm font-medium mb-1">Nombre de la Acción</label>
+                    <input type="text" id="stockName" required placeholder="Ej: AAPL" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <!-- El campo de Precio Actual se obtiene ahora de la API -->
+                <div class="flex flex-col">
+                    <label for="quantity" class="text-gray-400 text-sm font-medium mb-1">Cantidad de Acciones</label>
+                    <input type="number" id="quantity" required placeholder="1" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="entryPrice" class="text-gray-400 text-sm font-medium mb-1">Precio de Entrada (USD)</label>
+                    <input type="number" step="0.01" id="entryPrice" required placeholder="0.00" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="transactionType" class="text-gray-400 text-sm font-medium mb-1">Tipo de Transacción</label>
+                    <select id="transactionType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Seleccionar</option>
+                        <option value="compra">Compra</option>
+                        <option value="venta">Venta</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-4 mt-4">
+                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors">Registrar Transacción</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Transactions Table Section (Excel-like) -->
+        <section class="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700 overflow-x-auto no-scrollbar">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-amber-400">Portafolio</h2>
+            </div>
+            <div class="w-full">
+                <table class="min-w-full divide-y divide-gray-700 table-auto">
+                    <thead class="bg-gray-700 sticky top-0 z-10">
+                        <tr>
+                            <!-- Table Headers will be populated by JavaScript -->
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody" class="bg-gray-800 divide-y divide-gray-700">
+                        <!-- Table rows will be populated by JavaScript -->
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-sm font-medium text-gray-500 italic">No hay transacciones registradas</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <!-- Loading indicator for API calls -->
+                <div id="loadingIndicator" class="hidden text-center mt-4 text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Cargando precios...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Configuration -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('configModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-amber-400">Configuración de Columnas</h3>
+            <p class="text-sm text-gray-400 mb-6">Selecciona las columnas que deseas mostrar en la tabla.</p>
+            <div id="columnsCheckboxes" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Checkboxes will be populated by JS -->
+            </div>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="closeModal('configModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancelar</button>
+                <button onclick="saveColumnConfig()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Guardar Configuración</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Clear All Confirmation -->
+    <div id="confirmClearModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('confirmClearModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-red-400">¿Estás seguro?</h3>
+            <p class="text-gray-300">Esta acción eliminará todas las transacciones de forma permanente. ¿Deseas continuar?</p>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="closeModal('confirmClearModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancelar</button>
+                <button onclick="clearAllData()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Sí, eliminar todo</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Editing/Viewing Transaction Details -->
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('editTransactionModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-amber-400">Detalles de Transacción</h3>
+            <form id="editTransactionForm">
+                <!-- Form fields will be populated by JS -->
+            </form>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="closeModal('editTransactionModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cerrar</button>
+                <button type="submit" form="editTransactionForm" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Modal for Portfolio Analysis from Gemini LLM -->
+    <div id="analysisModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('analysisModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-purple-400">Análisis de Portafolio por IA ✨</h3>
+            <div id="analysisContent" class="prose max-w-none text-gray-300">
+                <div id="analysisLoading" class="text-center text-gray-400 p-4">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Generando análisis...
+                </div>
+                <div id="analysisResult" class="hidden">
+                    <!-- The LLM analysis will be inserted here -->
+                </div>
+            </div>
+            <div class="flex justify-end mt-8">
+                <button onclick="closeModal('analysisModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+    
+    <script>
+        let transactions = [];
+        let exchangeRate = 1000;
+        const DEFAULT_COLUMNS = ['stockName', 'currentPrice', 'quantity', 'entryPrice', 'holdingValueUSD', 'pnlTotal'];
+        let activeColumns = [...DEFAULT_COLUMNS];
+
+        // API Key for Alpha Vantage - provided by user
+        const ALPHA_VANTAGE_API_KEY = "2WMFTP4I863HSQ26";
+        const API_CALL_DELAY = 1000; // 1 second delay between API calls to respect rate limits
+
+        // Column definitions for configuration
+        const allColumns = [
+            { id: 'stockName', name: 'Acción' },
+            { id: 'currentPrice', name: 'Precio Actual' },
+            { id: 'quantity', name: 'Cantidad' },
+            { id: 'entryPrice', name: 'Precio Entrada' },
+            { id: 'holdingValueUSD', name: 'Tenencia USD' },
+            { id: 'portfolioPercentage', name: '% Cartera' },
+            { id: 'priceChange', name: 'Var. Diaria ±' },
+            { id: 'pnlTotal', name: 'P&L Total' },
+            { id: 'transactionType', name: 'Tipo' },
+            { id: 'date', name: 'Fecha' },
+            { id: 'time', name: 'Hora' }
+        ];
+        
+        // --- Core Functions ---
+        
+        async function fetchStockPrice(symbol) {
+            const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+            let retries = 0;
+            const maxRetries = 3;
+            let delay = 1000;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const data = await response.json();
+                    
+                    if (data["Note"]) {
+                        throw new Error(data["Note"]);
+                    }
+
+                    if (data["Global Quote"] && data["Global Quote"]["05. price"]) {
+                        return parseFloat(data["Global Quote"]["05. price"]);
+                    } else {
+                        throw new Error('Símbolo no encontrado o datos de precio no disponibles');
+                    }
+                } catch (error) {
+                    console.error(`Error al buscar precio para ${symbol}: ${error.message}`);
+                    retries++;
+                    if (retries < maxRetries) {
+                        console.log(`Reintentando en ${delay / 1000} segundos...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        showNotification(`Error al obtener precio para ${symbol}. ${error.message}`, 'error');
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+
+        async function fetchExchangeRate() {
+            const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=ARS&apikey=${ALPHA_VANTAGE_API_KEY}`;
+            const rateValueElement = document.getElementById('exchangeRateValue');
+            const rateLoadingIndicator = document.getElementById('rateLoadingIndicator');
+            
+            rateLoadingIndicator.classList.remove('hidden');
+            let retries = 0;
+            const maxRetries = 3;
+            let delay = 1000;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const data = await response.json();
+
+                    if (data["Note"]) {
+                        throw new Error(data["Note"]);
+                    }
+                    
+                    if (data["Realtime Currency Exchange Rate"] && data["Realtime Currency Exchange Rate"]["5. Exchange Rate"]) {
+                        const newRate = parseFloat(data["Realtime Currency Exchange Rate"]["5. Exchange Rate"]);
+                        exchangeRate = newRate;
+                        rateValueElement.textContent = newRate.toFixed(2);
+                        showNotification('Tasa de cambio actualizada', 'success');
+                        updateUI();
+                        return newRate;
+                    } else {
+                        throw new Error('Datos de tasa de cambio no disponibles.');
+                    }
+                } catch (error) {
+                    console.error(`Error al buscar la tasa de cambio: ${error.message}`);
+                    retries++;
+                    if (retries < maxRetries) {
+                        console.log(`Reintentando en ${delay / 1000} segundos...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        showNotification(`Error al obtener la tasa de cambio. ${error.message}`, 'error');
+                        rateValueElement.textContent = exchangeRate.toFixed(2); // Fallback to last known rate
+                        return null;
+                    }
+                }
+            }
+            rateLoadingIndicator.classList.add('hidden');
+            return null;
+        }
+
+        async function updateAllPrices() {
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            let updated = false;
+
+            // Fetch a fresh exchange rate first
+            await fetchExchangeRate();
+
+            for (let i = 0; i < transactions.length; i++) {
+                const transaction = transactions[i];
+                const newPrice = await fetchStockPrice(transaction.stockName);
+                if (newPrice !== null) {
+                    transactions[i].currentPrice = newPrice;
+                    updated = true;
+                }
+                if (i < transactions.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, API_CALL_DELAY));
+                }
+            }
+            document.getElementById('loadingIndicator').classList.add('hidden');
+            if (updated) {
+                updateUI();
+                showNotification('Todos los precios han sido actualizados', 'success');
+            } else {
+                showNotification('No se pudieron actualizar los precios de las acciones. Inténtalo de nuevo más tarde.', 'error');
+            }
+        }
+        
+        function updateTable() {
+            const tbody = document.getElementById('transactionsBody');
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${activeColumns.length + 1}" class="px-6 py-4 text-center text-sm font-medium text-gray-500 italic">No hay transacciones registradas</td></tr>`;
+                return;
+            }
+
+            const totalPortfolioValue = transactions.reduce((sum, t) => sum + (t.quantity * t.currentPrice), 0);
+            tbody.innerHTML = '';
+
+            transactions.forEach((transaction, index) => {
+                const row = tbody.insertRow();
+                const holdingValueUSD = transaction.quantity * transaction.currentPrice;
+                const priceChange = transaction.currentPrice - transaction.entryPrice;
+                const pnlTotal = priceChange * transaction.quantity;
+                const portfolioPercentage = totalPortfolioValue > 0 ? (holdingValueUSD / totalPortfolioValue) * 100 : 0;
+                const priceChangePercent = transaction.entryPrice > 0 ? (priceChange / transaction.entryPrice) * 100 : 0;
+
+                const columnData = {
+                    stockName: `<div class="font-bold text-gray-100">${transaction.stockName}</div><span class="text-xs text-gray-400">${transaction.transactionType}</span>`,
+                    currentPrice: `$${transaction.currentPrice.toFixed(2)}`,
+                    quantity: transaction.quantity,
+                    entryPrice: `$${transaction.entryPrice.toFixed(2)}`,
+                    holdingValueUSD: `$${holdingValueUSD.toFixed(2)}`,
+                    pnlTotal: `<span class="${pnlTotal >= 0 ? 'text-green-400' : 'text-red-400'} font-medium">${pnlTotal >= 0 ? '+' : ''}$${pnlTotal.toFixed(2)}</span>`,
+                    portfolioPercentage: `${portfolioPercentage.toFixed(2)}%`,
+                    priceChange: `<span class="${priceChange >= 0 ? 'text-green-400' : 'text-red-400'}">${priceChange >= 0 ? '+' : ''}$${priceChange.toFixed(2)}<br><small>(${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%)</small></span>`,
+                    transactionType: `<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${transaction.transactionType === 'compra' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${transaction.transactionType.toUpperCase()}</span>`,
+                    date: transaction.date,
+                    time: transaction.time
+                };
+                
+                activeColumns.forEach(columnId => {
+                    const cell = row.insertCell();
+                    cell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300';
+                    cell.innerHTML = columnData[columnId] || '';
+                });
+
+                const actionsCell = row.insertCell();
+                actionsCell.className = 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium';
+                actionsCell.innerHTML = `
+                    <button onclick="showEditTransactionModal(${index})" class="text-indigo-400 hover:text-indigo-600 transition-colors mr-2"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteTransaction(${index})" class="text-red-400 hover:text-red-600 transition-colors"><i class="fas fa-trash"></i></button>
+                `;
+            });
+
+            updateTableHeaders();
+        }
+
+        function updateTableHeaders() {
+            const thead = document.querySelector('table thead tr');
+            thead.innerHTML = '';
+            
+            activeColumns.forEach(columnId => {
+                const column = allColumns.find(c => c.id === columnId);
+                if (column) {
+                    thead.innerHTML += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">${column.name}</th>`;
+                }
+            });
+            thead.innerHTML += `<th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Acciones</th>`;
+        }
+        
+        function updateSummary() {
+            const totalUSD = transactions.reduce((sum, t) => sum + (t.quantity * t.currentPrice), 0);
+            const totalARS = totalUSD * exchangeRate;
+            const totalTransactionsCount = transactions.length;
+            const totalPnL = transactions.reduce((sum, t) => sum + ((t.currentPrice - t.entryPrice) * t.quantity), 0);
+
+            document.getElementById('totalUSD').textContent = `$${totalUSD.toFixed(2)}`;
+            document.getElementById('totalARS').textContent = `$${totalARS.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+            document.getElementById('totalTransactions').textContent = totalTransactionsCount;
+            
+            const pnlElement = document.getElementById('totalPnL');
+            pnlElement.textContent = `${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}`;
+            pnlElement.className = `text-2xl md:text-3xl font-bold mt-2 ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`;
+        }
+
+        document.getElementById('transactionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const stockNameInput = document.getElementById('stockName');
+            const quantityInput = document.getElementById('quantity');
+            const entryPriceInput = document.getElementById('entryPrice');
+            const transactionTypeInput = document.getElementById('transactionType');
+
+            const stockName = stockNameInput.value.toUpperCase();
+            const quantity = parseInt(quantityInput.value);
+            const entryPrice = parseFloat(entryPriceInput.value);
+            const transactionType = transactionTypeInput.value;
+
+            if (quantity <= 0 || entryPrice <= 0) {
+                showNotification('Por favor, ingresa valores válidos para cantidad y precio de entrada.', 'error');
+                return;
+            }
+
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            const currentPrice = await fetchStockPrice(stockName);
+            document.getElementById('loadingIndicator').classList.add('hidden');
+
+            if (currentPrice === null) {
+                showNotification('No se pudo obtener el precio de la acción. La transacción no se ha registrado.', 'error');
+                return;
+            }
+
+            const formData = {
+                id: transactions.length > 0 ? Math.max(...transactions.map(t => t.id || 0)) + 1 : 1,
+                stockName,
+                currentPrice,
+                quantity,
+                entryPrice,
+                transactionType,
+                date: new Date().toLocaleDateString('es-AR'),
+                time: new Date().toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'}),
+            };
+
+            transactions.push(formData);
+            updateUI();
+            this.reset();
+            showNotification('Transacción registrada exitosamente', 'success');
+        });
+
+        async function showEditTransactionModal(index) {
+            const transaction = transactions[index];
+            if (!transaction) return;
+
+            const modal = document.getElementById('editTransactionModal');
+            const form = document.getElementById('editTransactionForm');
+            form.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Nombre</label>
+                        <input type="text" id="edit-stockName" value="${transaction.stockName}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Precio Actual (USD)</label>
+                        <input type="number" step="0.01" id="edit-currentPrice" value="${transaction.currentPrice}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Cantidad</label>
+                        <input type="number" id="edit-quantity" value="${transaction.quantity}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Precio Entrada (USD)</label>
+                        <input type="number" step="0.01" id="edit-entryPrice" value="${transaction.entryPrice}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Tipo</label>
+                        <select id="edit-transactionType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="compra" ${transaction.transactionType === 'compra' ? 'selected' : ''}>Compra</option>
+                            <option value="venta" ${transaction.transactionType === 'venta' ? 'selected' : ''}>Venta</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const newStockName = document.getElementById('edit-stockName').value.toUpperCase();
+                const newQuantity = parseInt(document.getElementById('edit-quantity').value);
+                const newEntryPrice = parseFloat(document.getElementById('edit-entryPrice').value);
+                const newTransactionType = document.getElementById('edit-transactionType').value;
+                
+                if (newStockName !== transactions[index].stockName) {
+                    document.getElementById('loadingIndicator').classList.remove('hidden');
+                    const newPrice = await fetchStockPrice(newStockName);
+                    document.getElementById('loadingIndicator').classList.add('hidden');
+                    if (newPrice === null) {
+                        showNotification('No se pudo obtener el nuevo precio. Los cambios no se han guardado.', 'error');
+                        return;
+                    }
+                    transactions[index].currentPrice = newPrice;
+                } else {
+                    transactions[index].currentPrice = parseFloat(document.getElementById('edit-currentPrice').value);
+                }
+
+                transactions[index].stockName = newStockName;
+                transactions[index].quantity = newQuantity;
+                transactions[index].entryPrice = newEntryPrice;
+                transactions[index].transactionType = newTransactionType;
+                
+                updateUI();
+                closeModal('editTransactionModal');
+                showNotification('Transacción actualizada exitosamente', 'success');
+            };
+            modal.style.display = 'block';
+        }
+
+        function deleteTransaction(index) {
+            showConfirmationModal('¿Estás seguro de que quieres eliminar esta transacción?', () => {
+                transactions.splice(index, 1);
+                updateUI();
+                showNotification('Transacción eliminada', 'error');
+            });
+        }
+
+        function showClearAllModal() {
+            document.getElementById('confirmClearModal').style.display = 'block';
+        }
+
+        function clearAllData() {
+            transactions = [];
+            updateUI();
+            closeModal('confirmClearModal');
+            showNotification('Todos los datos han sido eliminados', 'error');
+        }
+
+        // --- Modal & UI Control Functions ---
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function showConfigModal() {
+            const modal = document.getElementById('configModal');
+            const checkboxesContainer = document.getElementById('columnsCheckboxes');
+            checkboxesContainer.innerHTML = '';
+            
+            allColumns.forEach(column => {
+                const isChecked = activeColumns.includes(column.id);
+                const checkboxHtml = `
+                    <div class="flex items-center">
+                        <input type="checkbox" id="col-${column.id}" value="${column.id}" ${isChecked ? 'checked' : ''} class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
+                        <label for="col-${column.id}" class="ml-2 block text-sm text-gray-300">${column.name}</label>
+                    </div>
+                `;
+                checkboxesContainer.innerHTML += checkboxHtml;
+            });
+            modal.style.display = 'block';
+        }
+        
+        function saveColumnConfig() {
+            const checkboxes = document.querySelectorAll('#columnsCheckboxes input[type="checkbox"]');
+            activeColumns = [];
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    activeColumns.push(checkbox.value);
+                }
+            });
+            updateUI();
+            closeModal('configModal');
+            showNotification('Configuración de columnas guardada', 'success');
+        }
+        
+        function createPortfolio() {
+            showConfirmationModal('¿Estás seguro de que quieres crear un nuevo portafolio? Esto borrará el actual.', () => {
+                transactions = [];
+                updateUI();
+                showNotification('Nuevo portafolio creado', 'success');
+            });
+        }
+        
+        function showEditPortfolioModal() {
+            showConfigModal();
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdown-menu');
+            dropdown.classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.inline-flex')) {
+                const dropdowns = document.getElementsByClassName('dropdown-menu');
+                for (let i = 0; i < dropdowns.length; i++) {
+                    const openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+        
+        function showNotification(message, type) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(10px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function showConfirmationModal(message, onConfirm) {
+            const modalId = 'confirmModalTemp';
+            if (document.getElementById(modalId)) {
+                document.getElementById(modalId).remove();
+            }
+
+            const modalHtml = `
+                <div id="${modalId}" class="modal" style="display: block;">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="document.getElementById('${modalId}').remove()">&times;</span>
+                        <h3 class="text-xl font-bold mb-4 text-blue-400">Confirmación</h3>
+                        <p class="text-gray-300">${message}</p>
+                        <div class="flex justify-end mt-8 gap-4">
+                            <button onclick="document.getElementById('${modalId}').remove()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancelar</button>
+                            <button id="confirm-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.getElementById('confirm-btn').onclick = () => {
+                onConfirm();
+                document.getElementById(modalId).remove();
+            };
+        }
+
+        // --- Data Persistence Functions ---
+        function saveData() {
+            localStorage.setItem('guiarcapital_transactions', JSON.stringify(transactions));
+            localStorage.setItem('guiarcapital_exchangeRate', exchangeRate.toString());
+            localStorage.setItem('guiarcapital_activeColumns', JSON.stringify(activeColumns));
+        }
+
+        function loadData() {
+            const savedTransactions = localStorage.getItem('guiarcapital_transactions');
+            const savedExchangeRate = localStorage.getItem('guiarcapital_exchangeRate');
+            const savedColumns = localStorage.getItem('guiarcapital_activeColumns');
+            
+            if (savedTransactions) {
+                transactions = JSON.parse(savedTransactions);
+            }
+            if (savedExchangeRate) {
+                exchangeRate = parseFloat(savedExchangeRate);
+                document.getElementById('exchangeRateValue').textContent = exchangeRate.toFixed(2);
+            }
+            if (savedColumns) {
+                activeColumns = JSON.parse(savedColumns);
+            }
+        }
+        
+        function updateManualExchangeRate() {
+            const newRate = parseFloat(document.getElementById('exchangeRateInput').value);
+            if (newRate > 0) {
+                exchangeRate = newRate;
+                document.getElementById('exchangeRateValue').textContent = newRate.toFixed(2);
+                updateUI();
+                showNotification(`Tipo de cambio actualizado a ${exchangeRate} ARS/USD`, 'success');
+            } else {
+                showNotification('El tipo de cambio debe ser un valor positivo', 'error');
+            }
+        }
+
+        function exportData() {
+            const dataToExport = {
+                transactions,
+                exchangeRate,
+                activeColumns,
+                exportDate: new Date().toISOString()
+            };
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `guiarcapital_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showNotification('Datos exportados exitosamente', 'success');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            if (importedData.transactions && Array.isArray(importedData.transactions)) {
+                                showConfirmationModal('¿Deseas reemplazar todos los datos actuales con los datos importados?', () => {
+                                    transactions = importedData.transactions;
+                                    exchangeRate = importedData.exchangeRate || 1000;
+                                    activeColumns = importedData.activeColumns || DEFAULT_COLUMNS;
+                                    document.getElementById('exchangeRateValue').textContent = exchangeRate.toFixed(2);
+                                    updateUI();
+                                    showNotification('Datos importados exitosamente', 'success');
+                                });
+                            } else {
+                                showNotification('Formato de archivo inválido. Por favor, sube un archivo válido de GuiarCapital.', 'error');
+                            }
+                        } catch (error) {
+                            showNotification('Error al importar el archivo. Verifica que sea un archivo JSON válido.', 'error');
+                            console.error('Error importing data:', error);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // --- NEW: Gemini API Integration for Portfolio Analysis ---
+
+        // Function to build the prompt with portfolio data
+        function getPortfolioAnalysisPrompt() {
+            const portfolioData = transactions.map(t => {
+                const pnl = (t.currentPrice - t.entryPrice) * t.quantity;
+                const holdingValue = t.currentPrice * t.quantity;
+                return {
+                    stockName: t.stockName,
+                    quantity: t.quantity,
+                    entryPrice: t.entryPrice.toFixed(2),
+                    currentPrice: t.currentPrice.toFixed(2),
+                    holdingValue: holdingValue.toFixed(2),
+                    pnl: pnl.toFixed(2)
+                };
+            });
+            
+            const totalUSD = transactions.reduce((sum, t) => sum + (t.quantity * t.currentPrice), 0);
+            const totalPnL = transactions.reduce((sum, t) => sum + ((t.currentPrice - t.entryPrice) * t.quantity), 0);
+
+            const prompt = `
+            Eres un analista de portafolios financiero experto. Analiza el siguiente portafolio de inversiones y proporciona un resumen claro y estructurado.
+            
+            **Datos del Portafolio:**
+            - Saldo Total del Portafolio: $${totalUSD.toFixed(2)} USD
+            - Ganancias y Pérdidas (P&L) Totales: $${totalPnL.toFixed(2)} USD
+            - Tasa de Cambio USD/ARS: ${exchangeRate.toFixed(2)}
+            
+            **Detalles de cada Transacción:**
+            ${JSON.stringify(portfolioData, null, 2)}
+            
+            **Instrucciones para el Análisis:**
+            1.  **Resumen General**: Empieza con un párrafo conciso sobre el rendimiento y la composición general del portafolio.
+            2.  **Rendimiento de Acciones**: Identifica las acciones con el mejor y peor rendimiento (en términos de P&L).
+            3.  **Diversificación**: Comenta sobre la diversificación del portafolio. ¿Está concentrado en pocas acciones o está bien distribuido?
+            4.  **Sugerencias (Breve)**: Ofrece un par de sugerencias generales y cautelares, como "considerar la diversificación" o "mantenerse al tanto de las noticias del mercado", sin dar consejos de inversión explícitos.
+            
+            Responde en español, utilizando un formato de Markdown claro para las secciones.
+            `;
+            return prompt;
+        }
+
+        async function getGeminiAnalysis(prompt) {
+            const apiKey = ""; // Canvas will provide this automatically
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+
+            let retries = 0;
+            const maxRetries = 3;
+            let delay = 1000;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API call failed with status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error('Respuesta de la API de Gemini inesperada o vacía.');
+                    }
+                } catch (error) {
+                    console.error(`Error al llamar a la API de Gemini: ${error.message}`);
+                    retries++;
+                    if (retries < maxRetries) {
+                        console.log(`Reintentando en ${delay / 1000} segundos...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        showNotification('Error al generar el análisis. Por favor, inténtalo de nuevo más tarde.', 'error');
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+
+        async function showPortfolioAnalysisModal() {
+            const modal = document.getElementById('analysisModal');
+            const analysisLoading = document.getElementById('analysisLoading');
+            const analysisResult = document.getElementById('analysisResult');
+            
+            // Show modal and loading indicator, hide previous result
+            modal.style.display = 'block';
+            analysisLoading.classList.remove('hidden');
+            analysisResult.classList.add('hidden');
+            analysisResult.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                analysisResult.innerHTML = '<p>No hay transacciones para analizar. Por favor, añade algunas para generar un análisis.</p>';
+                analysisLoading.classList.add('hidden');
+                analysisResult.classList.remove('hidden');
+                return;
+            }
+
+            const prompt = getPortfolioAnalysisPrompt();
+            const analysisText = await getGeminiAnalysis(prompt);
+            
+            if (analysisText) {
+                // Display the analysis text
+                analysisResult.innerHTML = analysisText.split('\n').map(line => {
+                    if (line.startsWith('###')) return `<h4 class="text-lg font-bold mt-4 text-purple-300">${line.substring(4)}</h4>`;
+                    if (line.startsWith('**')) return `<p class="font-bold mt-2">${line.replace(/\*\*/g, '')}</p>`;
+                    return `<p>${line}</p>`;
+                }).join('');
+            } else {
+                analysisResult.innerHTML = '<p class="text-red-400">No se pudo generar el análisis.</p>';
+            }
+            
+            analysisLoading.classList.add('hidden');
+            analysisResult.classList.remove('hidden');
+        }
+
+        // --- Main Initialization ---
+        function updateUI() {
+            updateTable();
+            updateSummary();
+            saveData();
+        }
+
+        window.addEventListener('load', async () => {
+            loadData();
+            await fetchExchangeRate();
+            updateUI();
+            if (transactions.length > 0) {
+                updateAllPrices();
+            }
+        });
+        
+    </script>
+</body>
+</html>
