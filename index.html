@@ -106,7 +106,7 @@
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             opacity: 0;
             transform: translateY(10px);
-        }<
+        }
 
         .notification.success {
             background-color: #10B981;
@@ -251,6 +251,24 @@
                         <option value="venta">Venta</option>
                     </select>
                 </div>
+                <!-- NEW FIELDS START HERE -->
+                <div class="flex flex-col">
+                    <label for="assetType" class="text-gray-400 text-sm font-medium mb-1">Tipo de Activo</label>
+                    <select id="assetType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Seleccionar</option>
+                        <option value="accion_real">Acción Real</option>
+                        <option value="cedear">CEDEAR</option>
+                    </select>
+                </div>
+                <div class="flex flex-col">
+                    <label for="displayPreference" class="text-gray-400 text-sm font-medium mb-1">Moneda de Visualización</label>
+                    <select id="displayPreference" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="USD">USD</option>
+                        <option value="ARS">ARS</option>
+                        <option value="Ambos">Ambos</option>
+                    </select>
+                </div>
+                <!-- NEW FIELDS END HERE -->
                 <div class="lg:col-span-4 mt-4">
                     <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors">Registrar Transacción</button>
                 </div>
@@ -353,12 +371,403 @@
     <script>
         let transactions = [];
         let exchangeRate = 1000;
-        const DEFAULT_COLUMNS = ['stockName', 'currentPrice', 'quantity', 'entryPrice', 'holdingValueUSD', 'pnlTotal'];
+        const DEFAULT_COLUMNS = ['stockName', 'currentPrice', 'quantity', 'entryPrice', 'holdingValueUSD', 'pnlTotal', 'cedearRatio', 'isCedear', 'assetType', 'displayPreference'];
         let activeColumns = [...DEFAULT_COLUMNS];
 
         // API Key for Alpha Vantage - provided by user
         const ALPHA_VANTAGE_API_KEY = "2WMFTP4I863HSQ26";
         const API_CALL_DELAY = 1000; // 1 second delay between API calls to respect rate limits
+
+        // CEDEARs data loaded from the provided PDF
+        const cedearData = {
+            "MMM": { "name": "3M Company", "ratio": "10:1" },
+            "ABT": { "name": "Abbott Labs", "ratio": "4:1" },
+            "ABBV": { "name": "AbbVie Inc.", "ratio": "10:1" },
+            "ANF": { "name": "Abercrombie & Fitch Co", "ratio": "1:1" },
+            "ACN": { "name": "Accenture", "ratio": "75:1" },
+            "ADGO": { "name": "Adecoagro S.A.", "ratio": "1:1" },
+            "ADS": { "name": "Adidas AG", "ratio": "22:1" },
+            "ADBE": { "name": "Adobe Systems Incorporated", "ratio": "44:1" },
+            "JMIA": { "name": "Adr Jumia Technologies Ag", "ratio": "1:1" },
+            "AAP": { "name": "Advanced Auto Parts Inc", "ratio": "14:1" },
+            "AMD": { "name": "Advanced Micro Devices, Inc.", "ratio": "10:1" },
+            "AEG": { "name": "Aegon N.V.", "ratio": "1:1" },
+            "AEM": { "name": "Agnico Eagle Mines Limited", "ratio": "6:1" },
+            "ABNB": { "name": "Airbnb Inc", "ratio": "15:1" },
+            "BABA": { "name": "Alibaba Group Holding Limited", "ratio": "9:1" },
+            "GOOGL": { "name": "Alphabet Inc.", "ratio": "58:1" },
+            "AABA": { "name": "Altaba Inc.", "ratio": "3:1" },
+            "MO": { "name": "Altria Group Inc.", "ratio": "4:1" },
+            "AOCA": { "name": "Aluminum Corp Of China", "ratio": "1:1" },
+            "AMZN": { "name": "Amazon.Com, Inc.", "ratio": "144:1" },
+            "ABEV": { "name": "Ambev S.A.", "ratio": "1:3" },
+            "ABEV3": { "name": "Ambev S.A.", "ratio": "1:1" },
+            "AMX": { "name": "America Movil", "ratio": "1:1" },
+            "AAL": { "name": "American Airlines Group Inc", "ratio": "2:1" },
+            "AXP": { "name": "American Express Co", "ratio": "15:1" },
+            "AIG": { "name": "American International Group (AIG)", "ratio": "5:1" },
+            "AMGN": { "name": "Amgen Inc.", "ratio": "30:1" },
+            "ADI": { "name": "Analog Devices", "ratio": "15:1" },
+            "AAPL": { "name": "Apple Inc.", "ratio": "20:1" },
+            "AMAT": { "name": "Applied Materials Inc.", "ratio": "5:1" },
+            "ARCO": { "name": "Arcos Dorados Holdings Inc.", "ratio": "1:2" },
+            "ARKK": { "name": "ARK INNOVATION", "ratio": "10:1" },
+            "ARM": { "name": "ARM Holdings Plc", "ratio": "27:1" },
+            "ASML": { "name": "ASML HOLDING NV", "ratio": "146:1" },
+            "AZN": { "name": "Astrazeneca Pic", "ratio": "2:1" },
+            "TEAM": { "name": "ATLASSIAN CORPORATION", "ratio": "47:1" },
+            "T": { "name": "At &T Inc.", "ratio": "3:1" },
+            "ADP": { "name": "Automatic Data Processing Inc.", "ratio": "6:1" },
+            "AVY": { "name": "Avery Dennison Corp.", "ratio": "18:1" },
+            "CAR": { "name": "Avis Budget Group Inc.", "ratio": "26:1" },
+            "BIDU": { "name": "Baidu, Inc.", "ratio": "11:1" },
+            "BKR": { "name": "Baker Hughes Co", "ratio": "7:1" },
+            "BBD": { "name": "Banco Bradesco S.A.", "ratio": "1:1" },
+            "BBDC3": { "name": "Banco Bradesco S.A.", "ratio": "1:1" },
+            "BPA11": { "name": "Banco BTG Pactual S.A.", "ratio": "1:1" },
+            "BBAS3": { "name": "Banco do Brasil S.A.", "ratio": "2:1" },
+            "ITUB3": { "name": "Banco Itaú Unibanco S.A", "ratio": "1:1" },
+            "BSBR": { "name": "Banco Santander (Brasil) S.A.", "ratio": "1:1" },
+            "SAN": { "name": "Banco Santander S.A", "ratio": "1:4" },
+            "BA.C": { "name": "Bank Of America Corporation", "ratio": "4:1" },
+            "BCS": { "name": "Barclays Bank Plc", "ratio": "1:1" },
+            "B": { "name": "Barrick Gold Corp", "ratio": "2:1" },
+            "BAS": { "name": "Basf SE", "ratio": "2:1" },
+            "BAYN": { "name": "Bayer AG", "ratio": "3:1" },
+            "BRKB": { "name": "Berkshire Hathaway Inc.", "ratio": "22:1" },
+            "BHP": { "name": "Bhp Group Ltd", "ratio": "2:1" },
+            "BBV": { "name": "Bilbao Vizcaya Argentaria S.A.", "ratio": "1:1" },
+            "BIOX": { "name": "Bioceres Crop Solutions Corp.", "ratio": "1:1" },
+            "BIIB": { "name": "Biogen Inc.", "ratio": "13:1" },
+            "BITF": { "name": "Bitfarms Ltd.", "ratio": "1:5" },
+            "BB": { "name": "Blackberry Limited", "ratio": "3:1" },
+            "BKNG": { "name": "Booking", "ratio": "700:1" },
+            "BP": { "name": "BP PCL", "ratio": "5:1" },
+            "LND": { "name": "Brasilagro - Co Brasileira de Propriedades Agricolas", "ratio": "1:1" },
+            "BAK": { "name": "Braskem SA", "ratio": "2:1" },
+            "BRFS": { "name": "BRF S.A.", "ratio": "1:3" },
+            "BMY": { "name": "Bristol-Myers Squibb Company", "ratio": "3:1" },
+            "AVGO": { "name": "Broadcom Inc.", "ratio": "39:1" },
+            "BNG": { "name": "Bunge Limited", "ratio": "5:1" },
+            "AI": { "name": "C3.AI INC", "ratio": "5:1" },
+            "CAJ": { "name": "Canon Inc", "ratio": "2:1" },
+            "CAH": { "name": "Cardinal Health Inc", "ratio": "3:1" },
+            "CCL": { "name": "Carnival", "ratio": "3:1" },
+            "CAT": { "name": "Caterpillar Inc", "ratio": "20:1" },
+            "CLS": { "name": "CELESTICA INC", "ratio": "20:1" },
+            "CX": { "name": "Cemex S.A.B. de CV", "ratio": "1:1" },
+            "EBR": { "name": "Centrais Eléctricas Brasileiras S.A. - Eletrobras", "ratio": "1:4" },
+            "SCHW": { "name": "Charles Schwab", "ratio": "13:1" },
+            "CVX": { "name": "Chevron Corp.", "ratio": "16:1" },
+            "LFC": { "name": "China Life Insurance", "ratio": "2:1" },
+            "SNP": { "name": "China Petroleum & Chem", "ratio": "3:1" },
+            "SBSP3": { "name": "Cia Saneamento Básico de SP", "ratio": "1:1" },
+            "CSCO": { "name": "Cisco Systems Inc", "ratio": "5:1" },
+            "C": { "name": "Citigroup Inc", "ratio": "3:1" },
+            "KOFM": { "name": "Coca-Cola Femsa, S.A.B. De C.V.", "ratio": "2:1" },
+            "CDE": { "name": "Coeur Mining Inc.", "ratio": "1:1" },
+            "COIN": { "name": "Coinbase Global Inc", "ratio": "27:1" },
+            "CL": { "name": "Colgate Palmolive Co", "ratio": "3:1" },
+            "CBRD": { "name": "Companhia Brasileira De Dis NPV ADR", "ratio": "1:1" },
+            "SBS": { "name": "Companhia de Saneamento Básico do Estado de São Paulo-Sabesp", "ratio": "1:2" },
+            "ELP": { "name": "Companhia Paranaense de Energía - COPEL", "ratio": "1:3" },
+            "SID": { "name": "Companhia Siderúrgica Nacional", "ratio": "1:8" },
+            "CSNA3": { "name": "Companhia Siderúrgica Nacional S.A.", "ratio": "1:1" },
+            "CEC": { "name": "CONSTELLATION ENERGY CORPORATION", "ratio": "45:1" },
+            "GLW": { "name": "Corning Inc.", "ratio": "4:1" },
+            "CAAP": { "name": "Corporación America Airports S.A.", "ratio": "1:4" },
+            "COST": { "name": "Costco Wholesale Corp", "ratio": "48:1" },
+            "CS": { "name": "Credit Suisse Group", "ratio": "1:1" },
+            "CVS": { "name": "CVS Health", "ratio": "15:1" },
+            "DHR": { "name": "Danaher Corp", "ratio": "54:1" },
+            "BSN": { "name": "Danone", "ratio": "20:1" },
+            "DECK": { "name": "DECKERS OUTDOOR CORPORATION", "ratio": "25:1" },
+            "DE": { "name": "Deere & Co.", "ratio": "40:1" },
+            "DAL": { "name": "Delta Air Lines", "ratio": "8:1" },
+            "DTEA": { "name": "Deutsche Telekom Ag", "ratio": "3:1" },
+            "DEO": { "name": "Diageo PLC", "ratio": "6:1" },
+            "SPXL": { "name": "DIREXION DAILY S&P 500 BULL 3X", "ratio": "25:1" },
+            "DOCU": { "name": "DocuSign Inc.", "ratio": "22:1" },
+            "DOW": { "name": "DOW Inc", "ratio": "6:1" },
+            "DD": { "name": "Dupont de Nemours Inc.", "ratio": "5:1" },
+            "EOAN": { "name": "E.On Se", "ratio": "6:1" },
+            "EBAY": { "name": "Ebay Inc.", "ratio": "2:1" },
+            "EA": { "name": "Electronic Arts Inc", "ratio": "14:1" },
+            "LLY": { "name": "Eli Lilly and Company", "ratio": "56:1" },
+            "AKO.B": { "name": "Embotelladora Andina S.A.", "ratio": "1:1" },
+            "ERJ": { "name": "Embraer-Empresa Brasileira de Aeronáutica S.A.", "ratio": "1:1" },
+            "XLE": { "name": "ENERGY SELECT SECTOR SPDR FUND", "ratio": "2:1" },
+            "E": { "name": "Eni Spa", "ratio": "4:1" },
+            "EFX": { "name": "Equifax Inc.", "ratio": "16:1" },
+            "EQNR": { "name": "Equinor Asa", "ratio": "6:1" },
+            "GLD": { "name": "ETF SPDR GOLD TRUST", "ratio": "50:1" },
+            "ETSY": { "name": "Etsy Inc.", "ratio": "16:1" },
+            "XOM": { "name": "Exxon Mobil Corporation", "ratio": "10:1" },
+            "FNMA": { "name": "Fed. Natl, Mortgage - Fannie Mae", "ratio": "1:1" },
+            "FDX": { "name": "Fedex Corp", "ratio": "10:1" },
+            "RACE": { "name": "Ferrari", "ratio": "83:1" },
+            "XLF": { "name": "FINANCIAL SELECT SECTOR SPDR FUND", "ratio": "2:1" },
+            "FSLR": { "name": "First Solar Inc.", "ratio": "18:1" },
+            "XLU": { "name": "First Trust NASDAQ Cybersecurity", "ratio": "10:1" },
+            "FMX": { "name": "Fomento Economico Mexicano - Femsa", "ratio": "6:1" },
+            "F": { "name": "Ford Motor Company", "ratio": "1:1" },
+            "FMCC": { "name": "Freddie Mac (Federal Home Loan)", "ratio": "1:1" },
+            "FCX": { "name": "Freeport Mcmoran Copper & Gold Inc.", "ratio": "3:1" },
+            "GRMN": { "name": "Garmin Ltd.", "ratio": "3:1" },
+            "GE": { "name": "General Electric Co.", "ratio": "8:1" },
+            "GM": { "name": "General Motors Co", "ratio": "6:1" },
+            "GPRK": { "name": "Geopark Ltd.", "ratio": "1:1" },
+            "GGB": { "name": "Gerdau S.A.", "ratio": "1:4" },
+            "GILD": { "name": "Gilead Sciences, Inc.", "ratio": "4:1" },
+            "URA": { "name": "Global X Uranium ETF", "ratio": "5:1" },
+            "GLOB": { "name": "Globant S.A.", "ratio": "18:1" },
+            "GFI": { "name": "Gold Fields Ltd.", "ratio": "1:1" },
+            "GT": { "name": "Goodyear Tire & Rubber co./the", "ratio": "2:1" },
+            "PAC": { "name": "Grupo Aeroportuario del Pacifico, S.A.B. de C.V.", "ratio": "16:1" },
+            "ASR": { "name": "Grupo Aeroportuario Del Sureste, S.A.B. de C.V.", "ratio": "20:1" },
+            "TV": { "name": "Grupo Televisa S.A.", "ratio": "3:1" },
+            "GSK": { "name": "GSK Plc.", "ratio": "4:1" },
+            "HAL": { "name": "Halliburton Co.", "ratio": "2:1" },
+            "HAPV3": { "name": "Hapvida Participacoes E Investimentos S.A.", "ratio": "1:1" },
+            "HOG": { "name": "Harley-Davidson Inc.", "ratio": "3:1" },
+            "HMY": { "name": "Harmony Gold Mining Company Ltd.", "ratio": "1:1" },
+            "HDB": { "name": "Hdfc Bank Limited.", "ratio": "2:1" },
+            "HL": { "name": "Hecla Mining Co.", "ratio": "1:1" },
+            "HHPD": { "name": "Hon Hai Precision Industry Co. Ltd.", "ratio": "2:1" },
+            "HMC": { "name": "Honda Motor Co. Ltd", "ratio": "1:1" },
+            "HON": { "name": "Honeywell International Inc.", "ratio": "8:1" },
+            "HWM": { "name": "Howmet Aerospace Inc.", "ratio": "1:1" },
+            "HPQ": { "name": "Hp Inc", "ratio": "1:1" },
+            "HSBC": { "name": "Hsbc Holdings Plc", "ratio": "2:1" },
+            "HNPIY": { "name": "Huaneng Power Intl", "ratio": "1:1" },
+            "HUT": { "name": "Hut 8 Mining Corp.", "ratio": "1:5" },
+            "IBN": { "name": "Icici Bank Ltd.", "ratio": "1:1" },
+            "INFY": { "name": "Infosys Limited", "ratio": "1:1" },
+            "ING": { "name": "Ing Groep Nv", "ratio": "3:1" },
+            "INTC": { "name": "Intel Corporation", "ratio": "5:1" },
+            "IBM": { "name": "International Business Machines", "ratio": "15:1" },
+            "IFF": { "name": "International Flavors & Fragrances Inc.", "ratio": "12:1" },
+            "IP": { "name": "International Paper Co.", "ratio": "4:1" },
+            "ISRG": { "name": "Intuitive Surgical inc", "ratio": "90:1" },
+            "QQQ": { "name": "INVESCO QQQ TRUST", "ratio": "20:1" },
+            "IBIT": { "name": "ISHARES BITCOIN TRUST", "ratio": "10:1" },
+            "FXI": { "name": "ISHARES CHINA LARGE-CAP ETF", "ratio": "5:1" },
+            "IEUR": { "name": "iShares Core MSCI Europe ETF", "ratio": "1:1" },
+            "IJH": { "name": "iShares CORE S&P MID-CAP ETF", "ratio": "12:1" },
+            "ETHA": { "name": "ISHARES ETHEREUM TR ETF", "ratio": "5:1" },
+            "EWZ": { "name": "ISHARES MSCI BRAZIL CAP", "ratio": "2:1" },
+            "EEM": { "name": "ISHARES MSCI EMERGING MARKET", "ratio": "5:1" },
+            "EWJ": { "name": "iShares MSCI JAPAN ETF", "ratio": "14:1" },
+            "IBB": { "name": "iShares Nasdaq Biotechnology ETF", "ratio": "27:1" },
+            "IVW": { "name": "iShares S&P 500 Growth ETF", "ratio": "20:1" },
+            "IVE": { "name": "iShares S&P 500 Value ETF", "ratio": "40:1" },
+            "SLV": { "name": "iShares SILVER TRUST", "ratio": "6:1" },
+            "IWM": { "name": "ISHARES TRUST RUSSELL 2000", "ratio": "10:1" },
+            "ITUB": { "name": "Itaú Unibanco Holding S.A.", "ratio": "1:1" },
+            "JPM": { "name": "J.P. Morgan & Chase Co.", "ratio": "15:1" },
+            "JD": { "name": "Jd.Com, Inc.", "ratio": "4:1" },
+            "JNJ": { "name": "Johnson & Johnson", "ratio": "15:1" },
+            "JCI": { "name": "Johnson Controls International", "ratio": "2:1" },
+            "JOYY": { "name": "JOYY Inc.", "ratio": "5:1" },
+            "KB": { "name": "Kb Financial Group Inc.", "ratio": "2:1" },
+            "KMB": { "name": "Kimberly-Clark Corp.", "ratio": "6:1" },
+            "KGC": { "name": "Kinross Gold Corp", "ratio": "1:1" },
+            "PHG": { "name": "Koninklijke Philips N.V.", "ratio": "5:1" },
+            "KEP": { "name": "Korea Electric Power Corp.", "ratio": "1:1" },
+            "LRCX": { "name": "Lam Research Corp", "ratio": "56:1" },
+            "LVS": { "name": "Las Vegas Sands Corp", "ratio": "2:1" },
+            "LAR": { "name": "Lithium Americas (Argentina) Corp", "ratio": "1:1" },
+            "LAC": { "name": "Lithium Americas Corp", "ratio": "1:1" },
+            "LYG": { "name": "Lloyds Banking Group Plc", "ratio": "2:1" },
+            "ERIC": { "name": "Lm Ericsson Telephone Co.", "ratio": "2:1" },
+            "RENT3": { "name": "Localiza Rent A Car S.A.", "ratio": "2:1" },
+            "LMT": { "name": "Lockheed Martin Corporation", "ratio": "20:1" },
+            "LREN3": { "name": "Lojas Renner S.A.", "ratio": "1:1" },
+            "MGLU3": { "name": "Magazine Luiza S.A.", "ratio": "1:1" },
+            "MMC": { "name": "Marsh & Mclennan Companies Inc.", "ratio": "16:1" },
+            "MRVL": { "name": "Marvell Technology Inc", "ratio": "14:1" },
+            "MA": { "name": "Mastercard Inc.", "ratio": "33:1" },
+            "MCD": { "name": "Mcdonald'S Corp.", "ratio": "24:1" },
+            "MUX": { "name": "McEwen Mining Inc", "ratio": "2:1" },
+            "MDT": { "name": "Medtronic Public Limited Company", "ratio": "4:1" },
+            "MELI": { "name": "Mercadolibre Inc.", "ratio": "120:1" },
+            "MBG": { "name": "Mercedes-Benz Group AG", "ratio": "4:1" },
+            "MRK": { "name": "Merck & Co. Inc.", "ratio": "5:1" },
+            "META": { "name": "Meta Platforms Inc", "ratio": "24:1" },
+            "MU": { "name": "Micron Technology Inc", "ratio": "5:1" },
+            "MSFT": { "name": "Microsoft Corp.", "ratio": "30:1" },
+            "MSTR": { "name": "Microstrategy Inc CI A New", "ratio": "20:1" },
+            "MUFG": { "name": "Mitsubishi Ufj Financial Group", "ratio": "1:1" },
+            "MFG": { "name": "Mizuho Financial Group", "ratio": "1:1" },
+            "MBT": { "name": "Mobile Telesystems", "ratio": "2:1" },
+            "MRNA": { "name": "Moderna Inc", "ratio": "19:1" },
+            "MDLZ": { "name": "Mondelez", "ratio": "15:1" },
+            "MSI": { "name": "Motorola Solutions, Inc.", "ratio": "20:1" },
+            "NGG": { "name": "National Grid Plc", "ratio": "2:1" },
+            "NTCO": { "name": "Natura & Co Holding S.A.", "ratio": "1:1" },
+            "NTCO3": { "name": "Natura & Co Holding S.A.", "ratio": "1:1" },
+            "NECI": { "name": "Nec Corporation", "ratio": "1:3" },
+            "NTES": { "name": "Netease, Inc", "ratio": "14:1" },
+            "NFLX": { "name": "Netflix, Inc.", "ratio": "48:1" },
+            "NEM": { "name": "Newmont Corporation", "ratio": "3:1" },
+            "NXE": { "name": "Nexgen Energy LTD", "ratio": "1:1" },
+            "NKE": { "name": "Nike Inc.", "ratio": "12:1" },
+            "NIO": { "name": "NIO Inc.", "ratio": "4:1" },
+            "NSAN": { "name": "Nissan Motor Co., Ltd", "ratio": "1:1" },
+            "NOKA": { "name": "Nokia Corporation", "ratio": "1:1" },
+            "NMR": { "name": "Nomura Holdings, Inc", "ratio": "1:1" },
+            "NG": { "name": "Novagold Resources INC.", "ratio": "1:4" },
+            "NVS": { "name": "Novartis Ag", "ratio": "4:1" },
+            "NLM": { "name": "Novolipetsk Steel PJSC", "ratio": "2:1" },
+            "UN": { "name": "NU Holdings Ltd/Cayman Islands", "ratio": "2:1" },
+            "NUE": { "name": "Nucor Corp", "ratio": "16:1" },
+            "NVDA": { "name": "Nvidia Corporation", "ratio": "24:1" },
+            "OXY": { "name": "Occidental Petroleum Corp.", "ratio": "5:1" },
+            "ORCL": { "name": "Oracle Corporation", "ratio": "3:1" },
+            "ORAN": { "name": "Orange S.A.", "ratio": "1:1" },
+            "ORLY": { "name": "O'reilly Automotive Inc", "ratio": "222:1" },
+            "PCAR": { "name": "Paccar Inc.", "ratio": "3:1" },
+            "PAGS": { "name": "Pagseguro Digital Ltd", "ratio": "3:1" },
+            "PLTR": { "name": "Palantir Technologies Inc", "ratio": "3:1" },
+            "PANW": { "name": "Palo Alto Networks Inc", "ratio": "50:1" },
+            "PAAS": { "name": "Pan American Silver Corp.", "ratio": "3:1" },
+            "PCRF": { "name": "Panasonic Corporation", "ratio": "2:1" },
+            "PYPL": { "name": "Paypal Holdings, Inc.", "ratio": "8:1" },
+            "PDD": { "name": "PDD HOLDINGS INC", "ratio": "25:1" },
+            "PSO": { "name": "Pearson Plc", "ratio": "1:1" },
+            "PEP": { "name": "Pepsico Inc", "ratio": "18:1" },
+            "PRIO3": { "name": "Petro Rio S.A.", "ratio": "2:1" },
+            "PETR3": { "name": "Petrobras Petróleo Brasileiro S.A.", "ratio": "1:1" },
+            "PBR": { "name": "Petrobras (ADR)", "ratio": "1:1" },
+            "PTR": { "name": "Petrochina Co Ltd", "ratio": "4:1" },
+            "PFE": { "name": "Pfizer Inc.", "ratio": "4:1" },
+            "PM": { "name": "Philip Morris International", "ratio": "18:1" },
+            "PSX": { "name": "Phillips 66", "ratio": "6:1" },
+            "PINS": { "name": "Pinterest", "ratio": "7:1" },
+            "PBI": { "name": "Pitney Bowes Inc", "ratio": "1:1" },
+            "OGZD": { "name": "Pjsc Gazprom", "ratio": "2:1" },
+            "LKOD": { "name": "Pjsc Lukoil", "ratio": "4:1" },
+            "ATAD": { "name": "Pjsc Tatneft", "ratio": "4:1" },
+            "PKS": { "name": "Posco Holdings Inc.", "ratio": "3:1" },
+            "PG": { "name": "Procter & Gamble", "ratio": "15:1" },
+            "SH": { "name": "PROSHARES SHORT S&P500", "ratio": "8:1" },
+            "PSQ": { "name": "PROSHARES SHORT QQQ", "ratio": "8:1" },
+            "QCOM": { "name": "Qualcomm Inc.", "ratio": "11:1" },
+            "RTX": { "name": "Raytheon Technologies Corp", "ratio": "5:1" },
+            "RGTI": { "name": "RIGETTI COMPUTING INC", "ratio": "2:1" },
+            "RIO": { "name": "Rio Tinto Plc", "ratio": "8:1" },
+            "RIOT": { "name": "Riot Platforms", "ratio": "3:1" },
+            "RBLX": { "name": "Roblox Corp.", "ratio": "2:1" },
+            "ROKU": { "name": "Roku", "ratio": "13:1" },
+            "ROST": { "name": "Ross Stores, Inc.", "ratio": "4:1" },
+            "SHEL": { "name": "Royal Dutch Shell Pic", "ratio": "2:1" },
+            "SPGI": { "name": "S&P Global Inc", "ratio": "45:1" },
+            "CRM": { "name": "Salesforce Inc.", "ratio": "18:1" },
+            "SMSN": { "name": "Samsung Electronics Co. Ltd.", "ratio": "14:1" },
+            "SAP": { "name": "Sap Se", "ratio": "6:1" },
+            "SATL": { "name": "Satellogic Inc.", "ratio": "1:1" },
+            "SLB": { "name": "Schlumberger Ltd", "ratio": "3:1" },
+            "SE": { "name": "Sea Ltd.", "ratio": "32:1" },
+            "NOW": { "name": "SERVICENOW INC", "ratio": "172:1" },
+            "SHPW": { "name": "Shapeways Holdings Inc", "ratio": "1:2" },
+            "SHOP": { "name": "Shopify Inc.", "ratio": "107:1" },
+            "SIEGY": { "name": "Siemens Ag Adr", "ratio": "3:1" },
+            "SI": { "name": "Silvergate Bancorp", "ratio": "10:1" },
+            "SWKS": { "name": "Skyworks Solutions", "ratio": "21:1" },
+            "SNAP": { "name": "Snap Inc.", "ratio": "1:1" },
+            "SNA": { "name": "Snap-On Inc", "ratio": "6:1" },
+            "SNOW": { "name": "Snowflake Inc.", "ratio": "30:1" },
+            "SONY": { "name": "Sony Group Corporation", "ratio": "8:1" },
+            "SCCO": { "name": "Southern Copper Corp", "ratio": "2:1" },
+            "DIA": { "name": "SPDR DOW JONES INDUSTRIAL", "ratio": "20:1" },
+            "SPY": { "name": "SPDR S&P 500", "ratio": "20:1" },
+            "SPOT": { "name": "Spotify Technology S.A.", "ratio": "28:1" },
+            "XYZ": { "name": "Square Inc.", "ratio": "20:1" },
+            "SBUX": { "name": "Starbucks Corporation", "ratio": "12:1" },
+            "STLA": { "name": "Stellantis", "ratio": "5:1" },
+            "STNE": { "name": "StoneCo Ltd", "ratio": "3:1" },
+            "SDA": { "name": "SunCar Technology Group Inc", "ratio": "2:1" },
+            "SUZB3": { "name": "Suzano S.A.", "ratio": "1:1" },
+            "SUZ": { "name": "Suzano Papel E Celulose S.A.", "ratio": "1:1" },
+            "SYY": { "name": "Sysco Corp.", "ratio": "8:1" },
+            "TSM": { "name": "Taiwan Semiconductor Manufacturing", "ratio": "9:1" },
+            "TGT": { "name": "Target Corporation", "ratio": "24:1" },
+            "TTM": { "name": "Tata Motors Ltd", "ratio": "1:1" },
+            "RCTB4": { "name": "Telebras PN", "ratio": "1:1000" },
+            "TILAY": { "name": "Telecom Italia S.P.A. Ordinary Shares", "ratio": "1:1" },
+            "VIV": { "name": "Telefônica Brasil S.A.", "ratio": "1:1" },
+            "VIVT3": { "name": "Telefônica Brasil S.A.", "ratio": "1:1" },
+            "TEFO": { "name": "Telefonica S.A.", "ratio": "8:1" },
+            "TIMS3": { "name": "TIM S.A.", "ratio": "1:1" },
+            "TEM": { "name": "TEMPUS AI INC", "ratio": "12:1" },
+            "TEN": { "name": "Tenaris", "ratio": "1:1" },
+            "TXR": { "name": "Ternium S.A.", "ratio": "4:1" },
+            "TSLA": { "name": "Tesla, Inc.", "ratio": "15:1" },
+            "TXN": { "name": "Texas Instruments Inc", "ratio": "5:1" },
+            "BK": { "name": "The Bank Of New York Mellon Corp.", "ratio": "2:1" },
+            "BA": { "name": "The Boeing Company", "ratio": "24:1" },
+            "KO": { "name": "The Coca Cola Company", "ratio": "5:1" },
+            "XLC": { "name": "The Communication Services Select Sector SPDR Fund", "ratio": "19:1" },
+            "XLY": { "name": "The Consumer Discretionary Select Sector SPDR Fund", "ratio": "43:1" },
+            "XLP": { "name": "The Consumer Staples Select Sector SPDR Fund", "ratio": "16:1" },
+            "GS": { "name": "The Goldman Sachs Group, Inc", "ratio": "13:1" },
+            "XLV": { "name": "The Health Care Select Sector SPDR Fund", "ratio": "29:1" },
+            "HSY": { "name": "The Hershey Company", "ratio": "21:1" },
+            "HD": { "name": "The Home Depot Inc.", "ratio": "32:1" },
+            "XLI": { "name": "The Industrial Select Sector SPDR Fund", "ratio": "28:1" },
+            "XLB": { "name": "The Materials Select Sector SPDR Fund", "ratio": "18:1" },
+            "MOS": { "name": "The Mosaic Co", "ratio": "5:1" },
+            "XLRE": { "name": "The Real Estate Select Sector SPDR Fund", "ratio": "9:1" },
+            "XLK": { "name": "The Technology Select Sector SPDR Fund", "ratio": "46:1" },
+            "TRVV": { "name": "The Travelers Cos. Inc.", "ratio": "6:1" },
+            "DISN": { "name": "The Walt Disney Co.", "ratio": "12:1" },
+            "TMO": { "name": "Thermo Fisher Scientific Inc.", "ratio": "22:1" },
+            "TIMB": { "name": "Tim Participações S.A.", "ratio": "1:1" },
+            "TJX": { "name": "TJX Companies Inc/The", "ratio": "22:1" },
+            "TMUS": { "name": "T-mobile", "ratio": "33:1" },
+            "TTE": { "name": "TotalEnergies SE", "ratio": "3:1" },
+            "TM": { "name": "Toyota Motor Corporation", "ratio": "15:1" },
+            "TCOM": { "name": "TRIP.COM Group Ltd.", "ratio": "2:1" },
+            "TRIP": { "name": "Tripadvisor, Inc.", "ratio": "2:1" },
+            "TWLO": { "name": "Twilio Inc", "ratio": "36:1" },
+            "TWTR": { "name": "Twitter, Inc.", "ratio": "2:1" },
+            "USB": { "name": "U.S. Bancorp", "ratio": "5:1" },
+            "UBER": { "name": "Uber Technologies Inc.", "ratio": "2:1" },
+            "PATH": { "name": "UIPATH INC", "ratio": "2:1" },
+            "UGP": { "name": "Ultrapar Participações S.A.", "ratio": "1:1" },
+            "UL": { "name": "Unilever PLC - Sponsored", "ratio": "3:1" },
+            "UNP": { "name": "Union Pacific Corp.", "ratio": "20:1" },
+            "UAL": { "name": "United Airlines Holdings Inc.", "ratio": "5:1" },
+            "UNH": { "name": "United Health Group Inc.", "ratio": "33:1" },
+            "UPST": { "name": "Upstart Hidgs Inc", "ratio": "5:1" },
+            "URBN": { "name": "Urban Outfitters INC.", "ratio": "2:1" },
+            "XLU": { "name": "Utilities Select Sector SPDR Fund", "ratio": "15:1" },
+            "VALE": { "name": "Vale S.A.", "ratio": "2:1" },
+            "VALE3": { "name": "Vale S.A.", "ratio": "1:1" },
+            "VIG": { "name": "VANGUARD DIVIDEND APPRECIATION", "ratio": "39:1" },
+            "VEA": { "name": "Vanguard FTSE Developed Markets ETF", "ratio": "10:1" },
+            "SMH": { "name": "VAN ECK SEMICONDUCTOR ETF", "ratio": "50:1" },
+            "VRSN": { "name": "Verisign, Inc.", "ratio": "6:1" },
+            "VZ": { "name": "Verizon Communications Inc.", "ratio": "4:1" },
+            "VRTX": { "name": "VERTEX PHARMACEUTICALS INC", "ratio": "101:1" },
+            "SPCE": { "name": "Virgin Galactic", "ratio": "1:2" },
+            "V": { "name": "Visa Inc", "ratio": "18:1" },
+            "VIST": { "name": "Vista Energy S.A.B. de C.V.", "ratio": "3:1" },
+            "VST": { "name": "VISTRA CORPORATION", "ratio": "26:1" },
+            "VOD": { "name": "Vodafone Group Pic", "ratio": "1:1" },
+            "WBA": { "name": "Walgreens Boots Alliance Inc.", "ratio": "3:1" },
+            "WMT": { "name": "Walmart Inc.", "ratio": "18:1" },
+            "WEGE3": { "name": "Weg S.A.", "ratio": "1:1" },
+            "WBO": { "name": "Weibo Corporation", "ratio": "6:1" },
+            "WFC": { "name": "Wells Fargo & Co.", "ratio": "5:1" },
+            "XROX": { "name": "Xerox Holding Corporation", "ratio": "1:1" },
+            "XP": { "name": "XP Inc", "ratio": "4:1" },
+            "XPEV": { "name": "XPENG INC", "ratio": "4:1" },
+            "AUY": { "name": "Yamana Gold Inc.", "ratio": "1:1" },
+            "YZCA": { "name": "Yanzhou Coal Mining Co. Ltd.", "ratio": "2:1" },
+            "YELP": { "name": "Yelp Inc.", "ratio": "2:1" },
+            "ZM": { "name": "Zoom Video Communications Inc.", "ratio": "47:1" }
+        };
 
         // Column definitions for configuration
         const allColumns = [
@@ -366,14 +775,38 @@
             { id: 'currentPrice', name: 'Precio Actual' },
             { id: 'quantity', name: 'Cantidad' },
             { id: 'entryPrice', name: 'Precio Entrada' },
-            { id: 'holdingValueUSD', name: 'Tenencia USD' },
+            { id: 'holdingValueUSD', name: 'Tenencia' }, // Renamed to be generic for USD/ARS display
             { id: 'portfolioPercentage', name: '% Cartera' },
             { id: 'priceChange', name: 'Var. Diaria ±' },
-            { id: 'pnlTotal', name: 'P&L Total' },
+            { id: 'pnlTotal', name: 'P&L Total' }, // Renamed to be generic for USD/ARS display
             { id: 'transactionType', name: 'Tipo' },
             { id: 'date', name: 'Fecha' },
-            { id: 'time', name: 'Hora' }
+            { id: 'time', name: 'Hora' },
+            { id: 'cedearRatio', name: 'Ratio CEDEAR' },
+            { id: 'isCedear', name: 'Es CEDEAR' },
+            { id: 'assetType', name: 'Tipo de Activo' }, // New column
+            { id: 'displayPreference', name: 'Moneda Visualización' } // New column
         ];
+
+        /**
+         * Parses a ratio string (e.g., "20:1" or "1:2") into a numerical multiplier.
+         * If the ratio is A:B, it means A CEDEARs represent B underlying shares.
+         * The multiplier is B/A.
+         * @param {string} ratioString - The ratio string (e.g., "20:1").
+         * @returns {number} The multiplier for the real stock price to get the CEDEAR price. Defaults to 1 if invalid.
+         */
+        function parseRatio(ratioString) {
+            if (!ratioString || ratioString === 'N/A') return 1;
+            const parts = ratioString.split(':');
+            if (parts.length === 2) {
+                const numCedears = parseFloat(parts[0]);
+                const numShares = parseFloat(parts[1]);
+                if (numCedears > 0) {
+                    return numShares / numCedears;
+                }
+            }
+            return 1;
+        }
         
         // --- Core Functions ---
         
@@ -477,7 +910,7 @@
                 const transaction = transactions[i];
                 const newPrice = await fetchStockPrice(transaction.stockName);
                 if (newPrice !== null) {
-                    transactions[i].currentPrice = newPrice;
+                    transactions[i].currentPrice = newPrice; // currentPrice always stores the real stock price
                     updated = true;
                 }
                 if (i < transactions.length - 1) {
@@ -501,29 +934,77 @@
                 return;
             }
 
-            const totalPortfolioValue = transactions.reduce((sum, t) => sum + (t.quantity * t.currentPrice), 0);
+            // Calculate total portfolio value based on effective prices for percentage calculation
+            const totalPortfolioValue = transactions.reduce((sum, t) => {
+                let effectivePrice = t.currentPrice;
+                const cedearInfo = cedearData[t.stockName];
+                if (t.assetType === 'cedear' && cedearInfo) {
+                    effectivePrice = t.currentPrice * parseRatio(cedearInfo.ratio);
+                }
+                return sum + (t.quantity * effectivePrice);
+            }, 0);
+
             tbody.innerHTML = '';
 
             transactions.forEach((transaction, index) => {
                 const row = tbody.insertRow();
-                const holdingValueUSD = transaction.quantity * transaction.currentPrice;
-                const priceChange = transaction.currentPrice - transaction.entryPrice;
-                const pnlTotal = priceChange * transaction.quantity;
+                
+                // Calculate effective price per unit based on asset type and ratio
+                let effectivePricePerUnit = transaction.currentPrice; // Start with real stock price
+                const cedearInfo = cedearData[transaction.stockName];
+                if (transaction.assetType === 'cedear' && cedearInfo) {
+                    effectivePricePerUnit = transaction.currentPrice * parseRatio(cedearInfo.ratio);
+                }
+
+                const holdingValueUSD = transaction.quantity * effectivePricePerUnit;
+                const holdingValueARS = holdingValueUSD * exchangeRate;
+                const pnlTotalUSD = (effectivePricePerUnit - transaction.entryPrice) * transaction.quantity;
+                const pnlTotalARS = pnlTotalUSD * exchangeRate;
                 const portfolioPercentage = totalPortfolioValue > 0 ? (holdingValueUSD / totalPortfolioValue) * 100 : 0;
-                const priceChangePercent = transaction.entryPrice > 0 ? (priceChange / transaction.entryPrice) * 100 : 0;
+                
+                const priceChangePerUnit = effectivePricePerUnit - transaction.entryPrice;
+                const priceChangePercent = transaction.entryPrice > 0 ? (priceChangePerUnit / transaction.entryPrice) * 100 : 0;
+
+
+                // Determine how to display holding value based on displayPreference
+                let displayHoldingValueHtml;
+                if (transaction.displayPreference === 'USD') {
+                    displayHoldingValueHtml = `$${holdingValueUSD.toFixed(2)} USD`;
+                } else if (transaction.displayPreference === 'ARS') {
+                    displayHoldingValueHtml = `$${holdingValueARS.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS`;
+                } else { // Ambos
+                    displayHoldingValueHtml = `$${holdingValueUSD.toFixed(2)} USD<br>$${holdingValueARS.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS`;
+                }
+
+                // Determine how to display P&L total based on displayPreference
+                let displayPnlTotalHtml;
+                if (transaction.displayPreference === 'USD') {
+                    displayPnlTotalHtml = `<span class="${pnlTotalUSD >= 0 ? 'text-green-400' : 'text-red-400'} font-medium">${pnlTotalUSD >= 0 ? '+' : ''}$${pnlTotalUSD.toFixed(2)} USD</span>`;
+                } else if (transaction.displayPreference === 'ARS') {
+                    displayPnlTotalHtml = `<span class="${pnlTotalARS >= 0 ? 'text-green-400' : 'text-red-400'} font-medium">${pnlTotalARS >= 0 ? '+' : ''}$${pnlTotalARS.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS</span>`;
+                } else { // Ambos
+                    displayPnlTotalHtml = `
+                        <span class="${pnlTotalUSD >= 0 ? 'text-green-400' : 'text-red-400'} font-medium">${pnlTotalUSD >= 0 ? '+' : ''}$${pnlTotalUSD.toFixed(2)} USD</span><br>
+                        <span class="${pnlTotalARS >= 0 ? 'text-green-400' : 'text-red-400'} font-medium">${pnlTotalARS >= 0 ? '+' : ''}$${pnlTotalARS.toLocaleString('es-AR', {minimumFractionDigits: 2})} ARS</span>
+                    `;
+                }
 
                 const columnData = {
                     stockName: `<div class="font-bold text-gray-100">${transaction.stockName}</div><span class="text-xs text-gray-400">${transaction.transactionType}</span>`,
-                    currentPrice: `$${transaction.currentPrice.toFixed(2)}`,
+                    currentPrice: `$${effectivePricePerUnit.toFixed(2)}`, // Display effective price per CEDEAR/share
                     quantity: transaction.quantity,
                     entryPrice: `$${transaction.entryPrice.toFixed(2)}`,
-                    holdingValueUSD: `$${holdingValueUSD.toFixed(2)}`,
-                    pnlTotal: `<span class="${pnlTotal >= 0 ? 'text-green-400' : 'text-red-400'} font-medium">${pnlTotal >= 0 ? '+' : ''}$${pnlTotal.toFixed(2)}</span>`,
+                    holdingValueUSD: displayHoldingValueHtml, // This column now shows the preferred currency
+                    pnlTotal: displayPnlTotalHtml, // This column now shows the preferred currency
                     portfolioPercentage: `${portfolioPercentage.toFixed(2)}%`,
-                    priceChange: `<span class="${priceChange >= 0 ? 'text-green-400' : 'text-red-400'}">${priceChange >= 0 ? '+' : ''}$${priceChange.toFixed(2)}<br><small>(${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%)</small></span>`,
+                    priceChange: `<span class="${priceChangePerUnit >= 0 ? 'text-green-400' : 'text-red-400'}">${priceChangePerUnit >= 0 ? '+' : ''}$${priceChangePerUnit.toFixed(2)}<br><small>(${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%)</small></span>`,
                     transactionType: `<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${transaction.transactionType === 'compra' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${transaction.transactionType.toUpperCase()}</span>`,
                     date: transaction.date,
-                    time: transaction.time
+                    time: transaction.time,
+                    cedearRatio: cedearInfo ? cedearInfo.ratio : 'N/A', // Display raw ratio from data
+                    isCedear: transaction.assetType === 'cedear' ? 'Sí' : 'No', // Use assetType for this
+                    assetType: transaction.assetType === 'accion_real' ? 'Acción Real' : 'CEDEAR',
+                    displayPreference: transaction.displayPreference
                 };
                 
                 activeColumns.forEach(columnId => {
@@ -557,10 +1038,21 @@
         }
         
         function updateSummary() {
-            const totalUSD = transactions.reduce((sum, t) => sum + (t.quantity * t.currentPrice), 0);
+            let totalUSD = 0;
+            let totalPnL = 0;
+
+            transactions.forEach(t => {
+                let effectivePricePerUnit = t.currentPrice;
+                const cedearInfo = cedearData[t.stockName];
+                if (t.assetType === 'cedear' && cedearInfo) {
+                    effectivePricePerUnit = t.currentPrice * parseRatio(cedearInfo.ratio);
+                }
+                totalUSD += t.quantity * effectivePricePerUnit;
+                totalPnL += (effectivePricePerUnit - t.entryPrice) * t.quantity;
+            });
+
             const totalARS = totalUSD * exchangeRate;
             const totalTransactionsCount = transactions.length;
-            const totalPnL = transactions.reduce((sum, t) => sum + ((t.currentPrice - t.entryPrice) * t.quantity), 0);
 
             document.getElementById('totalUSD').textContent = `$${totalUSD.toFixed(2)}`;
             document.getElementById('totalARS').textContent = `$${totalARS.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
@@ -578,11 +1070,15 @@
             const quantityInput = document.getElementById('quantity');
             const entryPriceInput = document.getElementById('entryPrice');
             const transactionTypeInput = document.getElementById('transactionType');
+            const assetTypeInput = document.getElementById('assetType');
+            const displayPreferenceInput = document.getElementById('displayPreference');
 
             const stockName = stockNameInput.value.toUpperCase();
             const quantity = parseInt(quantityInput.value);
             const entryPrice = parseFloat(entryPriceInput.value);
             const transactionType = transactionTypeInput.value;
+            const assetType = assetTypeInput.value;
+            const displayPreference = displayPreferenceInput.value;
 
             if (quantity <= 0 || entryPrice <= 0) {
                 showNotification('Por favor, ingresa valores válidos para cantidad y precio de entrada.', 'error');
@@ -590,7 +1086,7 @@
             }
 
             document.getElementById('loadingIndicator').classList.remove('hidden');
-            const currentPrice = await fetchStockPrice(stockName);
+            const currentPrice = await fetchStockPrice(stockName); // This is the real stock price
             document.getElementById('loadingIndicator').classList.add('hidden');
 
             if (currentPrice === null) {
@@ -601,12 +1097,14 @@
             const formData = {
                 id: transactions.length > 0 ? Math.max(...transactions.map(t => t.id || 0)) + 1 : 1,
                 stockName,
-                currentPrice,
+                currentPrice, // Store the real stock price
                 quantity,
                 entryPrice,
                 transactionType,
                 date: new Date().toLocaleDateString('es-AR'),
                 time: new Date().toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'}),
+                assetType,
+                displayPreference
             };
 
             transactions.push(formData);
@@ -646,6 +1144,23 @@
                             <option value="venta" ${transaction.transactionType === 'venta' ? 'selected' : ''}>Venta</option>
                         </select>
                     </div>
+                    <!-- NEW EDIT FIELDS START HERE -->
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Tipo de Activo</label>
+                        <select id="edit-assetType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="accion_real" ${transaction.assetType === 'accion_real' ? 'selected' : ''}>Acción Real</option>
+                            <option value="cedear" ${transaction.assetType === 'cedear' ? 'selected' : ''}>CEDEAR</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-gray-400 text-sm font-medium mb-1">Moneda de Visualización</label>
+                        <select id="edit-displayPreference" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="USD" ${transaction.displayPreference === 'USD' ? 'selected' : ''}>USD</option>
+                            <option value="ARS" ${transaction.displayPreference === 'ARS' ? 'selected' : ''}>ARS</option>
+                            <option value="Ambos" ${transaction.displayPreference === 'Ambos' ? 'selected' : ''}>Ambos</option>
+                        </select>
+                    </div>
+                    <!-- NEW EDIT FIELDS END HERE -->
                 </div>
             `;
             form.onsubmit = async (e) => {
@@ -654,10 +1169,12 @@
                 const newQuantity = parseInt(document.getElementById('edit-quantity').value);
                 const newEntryPrice = parseFloat(document.getElementById('edit-entryPrice').value);
                 const newTransactionType = document.getElementById('edit-transactionType').value;
+                const newAssetType = document.getElementById('edit-assetType').value;
+                const newDisplayPreference = document.getElementById('edit-displayPreference').value;
                 
                 if (newStockName !== transactions[index].stockName) {
                     document.getElementById('loadingIndicator').classList.remove('hidden');
-                    const newPrice = await fetchStockPrice(newStockName);
+                    const newPrice = await fetchStockPrice(newStockName); // Fetch real stock price
                     document.getElementById('loadingIndicator').classList.add('hidden');
                     if (newPrice === null) {
                         showNotification('No se pudo obtener el nuevo precio. Los cambios no se han guardado.', 'error');
@@ -672,6 +1189,8 @@
                 transactions[index].quantity = newQuantity;
                 transactions[index].entryPrice = newEntryPrice;
                 transactions[index].transactionType = newTransactionType;
+                transactions[index].assetType = newAssetType;
+                transactions[index].displayPreference = newDisplayPreference;
                 
                 updateUI();
                 closeModal('editTransactionModal');
@@ -903,20 +1422,44 @@
         // Function to build the prompt with portfolio data
         function getPortfolioAnalysisPrompt() {
             const portfolioData = transactions.map(t => {
-                const pnl = (t.currentPrice - t.entryPrice) * t.quantity;
-                const holdingValue = t.currentPrice * t.quantity;
+                let effectivePricePerUnit = t.currentPrice;
+                const cedearInfo = cedearData[t.stockName];
+                if (t.assetType === 'cedear' && cedearInfo) {
+                    effectivePricePerUnit = t.currentPrice * parseRatio(cedearInfo.ratio);
+                }
+                const pnl = (effectivePricePerUnit - t.entryPrice) * t.quantity;
+                const holdingValue = effectivePricePerUnit * t.quantity;
+                
                 return {
                     stockName: t.stockName,
                     quantity: t.quantity,
                     entryPrice: t.entryPrice.toFixed(2),
-                    currentPrice: t.currentPrice.toFixed(2),
+                    currentPrice: effectivePricePerUnit.toFixed(2), // This should be the effective price for analysis
                     holdingValue: holdingValue.toFixed(2),
-                    pnl: pnl.toFixed(2)
+                    pnl: pnl.toFixed(2),
+                    isCedear: t.assetType === 'cedear' ? 'Sí' : 'No',
+                    cedearRatio: cedearInfo ? cedearInfo.ratio : 'N/A',
+                    assetType: t.assetType === 'accion_real' ? 'Acción Real' : 'CEDEAR',
+                    displayPreference: t.displayPreference
                 };
             });
             
-            const totalUSD = transactions.reduce((sum, t) => sum + (t.quantity * t.currentPrice), 0);
-            const totalPnL = transactions.reduce((sum, t) => sum + ((t.currentPrice - t.entryPrice) * t.quantity), 0);
+            let totalUSD = 0;
+            let totalPnL = 0;
+
+            transactions.forEach(t => {
+                let effectivePricePerUnit = t.currentPrice;
+                const cedearInfo = cedearData[t.stockName];
+                if (t.assetType === 'cedear' && cedearInfo) {
+                    effectivePricePerUnit = t.currentPrice * parseRatio(cedearInfo.ratio);
+                }
+                totalUSD += t.quantity * effectivePricePerUnit;
+                totalPnL += (effectivePricePerUnit - t.entryPrice) * t.quantity;
+            });
+
+            const totalARS = totalUSD * exchangeRate;
+            const totalCedears = transactions.filter(t => t.assetType === 'cedear').length;
+            const totalRealStocks = transactions.filter(t => t.assetType === 'accion_real').length;
 
             const prompt = `
             Eres un analista de portafolios financiero experto. Analiza el siguiente portafolio de inversiones y proporciona un resumen claro y estructurado.
@@ -925,14 +1468,16 @@
             - Saldo Total del Portafolio: $${totalUSD.toFixed(2)} USD
             - Ganancias y Pérdidas (P&L) Totales: $${totalPnL.toFixed(2)} USD
             - Tasa de Cambio USD/ARS: ${exchangeRate.toFixed(2)}
-            
+            - Número de CEDEARs en el portafolio: ${totalCedears}
+            - Número de Acciones Reales en el portafolio: ${totalRealStocks}
+
             **Detalles de cada Transacción:**
             ${JSON.stringify(portfolioData, null, 2)}
             
             **Instrucciones para el Análisis:**
             1.  **Resumen General**: Empieza con un párrafo conciso sobre el rendimiento y la composición general del portafolio.
-            2.  **Rendimiento de Acciones**: Identifica las acciones con el mejor y peor rendimiento (en términos de P&L).
-            3.  **Diversificación**: Comenta sobre la diversificación del portafolio. ¿Está concentrado en pocas acciones o está bien distribuido?
+            2.  **Rendimiento de Activos**: Identifica los activos con el mejor y peor rendimiento (en términos de P&L), diferenciando entre acciones reales y CEDEARs.
+            3.  **Composición del Portafolio**: Comenta sobre la composición del portafolio en términos de tipos de activos (acciones reales vs. CEDEARs) y su diversificación. ¿Está concentrado en pocos activos o está bien distribuido? ¿Cómo influyen los CEDEARs en la exposición al mercado argentino y extranjero?
             4.  **Sugerencias (Breve)**: Ofrece un par de sugerencias generales y cautelares, como "considerar la diversificación" o "mantenerse al tanto de las noticias del mercado", sin dar consejos de inversión explícitos.
             
             Responde en español, utilizando un formato de Markdown claro para las secciones.
@@ -1042,3 +1587,4 @@
     </script>
 </body>
 </html>
+
