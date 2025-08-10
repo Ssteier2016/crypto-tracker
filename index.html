@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuiarCapital - Portafolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1f2937;
+            color: #d1d5db;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .ga-logo-svg {
+            width: 48px;
+            height: 48px;
+            margin-right: 12px;
+        }
+        
+        .ga-logo-svg .g-path {
+            fill: #34D399;
+        }
+        .ga-logo-svg .a-path {
+            fill: #60A5FA;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #374151;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 95%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            animation-name: animatetop;
+            animation-duration: 0.4s
+        }
+
+        @keyframes animatetop {
+            from { top: -300px; opacity: 0 }
+            to { top: 0; opacity: 1 }
+        }
+
+        .close-btn {
+            color: #a1a1aa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #e5e7eb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .notification-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+        }
+
+        .notification {
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .notification.success {
+            background-color: #10B981;
+        }
+
+        .notification.error {
+            background-color: #EF4444;
+        }
+
+        .notification.info {
+            background-color: #3B82F6;
+        }
+
+        .dropdown-menu {
+            display: none;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .prose p {
+            margin-bottom: 1rem;
+        }
+        .prose h4 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <header class="bg-gray-800 shadow-xl sticky top-0 z-50 p-4">
+        <div class="container mx-auto flex justify-between items-center flex-wrap">
+            <div class="flex items-center">
+                <svg class="ga-logo-svg" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="gradG" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#34D399;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="gradA" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path class="g-path" d="M25,5 C12.5,5 2.5,15 2.5,27.5 C2.5,40 12.5,50 25,50 C30,50 35,47.5 37.5,42.5 L30,42.5 C28.75,45 26.25,47.5 25,47.5 C15,47.5 5,37.5 5,27.5 C5,17.5 15,7.5 25,7.5 C35,7.5 42.5,17.5 42.5,27.5 L42.5,35 L27.5,35 C20,35 15,30 15,22.5 C15,15 20,10 27.5,10 L37.5,10 L37.5,17.5 L40,17.5 L40,10 L45,10 L45,17.5 L47.5,17.5 L47.5,10 C47.5,7.5 46.25,5 42.5,5 L25,5 Z" style="fill:url(#gradG);" transform="scale(0.8) translate(5, 5)"/>
+                    <path class="a-path" d="M35,2.5 L45,22.5 L38.75,22.5 L36.25,12.5 L23.75,12.5 L21.25,22.5 L15,22.5 L25,2.5 L35,2.5 Z M25,17.5 L35,17.5 L33.75,22.5 L26.25,22.5 L25,17.5 Z" style="fill:url(#gradA);" transform="scale(0.8) translate(-5, 5)"/>
+                </svg>
+                <div class="text-3xl font-extrabold tracking-tight">
+                    <span class="text-teal-400">Guiar</span><span class="text-blue-400">Capital</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 mt-4 md:mt-0">
+                <select id="portfolioSelect" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+                    <option value="">Seleccionar Portafolio</option>
+                </select>
+                <div class="relative inline-block text-left">
+                    <button onclick="toggleDropdown()" class="inline-flex justify-center w-full rounded-md border border-gray-700 shadow-sm px-4 py-2 bg-gray-700 text-sm font-medium text-gray-200 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 transition-colors">
+                        Menú <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+                    <div id="dropdown-menu" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none dropdown-menu">
+                        <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                            <button onclick="createPortfolio()" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white transition-colors" role="menuitem">
+                                <i class="fas fa-plus-circle mr-2"></i> Crear Portafolio
+                            </button>
+                            <button onclick="showEditPortfolioModal()" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white transition-colors" role="menuitem">
+                                <i class="fas fa-edit mr-2"></i> Editar Portafolio
+                            </button>
+                            <button onclick="showConfigModal()" class="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white transition-colors" role="menuitem">
+                                <i class="fas fa-cog mr-2"></i> Configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-teal-400">Saldo Total USD</h3>
+                <div id="totalUSD" class="text-2xl md:text-3xl font-bold mt-2 text-teal-400">$0.00</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-blue-400">Saldo Total ARS</h3>
+                <div id="totalARS" class="text-2xl md:text-3xl font-bold mt-2 text-blue-400">$0.00</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-amber-400">P&L Total</h3>
+                <div id="totalPnL" class="text-2xl md:text-3xl font-bold mt-2 text-amber-400">+$0.00</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 text-center shadow-lg border border-gray-700">
+                <h3 class="text-md font-medium text-gray-400">Transacciones</h3>
+                <div id="totalTransactions" class="text-2xl md:text-3xl font-bold mt-2 text-gray-400">0</div>
+            </div>
+        </section>
+
+        <section class="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg border border-gray-700">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <label for="exchangeRateDisplay" class="text-gray-400 font-semibold text-sm">USD/ARS:</label>
+                    <div id="exchangeRateDisplay" class="flex items-center text-lg font-bold text-gray-200">
+                        <span id="exchangeRateValue">...</span>
+                        <i id="rateLoadingIndicator" class="fas fa-spinner fa-spin text-teal-400 ml-2 hidden"></i>
+                    </div>
+                    <button onclick="fetchExchangeRate()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Actualizar</button>
+                    <input type="number" id="exchangeRateInput" value="1000" step="0.01" class="w-24 px-3 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500 hidden">
+                    <button onclick="updateManualExchangeRate()" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm hidden">Manual</button>
+                </div>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <button onclick="updateAllPrices()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Actualizar Precios</button>
+                    <button onclick="showPortfolioAnalysisModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">
+                        Análisis de Portafolio ✨
+                    </button>
+                    <button onclick="exportData()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Exportar Datos</button>
+                    <button onclick="importData()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Importar Datos</button>
+                    <button onclick="showClearAllModal()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors text-sm">Limpiar Todo</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg border border-gray-700">
+            <h2 class="text-2xl font-bold text-amber-400 mb-6">Nueva Transacción</h2>
+            <form id="transactionForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="flex flex-col">
+                    <label for="stockName" class="text-gray-400 text-sm font-medium mb-1">Nombre de Acción</label>
+                    <input type="text" id="stockName" required placeholder="Ej: AAPL" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="quantity" class="text-gray-400 text-sm font-medium mb-1">Cantidad de Acciones</label>
+                    <input type="number" id="quantity" required placeholder="1" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="entryPriceUSD" class="text-gray-400 text-sm font-medium mb-1">Precio de Entrada (USD)</label>
+                    <input type="number" step="0.01" id="entryPriceUSD" required placeholder="0.00" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="entryPriceARS" class="text-gray-400 text-sm font-medium mb-1">Precio de Entrada (ARS)</label>
+                    <input type="number" step="0.01" id="entryPriceARS" placeholder="0.00" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex flex-col">
+                    <label for="transactionType" class="text-gray-400 text-sm font-medium mb-1">Tipo de Transacción</label>
+                    <select id="transactionType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Seleccionar</option>
+                        <option value="compra">Compra</option>
+                        <option value="venta">Venta</option>
+                    </select>
+                </div>
+                <div class="flex flex-col">
+                    <label for="assetType" class="text-gray-400 text-sm font-medium mb-1">Tipo de Activo</label>
+                    <select id="assetType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Seleccionar</option>
+                        <option value="accion_real">Acción Real</option>
+                        <option value="cedear">CEDEAR</option>
+                    </select>
+                </div>
+                <div class="flex flex-col">
+                    <label for="displayPreference" class="text-gray-400 text-sm font-medium mb-1">Moneda de Visualización</label>
+                    <select id="displayPreference" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="USD">USD</option>
+                        <option value="ARS">ARS</option>
+                        <option value="Ambos">Ambos</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-4 mt-4 relative">
+                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors">Registrar Transacción</button>
+                    <div id="formLoadingIndicator" class="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75 rounded-lg hidden">
+                        <i class="fas fa-spinner fa-spin text-teal-400 text-2xl"></i>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <section class="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700 overflow-x-auto no-scrollbar">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-amber-400">Portafolio</h2>
+            </div>
+            <div class="w-full">
+                <table class="min-w-full divide-y divide-gray-700 table-auto">
+                    <thead class="bg-gray-700 sticky top-0 z-10">
+                        <tr>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody" class="bg-gray-800 divide-y divide-gray-700">
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-sm font-medium text-gray-500 italic">No hay transacciones registradas</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div id="loadingIndicator" class="hidden text-center mt-4 text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Cargando precios...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('configModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-amber-400">Configuración de Columnas</h3>
+            <p class="text-sm text-gray-400 mb-6">Selecciona las columnas que deseas mostrar en la tabla.</p>
+            <div id="columnsCheckboxes" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            </div>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="closeModal('configModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancelar</button>
+                <button onclick="saveColumnConfig()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Guardar Configuración</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmClearModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('confirmClearModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-red-400">¿Estás seguro?</h3>
+            <p class="text-gray-300">Esta acción eliminará todas las transacciones de forma permanente. ¿Deseas continuar?</p>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="closeModal('confirmClearModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cancelar</button>
+                <button onclick="clearAllData()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Sí, eliminar todo</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('editTransactionModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-amber-400">Detalles de Transacción</h3>
+            <form id="editTransactionForm">
+            </form>
+            <div class="flex justify-end mt-8 gap-4">
+                <button onclick="closeModal('editTransactionModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cerrar</button>
+                <button type="submit" form="editTransactionForm" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="analysisModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('analysisModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-purple-400">Análisis de Portafolio por IA ✨</h3>
+            <div id="analysisContent" class="prose max-w-none text-gray-300">
+                <div id="analysisLoading" class="text-center text-gray-400 p-4">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Generando análisis...
+                </div>
+                <div id="analysisResult" class="hidden">
+                </div>
+            </div>
+            <div class="flex justify-end mt-8">
+                <button onclick="closeModal('analysisModal')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editPortfolioModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('editPortfolioModal')">&times;</span>
+            <h3 class="text-xl font-bold mb-4 text-amber-400">Editar Portafolio</h3>
+            <form id="editPortfolioForm">
+                <div class="flex flex-col mb-4">
+                    <label for="editPortfolioName" class="text-gray-400 text-sm font-medium mb-1">Nombre del Portafolio</label>
+                    <input type="text" id="editPortfolioName" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" onclick="deletePortfolio()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Eliminar Portafolio</button>
+                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="notificationContainer" class="notification-container"></div>
+    
+    <script>
+        let portfolios = [];
+        let currentPortfolioId = null;
+        let transactions = [];
+        let exchangeRate = 1000;
+        const allColumns = [
+            { id: 'stockName', name: 'Acción' },
+            { id: 'currentPrice', name: 'Precio Actual' },
+            { id: 'quantity', name: 'Cantidad' },
+            { id: 'entryPriceUSD', name: 'Precio Entrada USD' },
+            { id: 'entryPriceARS', name: 'Precio Entrada ARS' },
+            { id: 'holdingValueUSD', name: 'Tenencia' },
+            { id: 'portfolioPercentage', name: '% Cartera' },
+            { id: 'priceChange', name: 'Var. Diaria ±' },
+            { id: 'pnlTotal', name: 'P&L Total' },
+            { id: 'transactionType', name: 'Tipo' },
+            { id: 'date', name: 'Fecha' },
+            { id: 'time', name: 'Hora' },
+            { id: 'cedearRatio', name: 'Ratio CEDEAR' },
+            { id: 'isCedear', name: 'Es CEDEAR' },
+            { id: 'assetType', name: 'Tipo de Activo' },
+            { id: 'displayPreference', name: 'Moneda Visualización' }
+        ];
+        let activeColumns = allColumns.map(col => col.id); // All columns active by default
+
+        // API Key for Alpha Vantage
+        const ALPHA_VANTAGE_API_KEY = "2WMFTP4I863HSQ26";
+        const API_CALL_DELAY = 1000;
+
+        // CEDEARs data
+        const cedearData = {
+            "MMM": { "name": "3M Company", "ratio": "10:1" },
+            "ABT": { "name": "Abbott Labs", "ratio": "4:1" },
+            "ABBV": { "name": "AbbVie Inc.", "ratio": "10:1" },
+            "ANF": { "name": "Abercrombie & Fitch Co", "ratio": "1:1" },
+            "ACN": { "name": "Accenture", "ratio": "75:1" },
+            "ADGO": { "name": "Adecoagro S.A.", "ratio": "1:1" },
+            "ADS": { "name": "Adidas AG", "ratio": "22:1" },
+            "ADBE": { "name": "Adobe Systems Incorporated", "ratio": "44:1" },
+            "JMIA": { "name": "Adr Jumia Technologies Ag", "ratio": "1:1" },
+            "AAP": { "name": "Advanced Auto Parts Inc", "ratio": "14:1" },
+            "AMD": { "name": "Advanced Micro Devices, Inc.", "ratio": "10:1" },
+            "AEG": { "name": "Aegon N.V.", "ratio": "1:1" },
+            "AEM": { "name": "Agnico Eagle Mines Limited", "ratio": "6:1" },
+            "ABNB": { "name": "Airbnb Inc", "ratio": "15:1" },
+            "BABA": { "name": "Alibaba Group Holding Limited", "ratio": "9:1" },
+            "GOOGL": { "name": "Alphabet Inc.", "ratio": "58:1" },
+            "AABA": { "name": "Altaba Inc.", "ratio": "3:1" },
+            "MO": { "name": "Altria Group Inc.", "ratio": "4:1" },
+            "AOCA": { "name": "Aluminum Corp Of China", "ratio": "1:1" },
+            "AMZN": { "name": "Amazon.Com, Inc.", "ratio": "144:1" },
+            "ABEV": { "name": "Ambev S.A.", "ratio": "1:3" },
+            "ABEV3": { "name": "Ambev S.A.", "ratio": "1:1" },
+            "AMX": { "name": "America Movil", "ratio": "1:1" },
+            "AAL": { "name": "American Airlines Group Inc", "ratio": "2:1" },
+            "AXP": { "name": "American Express Co", "ratio": "15:1" },
+            "AIG": { "name": "American International Group (AIG)", "ratio": "5:1" },
+            "AMGN": { "name": "Amgen Inc.", "ratio": "30:1" },
+            "ADI": { "name": "Analog Devices", "ratio": "15:1" },
+            "AAPL": { "name": "Apple Inc.", "ratio": "20:1" },
+            "AMAT": { "name": "Applied Materials Inc.", "ratio": "5:1" },
+            "ARCO": { "name": "Arcos Dorados Holdings Inc.", "ratio": "1:2" },
+            "ARKK": { "name": "ARK INNOVATION", "ratio": "10:1" },
+            "ARM": { "name": "ARM Holdings Plc", "ratio": "27:1" },
+            "ASML": { "name": "ASML HOLDING NV", "ratio": "146:1" },
+            "AZN": { "name": "Astrazeneca Pic", "ratio": "2:1" },
+            "TEAM": { "name": "ATLASSIAN CORPORATION", "ratio": "47:1" },
+            "T": { "name": "At &T Inc.", "ratio": "3:1" },
+            "ADP": { "name": "Automatic Data Processing Inc.", "ratio": "6:1" },
+            "AVY": { "name": "Avery Dennison Corp.", "ratio": "18:1" },
+            "CAR": { "name": "Avis Budget Group Inc.", "ratio": "26:1" },
+            "BIDU": { "name": "Baidu, Inc.", "ratio": "11:1" },
+            "BKR": { "name": "Baker Hughes Co", "ratio": "7:1" },
+            "BBD": { "name": "Banco Bradesco S.A.", "ratio": "1:1" },
+            "BBDC3": { "name": "Banco Bradesco S.A.", "ratio": "1:1" },
+            "BPA11": { "name": "Banco BTG Pactual S.A.", "ratio": "1:1" },
+            "BBAS3": { "name": "Banco do Brasil S.A.", "ratio": "2:1" },
+            "ITUB3": { "name": "Banco Itaú Unibanco S.A", "ratio": "1:1" },
+            "BSBR": { "name": "Banco Santander (Brasil) S.A.", "ratio": "1:1" },
+            "SAN": { "name": "Banco Santander S.A", "ratio": "1:4" },
+            "BA.C": { "name": "Bank Of America Corporation", "ratio": "4:1" },
+            "BCS": { "name": "Barclays Bank Plc", "ratio": "1:1" },
+            "B": { "name": "Barrick Gold Corp", "ratio": "2:1" },
+            "BAS": { "name": "Basf SE", "ratio": "2:1" },
+            "BAYN": { "name": "Bayer AG", "ratio": "3:1" },
+            "BRKB": { "name": "Berkshire Hathaway Inc.", "ratio": "22:1" },
+            "BHP": { "name": "Bhp Group Ltd", "ratio": "2:1" },
+            "BBV": { "name": "Bilbao Vizcaya Argentaria S.A.", "ratio": "1:1" },
+            "BIOX": { "name": "Bioceres Crop Solutions Corp.", "ratio": "1:1" },
+            "BIIB": { "name": "Biogen Inc.", "ratio": "13:1" },
+            "BITF": { "name": "Bitfarms Ltd.", "ratio": "1:5" },
+            "BB": { "name": "Blackberry Limited", "ratio": "3:1" },
+            "BKNG": { "name": "Booking", "ratio": "700:1" },
+            "BP": { "name": "BP PCL", "ratio": "5:1" },
+            "LND": { "name": "Brasilagro - Co Brasileira de Propriedades Agricolas", "ratio": "1:1" },
+            "BAK": { "name": "Braskem SA", "ratio": "2:1" },
+            "BRFS": { "name": "BRF S.A.", "ratio": "1:3" },
+            "BMY": { "name": "Bristol-Myers Squibb Company", "ratio": "3:1" },
+            "AVGO": { "name": "Broadcom Inc.", "ratio": "39:1" },
+            "BNG": { "name": "Bunge Limited", "ratio": "5:1" },
+            "AI": { "name": "C3.AI INC", "ratio": "5:1" },
+            "CAJ": { "name": "Canon Inc", "ratio": "2:1" },
+            "CAH": { "name": "Cardinal Health Inc", "ratio": "3:1" },
+            "CCL": { "name": "Carnival", "ratio": "3:1" },
+            "CAT": { "name": "Caterpillar Inc", "ratio": "20:1" },
+            "CLS": { "name": "CELESTICA INC", "ratio": "20:1" },
+            "CX": { "name": "Cemex S.A.B. de CV", "ratio": "1:1" },
+            "EBR": { "name": "Centrais Eléctricas Brasileiras S.A. - Eletrobras", "ratio": "1:4" },
+            "SCHW": { "name": "Charles Schwab", "ratio": "13:1" },
+            "CVX": { "name": "Chevron Corp.", "ratio": "16:1" },
+            "LFC": { "name": "China Life Insurance", "ratio": "2:1" },
+            "SNP": { "name": "China Petroleum & Chem", "ratio": "3:1" },
+            "SBSP3": { "name": "Cia Saneamento Básico de SP", "ratio": "1:1" },
+            "CSCO": { "name": "Cisco Systems Inc", "ratio": "5:1" },
+            "C": { "name": "Citigroup Inc", "ratio": "3:1" },
+            "KOFM": { "name": "Coca-Cola Femsa, S.A.B. De C.V.", "ratio": "2:1" },
+            "CDE": { "name": "Coeur Mining Inc.", "ratio": "1:1" },
+            "COIN": { "name": "Coinbase Global Inc", "ratio": "27:1" },
+            "CL": { "name": "Colgate Palmolive Co", "ratio": "3:1" },
+            "CBRD": { "name": "Companhia Brasileira De Dis NPV ADR", "ratio": "1:1" },
+            "SBS": { "name": "Companhia de Saneamento Básico do Estado de São Paulo-Sabesp", "ratio": "1:2" },
+            "ELP": { "name": "Companhia Paranaense de Energía - COPEL", "ratio": "1:3" },
+            "SID": { "name": "Companhia Siderúrgica Nacional", "ratio": "1:8" },
+            "CSNA3": { "name": "Companhia Siderúrgica Nacional S.A.", "ratio": "1:1" },
+            "CEC": { "name": "CONSTELLATION ENERGY CORPORATION", "ratio": "45:1" },
+            "GLW": { "name": "Corning Inc.", "ratio": "4:1" },
+            "CAAP": { "name": "Corporación America Airports S.A.", "ratio": "1:4" },
+            "COST": { "name": "Costco Wholesale Corp", "ratio": "48:1" },
+            "CS": { "name": "Credit Suisse Group", "ratio": "1:1" },
+            "CVS": { "name": "CVS Health", "ratio": "15:1" },
+            "DHR": { "name": "Danaher Corp", "ratio": "54:1" },
+            "BSN": { "name": "Danone", "ratio": "20:1" },
+            "DECK": { "name": "DECKERS OUTDOOR CORPORATION", "ratio": "25:1" },
+            "DE": { "name": "Deere & Co.", "ratio": "40:1" },
+            "DAL": { "name": "Delta Air Lines", "ratio": "8:1" },
+            "DTEA": { "name": "Deutsche Telekom Ag", "ratio": "3:1" },
+            "DEO": { "name": "Diageo PLC", "ratio": "6:1" },
+            "SPXL": { "name": "DIREXION DAILY S&P 500 BULL 3X", "ratio": "25:1" },
+            "DOCU": { "name": "DocuSign Inc.", "ratio": "22:1" },
+            "DOW": { "name": "DOW Inc", "ratio": "6:1" },
+            "DD": { "name": "Dupont de Nemours Inc.", "ratio": "5:1" },
+            "EOAN": { "name": "E.On Se", "ratio": "6:1" },
+            "EBAY": { "name": "Ebay Inc.", "ratio": "2:1" },
+            "EA": { "name": "Electronic Arts Inc", "ratio": "14:1" },
+            "LLY": { "name": "Eli Lilly and Company", "ratio": "56:1" },
+            "AKO.B": { "name": "Embotelladora Andina S.A.", "ratio": "1:1" },
+            "ERJ": { "name": "Embraer-Empresa Brasileira de Aeronáutica S.A.", "ratio": "1:1" },
+            "XLE": { "name": "ENERGY SELECT SECTOR SPDR FUND", "ratio": "2:1" },
+            "E": { "name": "Eni Spa", "ratio": "4:1" },
+            "EFX": { "name": "Equifax Inc.", "ratio": "16:1" },
+            "EQNR": { "name": "Equinor Asa", "ratio": "6:1" },
+            "GLD": { "name": "ETF SPDR GOLD TRUST", "ratio": "50:1" },
+            "ETSY": { "name": "Etsy Inc.", "ratio": "16:1" },
+            "XOM": { "name": "Exxon Mobil Corporation", "ratio": "10:1" },
+            "FNMA": { "name": "Fed. Natl, Mortgage - Fannie Mae", "ratio": "1:1" },
+            "FDX": { "name": "Fedex Corp", "ratio": "10:1" },
+            "RACE": { "name": "Ferrari", "ratio": "83:1" },
+            "XLF": { "name": "FINANCIAL SELECT SECTOR SPDR FUND", "ratio": "2:1" },
+            "FSLR": { "name": "First Solar Inc.", "ratio": "18:1" },
+            "FMX": { "name": "Fomento Economico Mexicano - Femsa", "ratio": "6:1" },
+            "F": { "name": "Ford Motor Company", "ratio": "1:1" },
+            "FMCC": { "name": "Freddie Mac (Federal Home Loan)", "ratio": "1:1" },
+            "FCX": { "name": "Freeport Mcmoran Copper & Gold Inc.", "ratio": "3:1" },
+            "GRMN": { "name": "Garmin Ltd.", "ratio": "3:1" },
+            "GE": { "name": "General Electric Co.", "ratio": "8:1" },
+            "GM": { "name": "General Motors Co", "ratio": "6:1" },
+            "GPRK": { "name": "Geopark Ltd.", "ratio": "1:1" },
+            "GGB": { "name": "Gerdau S.A.", "ratio": "1:4" },
+            "GILD": { "name": "Gilead Sciences, Inc.", "ratio": "4:1" },
+            "URA": { "name": "Global X Uranium ETF", "ratio": "5:1" },
+            "GLOB": { "name": "Globant S.A.", "ratio": "18:1" },
+            "GFI": { "name": "Gold Fields Ltd.", "ratio": "1:1" },
+            "GT": { "name": "Goodyear Tire & Rubber co./the", "ratio": "2:1" },
+            "PAC": { "name": "Grupo Aeroportuario del Pacifico, S.A.B. de C.V.", "ratio": "16:1" },
+            "ASR": { "name": "Grupo Aeroportuario Del Sureste, S.A.B. de C.V.", "ratio": "20:1" },
+            "TV": { "name": "Grupo Televisa S.A.", "ratio": "3:1" },
+            "GSK": { "name": "GSK Plc.", "ratio": "4:1" },
+            "HAL": { "name": "Halliburton Co.", "ratio": "2:1" },
+            "HAPV3": { "name": "Hapvida Participacoes E Investimentos S.A.", "ratio": "1:1" },
+            "HOG": { "name": "Harley-Davidson Inc.", "ratio": "3:1" },
+            "HMY": { "name": "Harmony Gold Mining Company Ltd.", "ratio": "1:1" },
+            "HDB": { "name": "Hdfc Bank Limited.", "ratio": "2:1" },
+            "HL": { "name": "Hecla Mining Co.", "ratio": "1:1" },
+            "HHPD": { "name": "Hon Hai Precision Industry Co. Ltd.", "ratio": "2:1" },
+            "HMC": { "name": "Honda Motor Co. Ltd", "ratio": "1:1" },
+            "HON": { "name": "Honeywell International Inc.", "ratio": "8:1" },
+            "HWM": { "name": "Howmet Aerospace Inc.", "ratio": "1:1" },
+            "HPQ": { "name": "Hp Inc", "ratio": "1:1" },
+            "HSBC": { "name": "Hsbc Holdings Plc", "ratio": "2:1" },
+            "HNPIY": { "name": "Huaneng Power Intl", "ratio": "1:1" },
+            "HUT": { "name": "Hut 8 Mining Corp.", "ratio": "1:5" },
+            "IBN": { "name": "Icici Bank Ltd.", "ratio": "1:1" },
+            "INFY": { "name": "Infosys Limited", "ratio": "1:1" },
+            "ING": { "name": "Ing Groep Nv", "ratio": "3:1" },
+            "INTC": { "name": "Intel Corporation", "ratio": "5:1" },
+            "IBM": { "name": "International Business Machines", "ratio": "15:1" },
+            "IFF": { "name": "International Flavors & Fragrances Inc.", "ratio": "12:1" },
+            "IP": { "name": "International Paper Co.", "ratio": "4:1" },
+            "ISRG": { "name": "Intuitive Surgical inc", "ratio": "90:1" },
+            "QQQ": { "name": "INVESCO QQQ TRUST", "ratio": "20:1" },
+            "IBIT": { "name": "ISHARES BITCOIN TRUST", "ratio": "10:1" },
+            "FXI": { "name": "ISHARES CHINA LARGE-CAP ETF", "ratio": "5:1" },
+            "IEUR": { "name": "iShares Core MSCI Europe ETF", "ratio": "1:1" },
+            "IJH": { "name": "iShares CORE S&P MID-CAP ETF", "ratio": "12:1" },
+            "ETHA": { "name": "ISHARES ETHEREUM TR ETF", "ratio": "5:1" },
+            "EWZ": { "name": "ISHARES MSCI BRAZIL CAP", "ratio": "2:1" },
+            "EEM": { "name": "ISHARES MSCI EMERGING MARKET", "ratio": "5:1" },
+            "EWJ": { "name": "iShares MSCI JAPAN ETF", "ratio": "14:1" },
+            "IBB": { "name": "iShares Nasdaq Biotechnology ETF", "ratio": "27:1" },
+            "IVW": { "name": "iShares S&P 500 Growth ETF", "ratio": "20:1" },
+            "IVE": { "name": "iShares S&P 500 Value ETF", "ratio": "40:1" },
+            "SLV": { "name": "iShares SILVER TRUST", "ratio": "6:1" },
+            "IWM": { "name": "ISHARES TRUST RUSSELL 2000", "ratio": "10:1" },
+            "ITUB": { "name": "Itaú Unibanco Holding S.A.", "ratio": "1:1" },
+            "JPM": { "name": "J.P. Morgan & Chase Co.", "ratio": "15:1" },
+            "JD": { "name": "Jd.Com, Inc.", "ratio": "4:1" },
+            "JNJ": { "name": "Johnson & Johnson", "ratio": "15:1" },
+            "JCI": { "name": "Johnson Controls International", "ratio": "2:1" },
+            "JOYY": { "name": "JOYY Inc.", "ratio": "5:1" },
+            "KB": { "name": "Kb Financial Group Inc.", "ratio": "2:1" },
+            "KMB": { "name": "Kimberly-Clark Corp.", "ratio": "6:1" },
+            "KGC": { "name": "Kinross Gold Corp", "ratio": "1:1" },
+            "PHG": { "name": "Koninklijke Philips N.V.", "ratio": "5:1" },
+            "KEP": { "name": "Korea Electric Power Corp.", "ratio": "1:1" },
+            "LRCX": { "name": "Lam Research Corp", "ratio": "56:1" },
+            "LVS": { "name": "Las Vegas Sands Corp", "ratio": "2:1" },
+            "LAR": { "name": "Lithium Americas (Argentina) Corp", "ratio": "1:1" },
+            "LAC": { "name": "Lithium Americas Corp", "ratio": "1:1" },
+            "LYG": { "name": "Lloyds Banking Group Plc", "ratio": "2:1" },
+            "ERIC": { "name": "Lm Ericsson Telephone Co.", "ratio": "2:1" },
+            "RENT3": { "name": "Localiza Rent A Car S.A.", "ratio": "2:1" },
+            "LMT": { "name": "Lockheed Martin Corporation", "ratio": "20:1" },
+            "LREN3": { "name": "Lojas Renner S.A.", "ratio": "1:1" },
+            "MGLU3": { "name": "Magazine Luiza S.A.", "ratio": "1:1" },
+            "MMC": { "name": "Marsh & Mclennan Companies Inc.", "ratio": "16:1" },
+            "MRVL": { "name": "Marvell Technology Inc", "ratio": "14:1" },
+            "MA": { "name": "Mastercard Inc.", "ratio": "33:1" },
+            "MCD": { "name": "Mcdonald'S Corp.", "ratio": "24:1" },
+            "MUX": { "name": "McEwen Mining Inc", "ratio": "2:1" },
+            "MDT": { "name": "Medtronic Public Limited Company", "ratio": "4:1" },
+            "MELI": { "name": "Mercadolibre Inc.", "ratio": "120:1" },
+            "MBG": { "name": "Mercedes-Benz Group AG", "ratio": "4:1" },
+            "MRK": { "name": "Merck & Co. Inc.", "ratio": "5:1" },
+            "META": { "name": "Meta Platforms Inc", "ratio": "24:1" },
+            "MU": { "name": "Micron Technology Inc", "ratio": "5:1" },
+            "MSFT": { "name": "Microsoft Corp.", "ratio": "30:1" },
+            "MSTR": { "name": "Microstrategy Inc CI A New", "ratio": "20:1" },
+            "MUFG": { "name": "Mitsubishi Ufj Financial Group", "ratio": "1:1" },
+            "MFG": { "name": "Mizuho Financial Group", "ratio": "1:1" },
+            "MBT": { "name": "Mobile Telesystems", "ratio": "2:1" },
+            "MRNA": { "name": "Moderna Inc", "ratio": "19:1" },
+            "MDLZ": { "name": "Mondelez", "ratio": "15:1" },
+            "MSI": { "name": "Motorola Solutions, Inc.", "ratio": "20:1" },
+            "NGG": { "name": "National Grid Plc", "ratio": "2:1" },
+            "NTCO": { "name": "Natura & Co Holding S.A.", "ratio": "1:1" },
+            "NTCO3": { "name": "Natura & Co Holding S.A.", "ratio": "1:1" },
+            "NECI": { "name": "Nec Corporation", "ratio": "1:3" },
+            "NTES": { "name": "Netease, Inc", "ratio": "14:1" },
+            "NFLX": { "name": "Netflix, Inc.", "ratio": "48:1" },
+            "NEM": { "name": "Newmont Corporation", "ratio": "3:1" },
+            "NXE": { "name": "Nexgen Energy LTD", "ratio": "1:1" },
+            "NKE": { "name": "Nike Inc.", "ratio": "12:1" },
+            "NIO": { "name": "NIO Inc.", "ratio": "4:1" },
+            "NSAN": { "name": "Nissan Motor Co., Ltd", "ratio": "1:1" },
+            "NOKA": { "name": "Nokia Corporation", "ratio": "1:1" },
+            "NMR": { "name": "Nomura Holdings, Inc", "ratio": "1:1" },
+            "NG": { "name": "Novagold Resources INC.", "ratio": "1:4" },
+            "NVS": { "name": "Novartis Ag", "ratio": "4:1" },
+            "NLM": { "name": "Novolipetsk Steel PJSC", "ratio": "2:1" },
+            "UN": { "name": "NU Holdings Ltd/Cayman Islands", "ratio": "2:1" },
+            "NUE": { "name": "Nucor Corp", "ratio": "16:1" },
+            "NVDA": { "name": "Nvidia Corporation", "ratio": "24:1" },
+            "OXY": { "name": "Occidental Petroleum Corp.", "ratio": "5:1" },
+            "ORCL": { "name": "Oracle Corporation", "ratio": "3:1" },
+            "ORAN": { "name": "Orange S.A.", "ratio": "1:1" },
+            "ORLY": { "name": "O'reilly Automotive Inc", "ratio": "222:1" },
+            "PCAR": { "name": "Paccar Inc.", "ratio": "3:1" },
+            "PAGS": { "name": "Pagseguro Digital Ltd", "ratio": "3:1" },
+            "PLTR": { "name": "Palantir Technologies Inc", "ratio": "3:1" },
+            "PANW": { "name": "Palo Alto Networks Inc", "ratio": "50:1" },
+            "PAAS": { "name": "Pan American Silver Corp.", "ratio": "3:1" },
+            "PCRF": { "name": "Panasonic Corporation", "ratio": "2:1" },
+            "PYPL": { "name": "Paypal Holdings, Inc.", "ratio": "8:1" },
+            "PDD": { "name": "PDD HOLDINGS INC", "ratio": "25:1" },
+            "PSO": { "name": "Pearson Plc", "ratio": "1:1" },
+            "PEP": { "name": "Pepsico Inc", "ratio": "18:1" },
+            "PRIO3": { "name": "Petro Rio S.A.", "ratio": "2:1" },
+            "PETR3": { "name": "Petrobras Petróleo Brasileiro S.A.", "ratio": "1:1" },
+            "PBR": { "name": "Petrobras (ADR)", "ratio": "1:1" },
+            "PTR": { "name": "Petrochina Co Ltd", "ratio": "4:1" },
+            "PFE": { "name": "Pfizer Inc.", "ratio": "4:1" },
+            "PM": { "name": "Philip Morris International", "ratio": "18:1" },
+            "PSX": { "name": "Phillips 66", "ratio": "6:1" },
+            "PINS": { "name": "Pinterest", "ratio": "7:1" },
+            "PBI": { "name": "Pitney Bowes Inc", "ratio": "1:1" },
+            "OGZD": { "name": "Pjsc Gazprom", "ratio": "2:1" },
+            "LKOD": { "name": "Pjsc Lukoil", "ratio": "4:1" },
+            "ATAD": { "name": "Pjsc Tatneft", "ratio": "4:1" },
+            "PKS": { "name": "Posco Holdings Inc.", "ratio": "3:1" },
+            "PG": { "name": "Procter & Gamble", "ratio": "15:1" },
+            "SH": { "name": "PROSHARES SHORT S&P500", "ratio": "8:1" },
+            "PSQ": { "name": "PROSHARES SHORT QQQ", "ratio": "8:1" },
+            "QCOM": { "name": "Qualcomm Inc.", "ratio": "11:1" },
+            "RTX": { "name": "Raytheon Technologies Corp", "ratio": "5:1" },
+            "RGTI": { "name": "RIGETTI COMPUTING INC", "ratio": "2:1" },
+            "RIO": { "name": "Rio Tinto Plc", "ratio": "8:1" },
+            "RIOT": { "name": "Riot Platforms", "ratio": "3:1" },
+            "RBLX": { "name": "Roblox Corp.", "ratio": "2:1" },
+            "ROKU": { "name": "Roku", "ratio": "13:1" },
+            "ROST": { "name": "Ross Stores, Inc.", "ratio": "4:1" },
+            "SHEL": { "name": "Royal Dutch Shell Pic", "ratio": "2:1" },
+            "SPGI": { "name": "S&P Global Inc", "ratio": "45:1" },
+            "CRM": { "name": "Salesforce Inc.", "ratio": "18:1" },
+            "SMSN": { "name": "Samsung Electronics Co. Ltd.", "ratio": "14:1" },
+            "SAP": { "name": "Sap Se", "ratio": "6:1" },
+            "SATL": { "name": "Satellogic Inc.", "ratio": "1:1" },
+            "SLB": { "name": "Schlumberger Ltd", "ratio": "3:1" },
+            "SE": { "name": "Sea Ltd.", "ratio": "32:1" },
+            "NOW": { "name": "SERVICENOW INC", "ratio": "172:1" },
+            "SHPW": { "name": "Shapeways Holdings Inc", "ratio": "1:2" },
+            "SHOP": { "name": "Shopify Inc.", "ratio": "107:1" },
+            "SIEGY": { "name": "Siemens Ag Adr", "ratio": "3:1" },
+            "SI": { "name": "Silvergate Bancorp", "ratio": "10:1" },
+            "SWKS": { "name": "Skyworks Solutions", "ratio": "21:1" },
+            "SNAP": { "name": "Snap Inc.", "ratio": "1:1" },
+            "SNA": { "name": "Snap-On Inc", "ratio": "6:1" },
+            "SNOW": { "name": "Snowflake Inc.", "ratio": "30:1" },
+            "SONY": { "name": "Sony Group Corporation", "ratio": "8:1" },
+            "SCCO": { "name": "Southern Copper Corp", "ratio": "2:1" },
+            "DIA": { "name": "SPDR DOW JONES INDUSTRIAL", "ratio": "20:1" },
+            "SPY": { "name": "SPDR S&P 500", "ratio": "20:1" },
+            "SPOT": { "name": "Spotify Technology S.A.", "ratio": "28:1" },
+            "XYZ": { "name": "Square Inc.", "ratio": "20:1" },
+            "SBUX": { "name": "Starbucks Corporation", "ratio": "12:1" },
+            "STLA": { "name": "Stellantis", "ratio": "5:1" },
+            "STNE": { "name": "StoneCo Ltd", "ratio": "3:1" },
+            "SDA": { "name": "SunCar Technology Group Inc", "ratio": "2:1" },
+            "SUZB3": { "name": "Suzano S.A.", "ratio": "1:1" },
+            "SUZ": { "name": "Suzano Papel E Celulose S.A.", "ratio": "1:1" },
+            "SYY": { "name": "Sysco Corp.", "ratio": "8:1" },
+            "TSM": { "name": "Taiwan Semiconductor Manufacturing", "ratio": "9:1" },
+            "TGT": { "name": "Target Corporation", "ratio": "24:1" },
+            "TTM": { "name": "Tata Motors Ltd", "ratio": "1:1" },
+            "RCTB4": { "name": "Telebras PN", "ratio": "1:1000" },
+            "TILAY": { "name": "Telecom Italia S.P.A. Ordinary Shares", "ratio": "1:1" },
+            "VIV": { "name": "Telefônica Brasil S.A.", "ratio": "1:1" },
+            "VIVT3": { "name": "Telefônica Brasil S.A.", "ratio": "1:1" },
+            "TEFO": { "name": "Telefonica S.A.", "ratio": "8:1" },
+            "TIMS3": { "name": "TIM S.A.", "ratio": "1:1" },
+            "TEM": { "name": "TEMPUS AI INC", "ratio": "12:1" },
+            "TEN": { "name": "Tenaris", "ratio": "1:1" },
+            "TXR": { "name": "Ternium S.A.", "ratio": "4:1" },
+            "TSLA": { "name": "Tesla, Inc.", "ratio": "15:1" },
+            "TXN": { "name": "Texas Instruments Inc", "ratio": "5:1" },
+            "BK": { "name": "The Bank Of New York Mellon Corp.", "ratio": "2:1" },
+            "BA": { "name": "The Boeing Company", "ratio": "24:1" },
+            "KO": { "name": "The Coca Cola Company", "ratio": "5:1" },
+            "XLC": { "name": "The Communication Services Select Sector SPDR Fund", "ratio": "19:1" },
+            "XLY": { "name": "The Consumer Discretionary Select Sector SPDR Fund", "ratio": "43:1" },
+            "XLP": { "name": "The Consumer Staples Select Sector SPDR Fund", "ratio": "16:1" },
+            "GS": { "name": "The Goldman Sachs Group, Inc", "ratio": "13:1" },
+            "XLV": { "name": "The Health Care Select Sector SPDR Fund", "ratio": "29:1" },
+            "HSY": { "name": "The Hershey Company", "ratio": "21:1" },
+            "HD": { "name": "The Home Depot Inc.", "ratio": "32:1" },
+            "XLI": { "name": "The Industrial Select Sector SPDR Fund", "ratio": "28:1" },
+            "XLB": { "name": "The Materials Select Sector SPDR Fund", "ratio": "18:1" },
+            "MOS": { "name": "The Mosaic Co", "ratio": "5:1" },
+            "XLRE": { "name": "The Real Estate Select Sector SPDR Fund", "ratio": "9:1" },
+            "XLK": { "name": "The Technology Select Sector SPDR Fund", "ratio": "46:1" },
+            "TRVV": { "name": "The Travelers Cos. Inc.", "ratio": "6:1" },
+            "DISN": { "name": "The Walt Disney Co.", "ratio": "12:1" },
+            "TMO": { "name": "Thermo Fisher Scientific Inc.", "ratio": "22:1" },
+            "TIMB": { "name": "Tim Participações S.A.", "ratio": "1:1" },
+            "TJX": { "name": "TJX Companies Inc/The", "ratio": "22:1" },
+            "TMUS": { "name": "T-mobile", "ratio": "33:1" },
+            "TTE": { "name": "TotalEnergies SE", "ratio": "3:1" },
+            "TM": { "name": "Toyota Motor Corporation", "ratio": "15:1" },
+            "TCOM": { "name": "TRIP.COM Group Ltd.", "ratio": "2:1" },
+            "TRIP": { "name": "Tripadvisor, Inc.", "ratio": "2:1" },
+            "TWLO": { "name": "Twilio Inc", "ratio": "36:1" },
+            "TWTR": { "name": "Twitter, Inc.", "ratio": "2:1" },
+            "USB": { "name": "U.S. Bancorp", "ratio": "5:1" },
+            "UBER": { "name": "Uber Technologies Inc.", "ratio": "2:1" },
+            "PATH": { "name": "UIPATH INC", "ratio": "2:1" },
+            "UGP": { "name": "Ultrapar Participações S.A.", "ratio": "1:1" },
+            "UL": { "name": "Unilever PLC - Sponsored", "ratio": "3:1" },
+            "UNP": { "name": "Union Pacific Corp.", "ratio": "20:1" },
+            "UAL": { "name": "United Airlines Holdings Inc.", "ratio": "5:1" },
+            "UNH": { "name": "United Health Group Inc.", "ratio": "33:1" },
+            "UPST": { "name": "Upstart Hidgs Inc", "ratio": "5:1" },
+            "URBN": { "name": "Urban Outfitters INC.", "ratio": "2:1" },
+            "XLU": { "name": "Utilities Select Sector SPDR Fund", "ratio": "15:1" },
+            "VALE": { "name": "Vale S.A.", "ratio": "2:1" },
+            "VALE3": { "name": "Vale S.A.", "ratio": "1:1" },
+            "VIG": { "name": "VANGUARD DIVIDEND APPRECIATION", "ratio": "39:1" },
+            "VEA": { "name": "Vanguard FTSE Developed Markets ETF", "ratio": "10:1" },
+            "SMH": { "name": "VAN ECK SEMICONDUCTOR ETF", "ratio": "50:1" },
+            "VRSN": { "name": "Verisign, Inc.", "ratio": "6:1" },
+            "VZ": { "name": "Verizon Communications Inc.", "ratio": "4:1" },
+            "VRTX": { "name": "VERTEX PHARMACEUTICALS INC", "ratio": "101:1" },
+            "SPCE": { "name": "Virgin Galactic", "ratio": "1:2" },
+            "V": { "name": "Visa Inc", "ratio": "18:1" },
+            "VIST": { "name": "Vista Energy S.A.B. de C.V.", "ratio": "3:1" },
+            "VST": { "name": "VISTRA CORPORATION", "ratio": "26:1" },
+            "VOD": { "name": "Vodafone Group Pic", "ratio": "1:1" },
+            "WBA": { "name": "Walgreens Boots Alliance Inc.", "ratio": "3:1" },
+            "WMT": { "name": "Walmart Inc.", "ratio": "18:1" },
+            "WEGE3": { "name": "Weg S.A.", "ratio": "1:1" },
+            "WBO": { "name": "Weibo Corporation", "ratio": "6:1" },
+            "WFC": { "name": "Wells Fargo & Co.", "ratio": "5:1" },
+            "XROX": { "name": "Xerox Holding Corporation", "ratio": "1:1" },
+            "XP": { "name": "XP Inc", "ratio": "4:1" },
+            "XPEV": { "name": "XPENG INC", "ratio": "4:1" },
+            "AUY": { "name": "Yamana Gold Inc.", "ratio": "1:1" },
+            "YZCA": { "name": "Yanzhou Coal Mining Co. Ltd.", "ratio": "2:1" },
+            "YELP": { "name": "Yelp Inc.", "ratio": "2:1" },
+            "ZM": { "name": "Zoom Video Communications Inc.", "ratio": "47:1" }
+        };
+
+        function parseRatio(ratioString) {
+            if (!ratioString || ratioString === 'N/A') return 1;
+            const parts = ratioString.split(':');
+            if (parts.length === 2) {
+                const numCedears = parseFloat(parts[0]);
+                const numShares = parseFloat(parts[1]);
+                if (numCedears > 0) {
+                    return numShares / numCedears;
+                }
+            }
+            return 1;
+        }
+        
+        // --- Portfolio Management ---
+        function createPortfolio() {
+            const portfolioName = prompt('Ingresa el nombre del nuevo portafolio:');
+            if (portfolioName) {
+                const portfolioId = 'portfolio_' + Date.now();
+                const newPortfolio = {
+                    id: portfolioId,
+                    name: portfolioName,
+                    transactions: [],
+                    activeColumns: [...activeColumns]
+                };
+                portfolios.push(newPortfolio);
+                currentPortfolioId = portfolioId;
+                transactions = [];
+                activeColumns = [...allColumns.map(col => col.id)];
+                savePortfolios();
+                updatePortfolioSelect();
+                updateUI();
+                showNotification(`Portafolio "${portfolioName}" creado con éxito`, 'success');
+            }
+        }
+
+        function switchPortfolio(portfolioId) {
+            const portfolio = portfolios.find(p => p.id === portfolioId);
+            if (portfolio) {
+                currentPortfolioId = portfolioId;
+                transactions = portfolio.transactions;
+                activeColumns = portfolio.activeColumns || [...allColumns.map(col => col.id)];
+                saveCurrentPortfolioId();
+                updateUI();
+                showNotification(`Cambiado a portafolio "${portfolio.name}"`, 'success');
+            }
+        }
+
+        function showEditPortfolioModal() {
+            if (!currentPortfolioId) {
+                showNotification('No hay un portafolio seleccionado', 'error');
+                return;
+            }
+            const portfolio = portfolios.find(p => p.id === currentPortfolioId);
+            if (!portfolio) return;
+            const modal = document.getElementById('editPortfolioModal');
+            const form = document.getElementById('editPortfolioForm');
+            document.getElementById('editPortfolioName').value = portfolio.name;
+
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const newName = document.getElementById('editPortfolioName').value;
+                portfolio.name = newName;
+                savePortfolios();
+                updatePortfolioSelect();
+                closeModal('editPortfolioModal');
+                showNotification(`Portafolio renombrado a "${newName}"`, 'success');
+            };
+
+            modal.style.display = 'block';
+        }
+
+        function deletePortfolio() {
+            if (!currentPortfolioId) return;
+            const portfolioIndex = portfolios.findIndex(p => p.id === currentPortfolioId);
+            if (portfolioIndex === -1) return;
+            if (confirm('¿Estás seguro de que deseas eliminar este portafolio? Esta acción no se puede deshacer.')) {
+                portfolios.splice(portfolioIndex, 1);
+                currentPortfolioId = portfolios.length > 0 ? portfolios[0].id : null;
+                if (currentPortfolioId) {
+                    const newPortfolio = portfolios.find(p => p.id === currentPortfolioId);
+                    transactions = newPortfolio.transactions;
+                    activeColumns = newPortfolio.activeColumns || [...allColumns.map(col => col.id)];
+                } else {
+                    transactions = [];
+                    activeColumns = [...allColumns.map(col => col.id)];
+                }
+                savePortfolios();
+                saveCurrentPortfolioId();
+                updatePortfolioSelect();
+                updateUI();
+                closeModal('editPortfolioModal');
+                showNotification('Portafolio eliminado con éxito', 'success');
+            }
+        }
+
+        function updatePortfolioSelect() {
+            const select = document.getElementById('portfolioSelect');
+            select.innerHTML = portfolios.length === 0 ? '<option value="">No hay portafolios</option>' : '';
+            portfolios.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.name;
+                if (p.id === currentPortfolioId) option.selected = true;
+                select.appendChild(option);
+            });
+            select.onchange = (e) => {
+                if (e.target.value) switchPortfolio(e.target.value);
+            };
+        }
+
+        // --- Core Functions ---
+        async function fetchStockPrice(symbol) {
+            const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data["Global Quote"] && data["Global Quote"]["05. price"]) {
+                    return parseFloat(data["Global Quote"]["05. price"]);
+                } else {
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error fetching price for ${symbol}:`, error);
+                return null;
+            }
+        }
+
+        async function fetchExchangeRate() {
+            document.getElementById('rateLoadingIndicator').classList.remove('hidden');
+            try {
+                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                const data = await response.json();
+                exchangeRate = data.rates.ARS || 1000;
+                document.getElementById('exchangeRateValue').textContent = exchangeRate.toFixed(2);
+                updateUI();
+                showNotification('Tasa de cambio actualizada', 'success');
+            } catch (error) {
+                console.error('Error fetching exchange rate:', error);
+                showNotification('Error al actualizar la tasa de cambio', 'error');
+            } finally {
+                document.getElementById('rateLoadingIndicator').classList.add('hidden');
+            }
+        }
+
+        function updateManualExchangeRate() {
+            const newRate = parseFloat(document.getElementById('exchangeRateInput').value);
+            if (newRate > 0) {
+                exchangeRate = newRate;
+                document.getElementById('exchangeRateValue').textContent = exchangeRate.toFixed(2);
+                updateUI();
+                showNotification('Tasa de cambio actualizada manualmente', 'success');
+            } else {
+                showNotification('Por favor, ingresa una tasa de cambio válida', 'error');
+            }
+        }
+
+        function addTransaction(event) {
+            event.preventDefault();
+            document.getElementById('formLoadingIndicator').classList.remove('hidden');
+
+            const stockName = document.getElementById('stockName').value.toUpperCase();
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const entryPriceUSD = parseFloat(document.getElementById('entryPriceUSD').value);
+            const entryPriceARS = parseFloat(document.getElementById('entryPriceARS').value) || (entryPriceUSD * exchangeRate);
+            const transactionType = document.getElementById('transactionType').value;
+            const assetType = document.getElementById('assetType').value;
+            const displayPreference = document.getElementById('displayPreference').value;
+
+            const isCedear = assetType === 'cedear';
+            const cedearInfo = cedearData[stockName];
+
+            if (isCedear && !cedearInfo) {
+                showNotification(`El símbolo ${stockName} no está en la lista de CEDEARs.`, 'error');
+                document.getElementById('formLoadingIndicator').classList.add('hidden');
+                return;
+            }
+
+            fetchStockPrice(stockName).then(currentPrice => {
+                if (currentPrice === null) {
+                    showNotification(`No se pudo obtener el precio actual para ${stockName}.`, 'error');
+                    document.getElementById('formLoadingIndicator').classList.add('hidden');
+                    return;
+                }
+
+                const transaction = {
+                    stockName,
+                    quantity: transactionType === 'venta' ? -quantity : quantity,
+                    entryPriceUSD,
+                    entryPriceARS,
+                    currentPrice,
+                    transactionType,
+                    isCedear,
+                    assetType,
+                    displayPreference,
+                    date: new Date().toLocaleDateString('es-AR'),
+                    time: new Date().toLocaleTimeString('es-AR')
+                };
+
+                transactions.push(transaction);
+                saveTransactions();
+                updateUI();
+                document.getElementById('transactionForm').reset();
+                showNotification('Transacción registrada con éxito', 'success');
+                document.getElementById('formLoadingIndicator').classList.add('hidden');
+            });
+        }
+
+        function editTransaction(index) {
+            const transaction = transactions[index];
+            const modal = document.getElementById('editTransactionModal');
+            const form = document.getElementById('editTransactionForm');
+
+            form.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex flex-col">
+                        <label for="editStockName" class="text-gray-400 text-sm font-medium mb-1">Nombre de Acción</label>
+                        <input type="text" id="editStockName" value="${transaction.stockName}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500" readonly>
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="editQuantity" class="text-gray-400 text-sm font-medium mb-1">Cantidad</label>
+                        <input type="number" id="editQuantity" value="${Math.abs(transaction.quantity)}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="editEntryPriceUSD" class="text-gray-400 text-sm font-medium mb-1">Precio de Entrada (USD)</label>
+                        <input type="number" step="0.01" id="editEntryPriceUSD" value="${transaction.entryPriceUSD}" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="editEntryPriceARS" class="text-gray-400 text-sm font-medium mb-1">Precio de Entrada (ARS)</label>
+                        <input type="number" step="0.01" id="editEntryPriceARS" value="${transaction.entryPriceARS || (transaction.entryPriceUSD * exchangeRate)}" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="editTransactionType" class="text-gray-400 text-sm font-medium mb-1">Tipo de Transacción</label>
+                        <select id="editTransactionType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="compra" ${transaction.transactionType === 'compra' ? 'selected' : ''}>Compra</option>
+                            <option value="venta" ${transaction.transactionType === 'venta' ? 'selected' : ''}>Venta</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="editAssetType" class="text-gray-400 text-sm font-medium mb-1">Tipo de Activo</label>
+                        <select id="editAssetType" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="accion_real" ${transaction.assetType === 'accion_real' ? 'selected' : ''}>Acción Real</option>
+                            <option value="cedear" ${transaction.assetType === 'cedear' ? 'selected' : ''}>CEDEAR</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="editDisplayPreference" class="text-gray-400 text-sm font-medium mb-1">Moneda de Visualización</label>
+                        <select id="editDisplayPreference" required class="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="USD" ${transaction.displayPreference === 'USD' ? 'selected' : ''}>USD</option>
+                            <option value="ARS" ${transaction.displayPreference === 'ARS' ? 'selected' : ''}>ARS</option>
+                            <option value="Ambos" ${transaction.displayPreference === 'Ambos' ? 'selected' : ''}>Ambos</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const newQuantity = parseFloat(document.getElementById('editQuantity').value);
+                const newEntryPriceUSD = parseFloat(document.getElementById('editEntryPriceUSD').value);
+                const newEntryPriceARS = parseFloat(document.getElementById('editEntryPriceARS').value) || (newEntryPriceUSD * exchangeRate);
+                const newTransactionType = document.getElementById('editTransactionType').value;
+                const newAssetType = document.getElementById('editAssetType').value;
+                const newDisplayPreference = document.getElementById('editDisplayPreference').value;
+
+                const isCedear = newAssetType === 'cedear';
+                const cedearInfo = cedearData[transaction.stockName];
+                if (isCedear && !cedearInfo) {
+                    showNotification(`El símbolo ${transaction.stockName} no está en la lista de CEDEARs.`, 'error');
+                    return;
+                }
+
+                transactions[index] = {
+                    ...transaction,
+                    quantity: newTransactionType === 'venta' ? -newQuantity : newQuantity,
+                    entryPriceUSD: newEntryPriceUSD,
+                    entryPriceARS: newEntryPriceARS,
+                    transactionType: newTransactionType,
+                    assetType: newAssetType,
+                    isCedear: isCedear,
+                    displayPreference: newDisplayPreference
+                };
+
+                saveTransactions();
+                updateUI();
+                closeModal('editTransactionModal');
+                showNotification('Transacción actualizada con éxito', 'success');
+            };
+
+            modal.style.display = 'block';
+        }
+
+        function deleteTransaction(index) {
+            if (confirm('¿Estás seguro de que deseas eliminar esta transacción?')) {
+                transactions.splice(index, 1);
+                saveTransactions();
+                updateUI();
+                showNotification('Transacción eliminada con éxito', 'success');
+            }
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('transactionsBody');
+            if (transactions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${activeColumns.length + 1}" class="px-6 py-4 text-center text-sm font-medium text-gray-500 italic">No hay transacciones registradas</td></tr>`;
+                return;
+            }
+
+            const totalPortfolioValue = transactions.reduce((sum, t) => {
+                let effectivePrice = t.currentPrice;
+                const cedearInfo = cedearData[t.stockName.toUpperCase()];
+                if (t.isCedear && cedearInfo) {
+                    const multiplier = parseRatio(cedearInfo.ratio);
+                    effectivePrice = t.currentPrice * multiplier;
+                    if (t.displayPreference === 'ARS' || t.displayPreference === 'Ambos') {
+                        effectivePrice = effectivePrice * exchangeRate;
+                    }
+                } else if (t.displayPreference === 'ARS' || t.displayPreference === 'Ambos') {
+                    effectivePrice = t.currentPrice * exchangeRate;
+                }
+                return sum + (effectivePrice * t.quantity);
+            }, 0);
+
+            const thead = document.querySelector('thead');
+            thead.innerHTML = `<tr>
+                ${activeColumns.map(col => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">${allColumns.find(c => c.id === col).name}</th>`).join('')}
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Acciones</th>
+            </tr>`;
+
+            tbody.innerHTML = '';
+            transactions.forEach((transaction, index) => {
+                const cedearInfo = cedearData[transaction.stockName.toUpperCase()];
+                const isCedear = transaction.isCedear;
+                const multiplier = isCedear && cedearInfo ? parseRatio(cedearInfo.ratio) : 1;
+
+                let displayPriceUSD = transaction.currentPrice;
+                let displayPriceARS = transaction.currentPrice * exchangeRate;
+                let entryPriceUSD = transaction.entryPriceUSD;
+                let entryPriceARS = transaction.entryPriceARS || (transaction.entryPriceUSD * exchangeRate);
+
+                if (isCedear && cedearInfo) {
+                    displayPriceUSD = transaction.currentPrice * multiplier;
+                    displayPriceARS = displayPriceUSD * exchangeRate;
+                    entryPriceUSD = transaction.entryPriceUSD * multiplier;
+                    entryPriceARS = transaction.entryPriceARS || (entryPriceUSD * exchangeRate);
+                }
+
+                let holdingValue = transaction.quantity * (transaction.displayPreference === 'ARS' ? displayPriceARS : displayPriceUSD);
+                let holdingCurrency = transaction.displayPreference === 'ARS' ? 'ARS' : 'USD';
+                let entryValueUSD = transaction.quantity * entryPriceUSD;
+                let entryValueARS = transaction.quantity * entryPriceARS;
+                let pnlUSD = (displayPriceUSD * transaction.quantity) - entryValueUSD;
+                let pnlARS = (displayPriceARS * transaction.quantity) - entryValueARS;
+
+                const portfolioPercentage = totalPortfolioValue > 0 ? ((holdingValue / totalPortfolioValue) * 100).toFixed(2) : '0.00';
+
+                const row = document.createElement('tr');
+                row.innerHTML = activeColumns.map(col => {
+                    switch (col) {
+                        case 'stockName':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">${transaction.stockName.toUpperCase()}</td>`;
+                        case 'currentPrice':
+                            if (transaction.displayPreference === 'Ambos') {
+                                return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">USD$${displayPriceUSD.toFixed(2)} / $${displayPriceARS.toFixed(2)}</td>`;
+                            }
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.displayPreference === 'ARS' ? '$' : 'USD$'}${transaction.displayPreference === 'ARS' ? displayPriceARS.toFixed(2) : displayPriceUSD.toFixed(2)}</td>`;
+                        case 'quantity':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.quantity}</td>`;
+                        case 'entryPriceUSD':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">USD$${entryPriceUSD.toFixed(2)}</td>`;
+                        case 'entryPriceARS':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">$${entryPriceARS.toFixed(2)}</td>`;
+                        case 'holdingValueUSD':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${holdingCurrency === 'ARS' ? '$' : 'USD$'}${holdingValue.toFixed(2)}</td>`;
+                        case 'portfolioPercentage':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${portfolioPercentage}%</td>`;
+                        case 'priceChange':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">N/A</td>`;
+                        case 'pnlTotal':
+                            if (transaction.displayPreference === 'Ambos') {
+                                return `<td class="px-6 py-4 whitespace-nowrap text-sm ${pnlUSD >= 0 ? 'text-green-400' : 'text-red-400'}">USD$${pnlUSD.toFixed(2)} / $${pnlARS.toFixed(2)}</td>`;
+                            }
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm ${holdingCurrency === 'ARS' ? (pnlARS >= 0 ? 'text-green-400' : 'text-red-400') : (pnlUSD >= 0 ? 'text-green-400' : 'text-red-400')}">${holdingCurrency === 'ARS' ? '$' : 'USD$'}${holdingCurrency === 'ARS' ? pnlARS.toFixed(2) : pnlUSD.toFixed(2)}</td>`;
+                        case 'transactionType':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.transactionType}</td>`;
+                        case 'date':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.date || 'N/A'}</td>`;
+                        case 'time':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.time || 'N/A'}</td>`;
+                        case 'cedearRatio':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${isCedear && cedearInfo ? cedearInfo.ratio : 'N/A'}</td>`;
+                        case 'isCedear':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${isCedear ? 'Sí' : 'No'}</td>`;
+                        case 'assetType':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.assetType === 'cedear' ? 'CEDEAR' : 'Acción Real'}</td>`;
+                        case 'displayPreference':
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${transaction.displayPreference}</td>`;
+                        default:
+                            return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">N/A</td>`;
+                    }
+                }).join('') + `
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="editTransaction(${index})" class="text-blue-400 hover:text-blue-300 mr-4"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteTransaction(${index})" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                    </td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateUI() {
+            const totalUSD = transactions.reduce((sum, t) => {
+                let price = t.currentPrice;
+                const cedearInfo = cedearData[t.stockName.toUpperCase()];
+                if (t.isCedear && cedearInfo) {
+                    const multiplier = parseRatio(cedearInfo.ratio);
+                    price = t.currentPrice * multiplier;
+                }
+                return sum + (price * t.quantity);
+            }, 0);
+
+            const totalARS = totalUSD * exchangeRate;
+
+            const totalPnLUSD = transactions.reduce((sum, t) => {
+                let currentValue = t.currentPrice * t.quantity;
+                let entryValue = t.entryPriceUSD * t.quantity;
+                const cedearInfo = cedearData[t.stockName.toUpperCase()];
+                if (t.isCedear && cedearInfo) {
+                    const multiplier = parseRatio(cedearInfo.ratio);
+                    currentValue = (t.currentPrice * multiplier) * t.quantity;
+                    entryValue = (t.entryPriceUSD * multiplier) * t.quantity;
+                }
+                return sum + (currentValue - entryValue);
+            }, 0);
+
+            const totalPnLARS = transactions.reduce((sum, t) => {
+                let currentValue = (t.currentPrice * exchangeRate) * t.quantity;
+                let entryValue = (t.entryPriceARS || (t.entryPriceUSD * exchangeRate)) * t.quantity;
+                const cedearInfo = cedearData[t.stockName.toUpperCase()];
+                if (t.isCedear && cedearInfo) {
+                    const multiplier = parseRatio(cedearInfo.ratio);
+                    currentValue = (t.currentPrice * multiplier * exchangeRate) * t.quantity;
+                    entryValue = (t.entryPriceARS || (t.entryPriceUSD * multiplier * exchangeRate)) * t.quantity;
+                }
+                return sum + (currentValue - entryValue);
+            }, 0);
+
+            document.getElementById('totalUSD').textContent = `USD$${totalUSD.toFixed(2)}`;
+            document.getElementById('totalARS').textContent = `$${totalARS.toFixed(2)}`;
+            document.getElementById('totalPnL').textContent = `${totalPnLUSD >= 0 ? '+' : ''}USD$${totalPnLUSD.toFixed(2)} / $${totalPnLARS.toFixed(2)}`;
+            document.getElementById('totalTransactions').textContent = transactions.length;
+
+            document.getElementById('exchangeRateValue').textContent = exchangeRate.toFixed(2);
+
+            updateTable();
+        }
+
+        async function updateAllPrices() {
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            for (let i = 0; i < transactions.length; i++) {
+                const transaction = transactions[i];
+                const price = await fetchStockPrice(transaction.stockName);
+                if (price !== null) {
+                    transaction.currentPrice = price;
+                }
+                await new Promise(resolve => setTimeout(resolve, API_CALL_DELAY));
+            }
+            saveTransactions();
+            updateUI();
+            document.getElementById('loadingIndicator').classList.add('hidden');
+            showNotification('Precios actualizados con éxito', 'success');
+        }
+
+        // --- Portfolio Management ---
+        function createPortfolio() {
+            const portfolioName = prompt('Ingresa el nombre del nuevo portafolio:');
+            if (portfolioName) {
+                const portfolioId = 'portfolio_' + Date.now();
+                const newPortfolio = {
+                    id: portfolioId,
+                    name: portfolioName,
+                    transactions: [],
+                    activeColumns: [...activeColumns]
+                };
+                portfolios.push(newPortfolio);
+                currentPortfolioId = portfolioId;
+                transactions = [];
+                activeColumns = [...allColumns.map(col => col.id)];
+                savePortfolios();
+                updatePortfolioSelect();
+                updateUI();
+                showNotification(`Portafolio "${portfolioName}" creado con éxito`, 'success');
+            }
+        }
+
+        function switchPortfolio(portfolioId) {
+            const portfolio = portfolios.find(p => p.id === portfolioId);
+            if (portfolio) {
+                currentPortfolioId = portfolioId;
+                transactions = portfolio.transactions;
+                activeColumns = portfolio.activeColumns || [...allColumns.map(col => col.id)];
+                saveCurrentPortfolioId();
+                updateUI();
+                showNotification(`Cambiado a portafolio "${portfolio.name}"`, 'success');
+            }
+        }
+
+        function showEditPortfolioModal() {
+            if (!currentPortfolioId) {
+                showNotification('No hay un portafolio seleccionado', 'error');
+                return;
+            }
+            const portfolio = portfolios.find(p => p.id === currentPortfolioId);
+            if (!portfolio) return;
+            const modal = document.getElementById('editPortfolioModal');
+            const form = document.getElementById('editPortfolioForm');
+            document.getElementById('editPortfolioName').value = portfolio.name;
+
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const newName = document.getElementById('editPortfolioName').value;
+                portfolio.name = newName;
+                savePortfolios();
+                updatePortfolioSelect();
+                closeModal('editPortfolioModal');
+                showNotification(`Portafolio renombrado a "${newName}"`, 'success');
+            };
+
+            modal.style.display = 'block';
+        }
+
+        function deletePortfolio() {
+            if (!currentPortfolioId) return;
+            const portfolioIndex = portfolios.findIndex(p => p.id === currentPortfolioId);
+            if (portfolioIndex === -1) return;
+            if (confirm('¿Estás seguro de que deseas eliminar este portafolio? Esta acción no se puede deshacer.')) {
+                portfolios.splice(portfolioIndex, 1);
+                currentPortfolioId = portfolios.length > 0 ? portfolios[0].id : null;
+                if (currentPortfolioId) {
+                    const newPortfolio = portfolios.find(p => p.id === currentPortfolioId);
+                    transactions = newPortfolio.transactions;
+                    activeColumns = newPortfolio.activeColumns || [...allColumns.map(col => col.id)];
+                } else {
+                    transactions = [];
+                    activeColumns = [...allColumns.map(col => col.id)];
+                }
+                savePortfolios();
+                saveCurrentPortfolioId();
+                updatePortfolioSelect();
+                updateUI();
+                closeModal('editPortfolioModal');
+                showNotification('Portafolio eliminado con éxito', 'success');
+            }
+        }
+
+        function updatePortfolioSelect() {
+            const select = document.getElementById('portfolioSelect');
+            select.innerHTML = portfolios.length === 0 ? '<option value="">No hay portafolios</option>' : '';
+            portfolios.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.name;
+                if (p.id === currentPortfolioId) option.selected = true;
+                select.appendChild(option);
+            });
+            select.onchange = (e) => {
+                if (e.target.value) switchPortfolio(e.target.value);
+            };
+        }
+
+        // --- Storage Functions ---
+        function saveTransactions() {
+            if (currentPortfolioId) {
+                const portfolio = portfolios.find(p => p.id === currentPortfolioId);
+                if (portfolio) {
+                    portfolio.transactions = transactions;
+                    portfolio.activeColumns = activeColumns;
+                    savePortfolios();
+                }
+            }
+        }
+
+        function savePortfolios() {
+            localStorage.setItem('portfolios', JSON.stringify(portfolios));
+        }
+
+        function saveCurrentPortfolioId() {
+            localStorage.setItem('currentPortfolioId', currentPortfolioId || '');
+        }
+
+        function loadPortfolios() {
+            const savedPortfolios = localStorage.getItem('portfolios');
+            if (savedPortfolios) {
+                portfolios = JSON.parse(savedPortfolios);
+                const savedPortfolioId = localStorage.getItem('currentPortfolioId');
+                if (savedPortfolioId) {
+                    const portfolio = portfolios.find(p => p.id === savedPortfolioId);
+                    if (portfolio) {
+                        currentPortfolioId = savedPortfolioId;
+                        transactions = portfolio.transactions;
+                        activeColumns = portfolio.activeColumns || [...allColumns.map(col => col.id)];
+                    }
+                }
+                updatePortfolioSelect();
+                updateUI();
+            }
+        }
+
+        // --- UI Functions ---
+        function showNotification(message, type) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 10);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(10px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function toggleDropdown() {
+            document.getElementById('dropdown-menu').classList.toggle('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function showConfigModal() {
+            const checkboxesContainer = document.getElementById('columnsCheckboxes');
+            checkboxesContainer.innerHTML = '';
+            allColumns.forEach(col => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                div.innerHTML = `
+                    <input type="checkbox" id="col-${col.id}" ${activeColumns.includes(col.id) ? 'checked' : ''} class="h-4 w-4 text-teal-600 bg-gray-700 border-gray-600 rounded focus:ring-teal-500">
+                    <label for="col-${col.id}" class="ml-2 text-sm text-gray-300">${col.name}</label>
+                `;
+                checkboxesContainer.appendChild(div);
+            });
+            document.getElementById('configModal').style.display = 'block';
+        }
+
+        function saveColumnConfig() {
+            activeColumns = [];
+            allColumns.forEach(col => {
+                const checkbox = document.getElementById(`col-${col.id}`);
+                if (checkbox.checked) {
+                    activeColumns.push(col.id);
+                }
+            });
+            saveTransactions();
+            updateUI();
+            closeModal('configModal');
+            showNotification('Configuración de columnas guardada', 'success');
+        }
+
+        function showClearAllModal() {
+            document.getElementById('confirmClearModal').style.display = 'block';
+        }
+
+        function clearAllData() {
+            transactions = [];
+            saveTransactions();
+            updateUI();
+            closeModal('confirmClearModal');
+            showNotification('Todas las transacciones han sido eliminadas', 'success');
+        }
+
+        async function showPortfolioAnalysisModal() {
+            document.getElementById('analysisModal').style.display = 'block';
+            document.getElementById('analysisLoading').classList.remove('hidden');
+            document.getElementById('analysisResult').classList.add('hidden');
+
+            // Simulate AI analysis (placeholder, as no actual AI integration is provided)
+            setTimeout(() => {
+                const analysisResult = document.getElementById('analysisResult');
+                analysisResult.innerHTML = `
+                    <h4>Análisis de Portafolio</h4>
+                    <p>Tu portafolio contiene ${transactions.length} transacciones.</p>
+                    <p>Activos más comunes: ${[...new Set(transactions.map(t => t.stockName))].join(', ')}</p>
+                    <p>Distribución por tipo de activo:</p>
+                    <ul>
+                        <li>Acciones Reales: ${transactions.filter(t => t.assetType === 'accion_real').length}</li>
+                        <li>CEDEARs: ${transactions.filter(t => t.assetType === 'cedear').length}</li>
+                    </ul>
+                    <p>Recomendación: Considera diversificar tu portafolio si está muy concentrado en un solo activo.</p>
+                `;
+                document.getElementById('analysisLoading').classList.add('hidden');
+                document.getElementById('analysisResult').classList.remove('hidden');
+            }, 2000);
+        }
+
+        function exportData() {
+            const data = {
+                portfolios,
+                currentPortfolioId
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'portfolio_data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('Datos exportados con éxito', 'success');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            portfolios = data.portfolios || [];
+                            currentPortfolioId = data.currentPortfolioId || null;
+                            if (currentPortfolioId) {
+                                const portfolio = portfolios.find(p => p.id === currentPortfolioId);
+                                if (portfolio) {
+                                    transactions = portfolio.transactions;
+                                    activeColumns = portfolio.activeColumns || [...allColumns.map(col => col.id)];
+                                } else {
+                                    transactions = [];
+                                    activeColumns = [...allColumns.map(col => col.id)];
+                                }
+                            }
+                            savePortfolios();
+                            saveCurrentPortfolioId();
+                            updatePortfolioSelect();
+                            updateUI();
+                            showNotification('Datos importados con éxito', 'success');
+                        } catch (error) {
+                            showNotification('Error al importar los datos', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('transactionForm').addEventListener('submit', addTransaction);
+        window.addEventListener('click', (event) => {
+            if (!event.target.closest('.relative')) {
+                document.getElementById('dropdown-menu').classList.remove('show');
+            }
+        });
+
+        // --- Initialization ---
+        loadPortfolios();
+        fetchExchangeRate();
+    </script>
+</body>
+</html>                                                                              
