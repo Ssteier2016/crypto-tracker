@@ -939,16 +939,17 @@
             const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
             try {
                 const response = await fetch(url);
-        if (data && data["Global Quote"] && data["Global Quote"]["05. price"]) {
-                return parseFloat(data["Global Quote"]["05. price"]);
+                const data = await response.json();
+                if (data["Global Quote"] && data["Global Quote"]["05. price"]) {
+                    return parseFloat(data["Global Quote"]["05. price"]);
+                } else {
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error fetching price for ${symbol}:`, error);
+                return null;
             }
-            console.warn(`No price data for ${symbol}`);
-            return null;
-        } catch (error) {
-            console.error(`Error fetching price for ${symbol}:`, error);
-            return null;
         }
-    }
 
     async function fetchExchangeRate() {
         try {
