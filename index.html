@@ -13,7 +13,7 @@
         // Importaciones de Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, addDoc, getDocs, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
         // Configuración de Firebase y PWA
@@ -22,12 +22,12 @@
 
         let app, db, auth;
         let userId = '';
-        let appReadyPromise = null;
-        
+        let isAuthReady = false;
+
         document.addEventListener('DOMContentLoaded', () => {
             initializeAppAndAuth();
         });
-        
+
         // Inicialización de Firebase
         function initializeAppAndAuth() {
             setLogLevel('debug');
@@ -43,33 +43,32 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
                 console.log("Firebase y Firestore inicializados.");
-
-                appReadyPromise = new Promise(resolve => {
-                    onAuthStateChanged(auth, async (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            console.log("Autenticación exitosa. User ID:", userId);
-                            showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
-                            resolve();
-                        } else {
-                            try {
-                                await signInAnonymously(auth);
+                
+                // Usar onAuthStateChanged para gestionar el estado de autenticación
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Autenticación exitosa. User ID:", userId);
+                    } else {
+                        signInAnonymously(auth)
+                            .then(() => {
                                 userId = auth.currentUser.uid;
                                 console.log("Autenticado de forma anónima. User ID:", userId);
-                                showAppMessage("Autenticado de forma anónima. ¡Listo para usar!", 'success');
-                                resolve();
-                            } catch (e) {
+                            })
+                            .catch(e => {
                                 console.error("Error al autenticar de forma anónima:", e);
                                 showAppMessage("Error: No se pudo autenticar.", 'error');
-                            }
-                        }
-                    });
-
-                    if (typeof __initial_auth_token !== 'undefined') {
-                        signInWithCustomToken(auth, __initial_auth_token)
-                            .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
+                            });
                     }
+                    isAuthReady = true;
+                    showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
+                    setupHistoryListener();
                 });
+
+                if (typeof __initial_auth_token !== 'undefined') {
+                    signInWithCustomToken(auth, __initial_auth_token)
+                        .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
+                }
             } catch (e) {
                 console.error("Error al inicializar Firebase:", e);
                 showAppMessage("Error al inicializar Firebase. La aplicación podría no funcionar correctamente.", 'error');
@@ -84,6 +83,7 @@
         const scanBtn = document.getElementById('scan-btn');
         const generationSection = document.getElementById('generation-section');
         const scanningSection = document.getElementById('scanning-section');
+        const historySection = document.getElementById('history-section');
         const appMessage = document.getElementById('app-message');
         const submitBtn = document.getElementById('submit-btn');
         const editProductIdInput = document.getElementById('edit-product-id');
@@ -92,6 +92,7 @@
         const copyDescBtn = document.getElementById('copy-desc-btn');
         const geminiSection = document.getElementById('gemini-section');
         const registrationDateInput = document.getElementById('registration_date');
+        const historyList = document.getElementById('history-list');
 
         let html5QrCode;
 
@@ -109,7 +110,10 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            await appReadyPromise;
+            if (!isAuthReady || !userId) {
+                showAppMessage("La aplicación se está inicializando. Por favor, espera unos segundos.", 'info');
+                return;
+            }
 
             const formData = new FormData(form);
             const isEditing = !!formData.get('edit-product-id');
@@ -144,7 +148,6 @@
             } else {
                 if(isEditing){
                     try {
-                        // Obtener la foto existente del camino correcto
                         const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/productos`, productId));
                         if(docSnap.exists()){
                             productData.foto = docSnap.data().foto;
@@ -159,13 +162,11 @@
 
         async function saveOrUpdateProduct(productId, productData, isEditing) {
             try {
-                // Actualizado a la ruta privada de usuario
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/productos`, productId);
                 await setDoc(docRef, productData);
                 
                 if (isEditing) {
                     showAppMessage("¡Producto actualizado con éxito!", 'success');
-                    // Volver a mostrar los datos escaneados con la info actualizada
                     fetchProductData(productId);
                 } else {
                     showAppMessage("¡Producto guardado y código generado!", 'success');
@@ -303,11 +304,12 @@
                 showAppMessage('La función de compartir no está disponible en tu navegador.', 'error');
             }
         }
-
+        
         // Manejador de los botones de vista
         document.getElementById('show-generation-btn').addEventListener('click', () => {
             generationSection.classList.remove('hidden');
             scanningSection.classList.add('hidden');
+            historySection.classList.add('hidden');
             codeDisplay.classList.add('hidden');
             geminiSection.classList.add('hidden');
             scanResult.innerHTML = '';
@@ -315,7 +317,6 @@
             form.reset();
             editProductIdInput.value = '';
             submitBtn.textContent = 'Generar Código';
-            updateRegistrationDate(); // Actualizar la fecha
             if (html5QrCode) {
                 html5QrCode.stop().catch(console.error);
             }
@@ -324,8 +325,21 @@
         document.getElementById('scan-btn').addEventListener('click', () => {
             generationSection.classList.add('hidden');
             scanningSection.classList.remove('hidden');
+            historySection.classList.add('hidden');
             geminiSection.classList.add('hidden');
             startScanner();
+        });
+        
+        document.getElementById('show-history-btn').addEventListener('click', () => {
+            generationSection.classList.add('hidden');
+            scanningSection.classList.add('hidden');
+            historySection.classList.remove('hidden');
+            codeDisplay.classList.add('hidden');
+            geminiSection.classList.add('hidden');
+            scanResult.innerHTML = '';
+            if (html5QrCode) {
+                html5QrCode.stop().catch(console.error);
+            }
         });
 
         // Iniciar el escáner
@@ -366,10 +380,12 @@
 
         // Obtener datos del producto de Firestore
         async function fetchProductData(productId) {
-            await appReadyPromise;
+            if (!isAuthReady || !userId) {
+                showAppMessage("La aplicación no está lista. Intenta de nuevo en unos segundos.", 'info');
+                return;
+            }
 
             try {
-                // Actualizado a la ruta privada de usuario
                 const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/productos`, productId);
                 const productDocSnap = await getDoc(productDocRef);
 
@@ -377,7 +393,6 @@
                     const product = productDocSnap.data();
                     const scanDate = new Date().toISOString();
                     
-                    // Guardar el evento de escaneo en la nueva colección
                     const scansCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/scans`);
                     await addDoc(scansCollectionRef, {
                         product_id: productId,
@@ -385,12 +400,10 @@
                         scanned_by: userId
                     });
 
-                    // Obtener todo el historial de escaneos para este producto
                     const q = query(scansCollectionRef, where("product_id", "==", productId));
                     const querySnapshot = await getDocs(q);
                     const scanHistory = querySnapshot.docs.map(doc => doc.data());
                     
-                    // Ordenar el historial por fecha de escaneo descendente
                     scanHistory.sort((a, b) => new Date(b.scan_date) - new Date(a.scan_date));
 
                     showScannedData(product, scanHistory);
@@ -492,7 +505,7 @@
             document.getElementById('client').value = product.cliente;
             document.getElementById('brand').value = product.marca;
             document.getElementById('saleswoman').value = product.vendedora;
-            document.getElementById('registration_date').value = product.fecha_de_registro;
+            document.getElementById('registration_date').value = product.fecha_de_registro.substring(0, 16);
             
             // Establecer el ID del producto en el campo oculto
             editProductIdInput.value = product.product_id;
@@ -503,18 +516,6 @@
             showAppMessage("Modo de edición activado. Realiza los cambios y presiona 'Guardar Cambios'.", 'info');
         }
 
-        // Actualiza el campo de fecha de registro con la fecha y hora actuales
-        function updateRegistrationDate() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            registrationDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-        }
-
         // Manejador del botón para generar descripciones con Gemini API
         generateDescBtn.addEventListener('click', async () => {
             const price = document.getElementById('price').value;
@@ -522,13 +523,11 @@
             const note = document.getElementById('note').value;
             const brand = document.getElementById('brand').value;
 
-            // Simple validation
             if (!price || !clothingType) {
                 showAppMessage("Por favor, introduce al menos un precio y el tipo de ropa.", 'error');
                 return;
             }
 
-            // Show loading state
             generateDescBtn.textContent = 'Generando...';
             generateDescBtn.disabled = true;
 
@@ -570,7 +569,6 @@
                 showAppMessage(`Error al generar el texto: ${error.message}`, 'error');
                 geminiOutput.value = "Hubo un problema al generar el texto. Por favor, inténtalo de nuevo.";
             } finally {
-                // Reset button state
                 generateDescBtn.textContent = '✨ Generar Descripción ✨';
                 generateDescBtn.disabled = false;
             }
@@ -582,7 +580,42 @@
             document.execCommand('copy');
             showAppMessage("Texto copiado al portapapeles.", 'success');
         });
+        
+        // Listener para el historial de productos en tiempo real
+        function setupHistoryListener() {
+            if (!isAuthReady || !userId) return;
 
+            const productsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/productos`);
+            const q = query(productsCollectionRef, orderBy('fecha_de_registro', 'desc'));
+
+            onSnapshot(q, (querySnapshot) => {
+                historyList.innerHTML = '';
+                if (querySnapshot.empty) {
+                    historyList.innerHTML = '<p class="text-gray-500 text-center">Aún no hay productos registrados.</p>';
+                    return;
+                }
+                querySnapshot.forEach((doc) => {
+                    const product = doc.data();
+                    const listItem = document.createElement('div');
+                    listItem.className = 'bg-white p-4 rounded-xl shadow-md border-l-4 border-indigo-400 mb-4';
+                    listItem.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-lg font-bold text-gray-800 break-all">ID: ${product.product_id}</h4>
+                            <span class="text-sm text-gray-500">${new Date(product.fecha_de_registro).toLocaleString('es-ES')}</span>
+                        </div>
+                        <div class="text-sm text-gray-600 space-y-1">
+                            <p><strong>Precio:</strong> $${product.precio}</p>
+                            <p><strong>Tipo:</strong> ${product.tipo_de_ropa}</p>
+                            <p><strong>Nota:</strong> ${product.nota || 'N/A'}</p>
+                        </div>
+                    `;
+                    historyList.appendChild(listItem);
+                });
+            }, (error) => {
+                console.error("Error al escuchar los productos:", error);
+                showAppMessage("Error al cargar el historial de productos.", 'error');
+            });
+        }
     </script>
     <style>
         body {
@@ -599,12 +632,15 @@
 
         <div id="app-message" class="hidden"></div>
         
-        <div class="flex justify-center space-x-4 mb-8">
+        <div class="flex justify-center flex-wrap space-x-2 md:space-x-4 space-y-2 md:space-y-0 mb-8">
             <button id="show-generation-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">
                 Generar Código
             </button>
             <button id="scan-btn" class="px-6 py-3 bg-green-500 text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition duration-300">
                 Escanear Código
+            </button>
+            <button id="show-history-btn" class="px-6 py-3 bg-purple-500 text-white font-bold rounded-full shadow-lg hover:bg-purple-600 transition duration-300">
+                Ver Historial
             </button>
         </div>
 
@@ -631,7 +667,7 @@
                 
                 <div>
                     <label for="registration_date" class="block text-sm font-semibold text-gray-700 mb-1">Fecha de Registro</label>
-                    <input type="text" id="registration_date" name="registration_date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Ej: 2025-09-14T09:30:00.000Z">
+                    <input type="datetime-local" id="registration_date" name="registration_date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
                 </div>
 
                 <div>
@@ -693,6 +729,14 @@
             <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Escáner</h2>
             <div id="reader" class="w-full max-w-md mx-auto rounded-xl overflow-hidden"></div>
             <div id="scan-result" class="mt-4 p-4"></div>
+        </div>
+        
+        <!-- Sección de Historial -->
+        <div id="history-section" class="hidden p-6 md:p-10 bg-gray-50 rounded-2xl shadow-inner space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Historial de Productos Creados</h2>
+            <div id="history-list" class="space-y-4">
+                <p class="text-gray-500 text-center">Cargando historial...</p>
+            </div>
         </div>
     </div>
 
