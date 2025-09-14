@@ -81,6 +81,7 @@
         const geminiOutput = document.getElementById('gemini-output');
         const copyDescBtn = document.getElementById('copy-desc-btn');
         const geminiSection = document.getElementById('gemini-section');
+        const registrationDateInput = document.getElementById('registration_date');
 
         let html5QrCode;
 
@@ -107,10 +108,11 @@
             const formData = new FormData(form);
             const isEditing = !!formData.get('edit-product-id');
             const productId = isEditing ? formData.get('edit-product-id') : crypto.randomUUID();
+            const regDate = formData.get('registration_date');
             
             const productData = {
                 product_id: productId,
-                fecha_de_registro: isEditing ? (await getDoc(doc(db, `artifacts/${appId}/public/data/productos`, productId))).data().fecha_de_registro : new Date().toISOString(),
+                fecha_de_registro: regDate || new Date().toISOString(),
                 precio: formData.get('price'),
                 nota: formData.get('note'),
                 tipo_de_ropa: formData.get('clothing_type'),
@@ -173,12 +175,39 @@
         // Generar códigos
         function generateCodes(data) {
             codeDisplay.innerHTML = `
-                <div id="qrcode" class="mx-auto my-4 w-48 h-48"></div>
-                <div id="barcode-container" class="mx-auto my-4 flex justify-center">
-                    <svg id="barcode" class="w-64 h-24"></svg>
+                <div id="code-print-container" class="space-y-4">
+                    <div id="qrcode" class="mx-auto my-4 w-48 h-48"></div>
+                    <div id="barcode-container" class="mx-auto my-4 flex justify-center">
+                        <svg id="barcode" class="w-64 h-24"></svg>
+                    </div>
+                    <div class="text-center text-gray-700 font-mono text-sm">
+                        ID de Producto: <span class="font-bold">${data}</span>
+                    </div>
                 </div>
-                <div class="text-center text-gray-700 font-mono text-sm">
-                    ID de Producto: <span class="font-bold">${data}</span>
+                <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mt-6">
+                    <button id="print-btn" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-full shadow-lg hover:bg-blue-600 transition duration-300 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4v2a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm1-2a1 1 0 011-1h6a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V2z" clip-rule="evenodd" />
+                            <path d="M12 11a1 1 0 100-2 1 1 0 000 2z" />
+                            <path fill-rule="evenodd" d="M14 11a1 1 0 011 1v5a1 1 0 01-1 1H6a1 1 0 01-1-1v-5a1 1 0 011-1h8z" clip-rule="evenodd" />
+                        </svg>
+                        Imprimir
+                    </button>
+                    <button id="download-btn" class="px-6 py-3 bg-indigo-500 text-white font-bold rounded-full shadow-lg hover:bg-indigo-600 transition duration-300 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.707 9.293a1 1 0 001.414 0L10 7.414l1.879 1.879a1 1 0 101.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 000 1.414z" clip-rule="evenodd" />
+                            <path fill-rule="evenodd" d="M10 16a1 1 0 001-1V5a1 1 0 10-2 0v10a1 1 0 001 1z" clip-rule="evenodd" />
+                        </svg>
+                        Descargar
+                    </button>
+                    <button id="share-btn" class="px-6 py-3 bg-green-500 text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition duration-300 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M15 8a3 3 0 10-2.977-2.985A5.992 5.992 0 0115 8zM12 12a3 3 0 10-2.977-2.985A5.992 5.992 0 0112 12z" />
+                            <path d="M15 12a3 3 0 10-2.977-2.985A5.992 5.992 0 0115 12z" />
+                            <path d="M7 11.2a1 1 0 01-.84-.4l-2.43-1.43a1 1 0 11.96-1.72l2.43 1.43a1 1 0 01.84.4z" />
+                        </svg>
+                        Compartir
+                    </button>
                 </div>
             `;
             
@@ -189,8 +218,81 @@
                 width: 2,
                 height: 100,
             });
-            // Show the code display section
+
+            // Añadir manejadores de eventos a los nuevos botones
+            document.getElementById('print-btn').addEventListener('click', () => printCode());
+            document.getElementById('download-btn').addEventListener('click', () => downloadCode(data));
+            document.getElementById('share-btn').addEventListener('click', () => shareCode(data));
+            
+            // Mostrar la sección de visualización de códigos
             codeDisplay.classList.remove('hidden');
+        }
+
+        // Funciones para imprimir, descargar y compartir
+        function printCode() {
+            const printContent = document.getElementById('code-print-container').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Imprimir Código de Producto</title>
+                    <style>
+                        body {
+                            font-family: sans-serif;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            margin: 0;
+                            text-align: center;
+                        }
+                        #qrcode canvas, #barcode {
+                            max-width: 100%;
+                            height: auto;
+                            display: block;
+                            margin: 0 auto;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+        function downloadCode(data) {
+            const qrcodeCanvas = document.getElementById('qrcode').querySelector('canvas');
+            if (!qrcodeCanvas) {
+                showAppMessage("Error: No se encontró el código QR para descargar.", 'error');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = qrcodeCanvas.toDataURL('image/png');
+            link.download = `codigo-qr-${data}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showAppMessage("Código QR descargado con éxito.", 'success');
+        }
+
+        function shareCode(data) {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Código de Producto',
+                    text: `ID del producto: ${data}`,
+                }).then(() => {
+                    showAppMessage('ID del producto compartido.', 'success');
+                }).catch((error) => {
+                    console.error('Error al compartir:', error);
+                    showAppMessage('Error al compartir el ID.', 'error');
+                });
+            } else {
+                showAppMessage('La función de compartir no está disponible en tu navegador.', 'error');
+            }
         }
 
         // Manejador de los botones de vista
@@ -204,6 +306,7 @@
             form.reset();
             editProductIdInput.value = '';
             submitBtn.textContent = 'Generar Código';
+            updateRegistrationDate(); // Actualizar la fecha
             if (html5QrCode) {
                 html5QrCode.stop().catch(console.error);
             }
@@ -382,6 +485,7 @@
             document.getElementById('client').value = product.cliente;
             document.getElementById('brand').value = product.marca;
             document.getElementById('saleswoman').value = product.vendedora;
+            document.getElementById('registration_date').value = product.fecha_de_registro;
             
             // Establecer el ID del producto en el campo oculto
             editProductIdInput.value = product.product_id;
@@ -390,6 +494,18 @@
             submitBtn.textContent = 'Guardar Cambios';
             
             showAppMessage("Modo de edición activado. Realiza los cambios y presiona 'Guardar Cambios'.", 'info');
+        }
+
+        // Actualiza el campo de fecha de registro con la fecha y hora actuales
+        function updateRegistrationDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            registrationDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
         }
 
         // Manejador del botón para generar descripciones con Gemini API
@@ -506,6 +622,11 @@
                     </div>
                 </div>
                 
+                <div>
+                    <label for="registration_date" class="block text-sm font-semibold text-gray-700 mb-1">Fecha de Registro</label>
+                    <input type="text" id="registration_date" name="registration_date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Ej: 2025-09-14T09:30:00.000Z">
+                </div>
+
                 <div>
                     <label for="note" class="block text-sm font-semibold text-gray-700 mb-1">Nota</label>
                     <textarea id="note" name="note" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" rows="3" placeholder="Añade detalles del producto..."></textarea>
