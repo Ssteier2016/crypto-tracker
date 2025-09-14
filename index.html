@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Inventario</title>
+    <meta name="theme-color" content="#4f46e5">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -12,10 +13,10 @@
         // Importaciones de Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-        // Configuración de Firebase
+        // Configuración de Firebase y PWA
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -23,16 +24,41 @@
         let userId = '';
         let isAuthReady = false;
 
+        // Definiciones de la PWA
+        const manifestContent = {
+          "name": "Gestor de Inventario",
+          "short_name": "Inventario",
+          "description": "Una aplicación para generar y escanear códigos de barras y QR.",
+          "start_url": "./",
+          "display": "standalone",
+          "background_color": "#ffffff",
+          "theme_color": "#4f46e5",
+          "icons": [
+            { "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAAEhY5YFAAAAAXNSR0IArs4c6QAAAXRJREFUeJzt3bENgEAAAyHzl/4lG+0pU4nQeG+PgwEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwj+QOAC/wF0y8H4xQAAAP8K3E3EAAAAAASUVORK5CYII=", "sizes": "192x192", "type": "image/png" },
+            { "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAADdWNtLAAAAAXNSR0IArs4c6QAAAX5JREFUeJzt3TsNAEAMwqH974E6Fz+N4gUqXUeLgx8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwL4kHg8AAADgS5AFAAAAAADgUo0AAAAAAAAAAAAAAADAMq4tLg4AwAcEAP6N+YIAAPj+AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4A8y8E+e8XoWIAAAAAElFTkSuQmCC", "sizes": "512x512", "type": "image/png" }
+          ]
+        };
+
+        const serviceWorkerCode = `
+            self.addEventListener('install', (event) => {
+                console.log('Service worker instalado.');
+            });
+            self.addEventListener('fetch', (event) => {
+                // Lógica de caché para el modo sin conexión
+            });
+        `;
+
         document.addEventListener('DOMContentLoaded', () => {
             initializeAppAndAuth();
+            registerPWA();
         });
         
         // Inicialización de Firebase
         function initializeAppAndAuth() {
             setLogLevel('debug');
             if (Object.keys(firebaseConfig).length === 0) {
-                console.error("Firebase config is not available. Check your environment settings.");
-                showAppMessage("Error: La configuración de Firebase no está disponible. La aplicación no funcionará correctamente.", 'error');
+                console.error("Firebase config is not available.");
+                showAppMessage("Error: La configuración de Firebase no está disponible.", 'error');
                 return;
             }
 
@@ -44,12 +70,10 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Usuario autenticado:", userId);
                         showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
                     } else {
                         userId = crypto.randomUUID();
                         await signInAnonymously(auth);
-                        console.log("Autenticación anónima exitosa.");
                         showAppMessage("Autenticado de forma anónima. ¡Listo para usar!", 'success');
                     }
                     isAuthReady = true;
@@ -57,12 +81,31 @@
 
                 if (typeof __initial_auth_token !== 'undefined') {
                     signInWithCustomToken(auth, __initial_auth_token)
-                        .then(() => console.log("Token de autenticación personalizado utilizado."))
                         .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
                 }
             } catch (e) {
                 console.error("Error al inicializar Firebase:", e);
                 showAppMessage("Error al inicializar Firebase. La aplicación podría no funcionar correctamente.", 'error');
+            }
+        }
+
+        // Registrar la PWA dinámicamente
+        function registerPWA() {
+            if ('serviceWorker' in navigator) {
+                const serviceWorkerBlob = new Blob([serviceWorkerCode], { type: 'application/javascript' });
+                const serviceWorkerUrl = URL.createObjectURL(serviceWorkerBlob);
+
+                navigator.serviceWorker.register(serviceWorkerUrl)
+                    .then(reg => console.log('Service worker registrado con éxito.', reg))
+                    .catch(err => console.error('Error al registrar el service worker:', err));
+
+                const manifestBlob = new Blob([JSON.stringify(manifestContent)], { type: 'application/json' });
+                const manifestUrl = URL.createObjectURL(manifestBlob);
+
+                const manifestLink = document.createElement('link');
+                manifestLink.rel = 'manifest';
+                manifestLink.href = manifestUrl;
+                document.head.appendChild(manifestLink);
             }
         }
 
@@ -109,7 +152,6 @@
                 marca: formData.get('brand') || null,
                 vendedora: formData.get('saleswoman') || null,
                 foto: null,
-                fecha_de_escaneo: null
             };
 
             const imageFile = formData.get('photo');
@@ -132,7 +174,6 @@
 
         async function saveProduct(productId, productData) {
             try {
-                // Ruta para datos públicos
                 const docRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
                 await setDoc(docRef, productData);
                 showAppMessage("¡Producto guardado y código generado!", 'success');
@@ -215,17 +256,30 @@
             }
 
             try {
-                const docRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
-                const docSnap = await getDoc(docRef);
+                const productDocRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
+                const productDocSnap = await getDoc(productDocRef);
 
-                if (docSnap.exists()) {
-                    const product = docSnap.data();
+                if (productDocSnap.exists()) {
+                    const product = productDocSnap.data();
                     const scanDate = new Date().toISOString();
                     
-                    // Actualizar la fecha de escaneo en la base de datos
-                    await updateDoc(docRef, { fecha_de_escaneo: scanDate });
+                    // Guardar el evento de escaneo en la nueva colección
+                    const scansCollectionRef = collection(db, `artifacts/${appId}/public/data/scans`);
+                    await addDoc(scansCollectionRef, {
+                        product_id: productId,
+                        scan_date: scanDate,
+                        scanned_by: userId
+                    });
 
-                    showScannedData({ ...product, fecha_de_escaneo: scanDate });
+                    // Obtener todo el historial de escaneos para este producto
+                    const q = query(scansCollectionRef, where("product_id", "==", productId));
+                    const querySnapshot = await getDocs(q);
+                    const scanHistory = querySnapshot.docs.map(doc => doc.data());
+                    
+                    // Ordenar el historial por fecha de escaneo descendente
+                    scanHistory.sort((a, b) => new Date(b.scan_date) - new Date(a.scan_date));
+
+                    showScannedData(product, scanHistory);
                 } else {
                     showAppMessage("¡Producto no encontrado!", 'error');
                     scanResult.innerHTML = `
@@ -240,10 +294,17 @@
         }
 
         // Mostrar datos escaneados
-        function showScannedData(product) {
+        function showScannedData(product, scanHistory) {
             const formattedDate = (date) => date ? new Date(date).toLocaleString('es-ES') : 'N/A';
+            const historyHtml = scanHistory.map(scan => `
+                <li class="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                    <span class="font-semibold text-gray-700">Fecha de Venta:</span>
+                    <span class="text-sm text-gray-500">${formattedDate(scan.scan_date)}</span>
+                </li>
+            `).join('');
+
             scanResult.innerHTML = `
-                <div class="p-6 bg-white rounded-xl shadow-lg border-t-4 border-indigo-500">
+                <div class="p-6 bg-white rounded-xl shadow-lg border-t-4 border-indigo-500 mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Información del Producto</h2>
                     <div class="space-y-3 text-gray-700">
                         <div class="flex items-center">
@@ -253,10 +314,6 @@
                         <div class="flex items-center">
                             <span class="font-semibold w-1/3">Fecha de Registro:</span>
                             <span>${formattedDate(product.fecha_de_registro)}</span>
-                        </div>
-                        <div class="flex items-center">
-                            <span class="font-semibold w-1/3">Fecha de Escaneo:</span>
-                            <span>${formattedDate(product.fecha_de_escaneo)}</span>
                         </div>
                         <div class="flex items-center">
                             <span class="font-semibold w-1/3">Precio:</span>
@@ -289,6 +346,13 @@
                             </div>
                         ` : ''}
                     </div>
+                </div>
+                
+                <div class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner mt-4">
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Historial de Ventas</h3>
+                    <ul class="space-y-2">
+                        ${scanHistory.length > 0 ? historyHtml : '<li class="text-gray-500">Este producto aún no tiene historial de ventas.</li>'}
+                    </ul>
                 </div>
             `;
         }
