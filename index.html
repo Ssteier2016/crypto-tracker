@@ -23,34 +23,9 @@
         let app, db, auth;
         let userId = '';
         let isAuthReady = false;
-
-        // Definiciones de la PWA
-        const manifestContent = {
-          "name": "Gestor de Inventario",
-          "short_name": "Inventario",
-          "description": "Una aplicación para generar y escanear códigos de barras y QR.",
-          "start_url": "./",
-          "display": "standalone",
-          "background_color": "#ffffff",
-          "theme_color": "#4f46e5",
-          "icons": [
-            { "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAAEhY5YFAAAAAXNSR0IArs4c6QAAAXRJREFUeJzt3bENgEAAAyHzl/4lG+0pU4nQeG+PgwEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwj+QOAC/wF0y8H4xQAAAP8K3E3EAAAAAASUVORK5CYII=", "sizes": "192x192", "type": "image/png" },
-            { "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAADdWNtLAAAAAXNSR0IArs4c6QAAAX5JREFUeJzt3TsNAEAMwqH974E6Fz+N4gUqXUeLgx8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwL4kHg8AAADgS5AFAAAAAADgUo0AAAAAAAAAAAAAAADAMq4tLg4AwAcEAP6N+YIAAPj+AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4A8y8E+e8XoWIAAAAAElFTkSuQmCC", "sizes": "512x512", "type": "image/png" }
-          ]
-        };
-
-        const serviceWorkerCode = `
-            self.addEventListener('install', (event) => {
-                console.log('Service worker instalado.');
-            });
-            self.addEventListener('fetch', (event) => {
-                // Lógica de caché para el modo sin conexión
-            });
-        `;
-
+        
         document.addEventListener('DOMContentLoaded', () => {
             initializeAppAndAuth();
-            registerPWA();
         });
         
         // Inicialización de Firebase
@@ -70,10 +45,12 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
+                        console.log("Autenticación exitosa. User ID:", userId);
                         showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
                     } else {
                         userId = crypto.randomUUID();
                         await signInAnonymously(auth);
+                        console.log("Autenticado de forma anónima. User ID:", userId);
                         showAppMessage("Autenticado de forma anónima. ¡Listo para usar!", 'success');
                     }
                     isAuthReady = true;
@@ -88,27 +65,7 @@
                 showAppMessage("Error al inicializar Firebase. La aplicación podría no funcionar correctamente.", 'error');
             }
         }
-
-        // Registrar la PWA dinámicamente
-        function registerPWA() {
-            if ('serviceWorker' in navigator) {
-                const serviceWorkerBlob = new Blob([serviceWorkerCode], { type: 'application/javascript' });
-                const serviceWorkerUrl = URL.createObjectURL(serviceWorkerBlob);
-
-                navigator.serviceWorker.register(serviceWorkerUrl)
-                    .then(reg => console.log('Service worker registrado con éxito.', reg))
-                    .catch(err => console.error('Error al registrar el service worker:', err));
-
-                const manifestBlob = new Blob([JSON.stringify(manifestContent)], { type: 'application/json' });
-                const manifestUrl = URL.createObjectURL(manifestBlob);
-
-                const manifestLink = document.createElement('link');
-                manifestLink.rel = 'manifest';
-                manifestLink.href = manifestUrl;
-                document.head.appendChild(manifestLink);
-            }
-        }
-
+        
         // Referencias del DOM
         const form = document.getElementById('product-form');
         const codeDisplay = document.getElementById('code-display');
@@ -118,6 +75,12 @@
         const generationSection = document.getElementById('generation-section');
         const scanningSection = document.getElementById('scanning-section');
         const appMessage = document.getElementById('app-message');
+        const submitBtn = document.getElementById('submit-btn');
+        const editProductIdInput = document.getElementById('edit-product-id');
+        const generateDescBtn = document.getElementById('generate-desc-btn');
+        const geminiOutput = document.getElementById('gemini-output');
+        const copyDescBtn = document.getElementById('copy-desc-btn');
+        const geminiSection = document.getElementById('gemini-section');
 
         let html5QrCode;
 
@@ -131,20 +94,23 @@
             appMessage.style.display = 'block';
         }
 
-        // Manejador del formulario de generación
+        // Manejador del formulario de generación y edición
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!isAuthReady) {
-                showAppMessage("Aún no se ha completado la autenticación. Por favor, espera un momento.", 'info');
-                return;
+            
+            // Esperar a que la autenticación esté lista para evitar errores de permisos
+            while (!isAuthReady) {
+                console.log("Esperando por la autenticación...");
+                await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100ms
             }
 
             const formData = new FormData(form);
-            const productId = crypto.randomUUID();
+            const isEditing = !!formData.get('edit-product-id');
+            const productId = isEditing ? formData.get('edit-product-id') : crypto.randomUUID();
             
             const productData = {
                 product_id: productId,
-                fecha_de_registro: new Date().toISOString(),
+                fecha_de_registro: isEditing ? (await getDoc(doc(db, `artifacts/${appId}/public/data/productos`, productId))).data().fecha_de_registro : new Date().toISOString(),
                 precio: formData.get('price'),
                 nota: formData.get('note'),
                 tipo_de_ropa: formData.get('clothing_type'),
@@ -159,28 +125,48 @@
                 const reader = new FileReader();
                 reader.onload = async function(event) {
                     productData.foto = event.target.result;
-                    await saveProduct(productId, productData);
+                    await saveOrUpdateProduct(productId, productData, isEditing);
                 };
                 reader.onerror = function(error) {
                     console.error("Error al leer la imagen:", error);
                     showAppMessage("Error al cargar la imagen. El producto se guardará sin ella.", 'error');
-                    saveProduct(productId, productData);
+                    saveOrUpdateProduct(productId, productData, isEditing);
                 };
                 reader.readAsDataURL(imageFile);
             } else {
-                await saveProduct(productId, productData);
+                if(isEditing){
+                    productData.foto = (await getDoc(doc(db, `artifacts/${appId}/public/data/productos`, productId))).data().foto;
+                }
+                await saveOrUpdateProduct(productId, productData, isEditing);
             }
         });
 
-        async function saveProduct(productId, productData) {
+        async function saveOrUpdateProduct(productId, productData, isEditing) {
+            // Verificación añadida para asegurar que la base de datos está inicializada
+            if (!db) {
+                showAppMessage("Error: La base de datos no está inicializada. Por favor, recarga la página.", 'error');
+                return;
+            }
+
             try {
                 const docRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
                 await setDoc(docRef, productData);
-                showAppMessage("¡Producto guardado y código generado!", 'success');
-                generateCodes(productId);
+                
+                if (isEditing) {
+                    showAppMessage("¡Producto actualizado con éxito!", 'success');
+                    // Volver a mostrar los datos escaneados con la info actualizada
+                    fetchProductData(productId);
+                } else {
+                    showAppMessage("¡Producto guardado y código generado!", 'success');
+                    generateCodes(productId);
+                }
             } catch (e) {
-                console.error("Error al guardar el producto en Firestore:", e);
-                showAppMessage("Error al guardar el producto. Intenta de nuevo más tarde.", 'error');
+                console.error("Error al guardar/actualizar el producto en Firestore:", e);
+                let errorMessage = "Error al procesar el producto. Intenta de nuevo más tarde.";
+                if (e.message.includes("permission-denied")) {
+                    errorMessage = "Error: Permiso denegado. Asegúrate de que las reglas de seguridad de Firestore son correctas.";
+                }
+                showAppMessage(errorMessage, 'error');
             }
         }
 
@@ -203,12 +189,30 @@
                 width: 2,
                 height: 100,
             });
+            // Show the code display section
+            codeDisplay.classList.remove('hidden');
         }
 
-        // Manejador del escáner
-        scanBtn.addEventListener('click', () => {
+        // Manejador de los botones de vista
+        document.getElementById('show-generation-btn').addEventListener('click', () => {
+            generationSection.classList.remove('hidden');
+            scanningSection.classList.add('hidden');
+            codeDisplay.classList.add('hidden');
+            geminiSection.classList.add('hidden');
+            scanResult.innerHTML = '';
+            // Reset form for new product creation
+            form.reset();
+            editProductIdInput.value = '';
+            submitBtn.textContent = 'Generar Código';
+            if (html5QrCode) {
+                html5QrCode.stop().catch(console.error);
+            }
+        });
+
+        document.getElementById('scan-btn').addEventListener('click', () => {
             generationSection.classList.add('hidden');
             scanningSection.classList.remove('hidden');
+            geminiSection.classList.add('hidden');
             startScanner();
         });
 
@@ -300,6 +304,7 @@
                 <li class="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                     <span class="font-semibold text-gray-700">Fecha de Venta:</span>
                     <span class="text-sm text-gray-500">${formattedDate(scan.scan_date)}</span>
+                    <span class="block text-xs text-gray-400 mt-1">Vendido por: ${scan.scanned_by.substring(0, 8)}...</span>
                 </li>
             `).join('');
 
@@ -347,6 +352,11 @@
                         ` : ''}
                     </div>
                 </div>
+                <div class="flex justify-center mt-6">
+                    <button onclick='showEditForm(${JSON.stringify(product).replace(/'/g, "&#39;")})' class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">
+                        Editar Producto
+                    </button>
+                </div>
                 
                 <div class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner mt-4">
                     <h3 class="text-xl font-bold text-gray-800 mb-3">Historial de Ventas</h3>
@@ -356,6 +366,99 @@
                 </div>
             `;
         }
+        
+        // Función para mostrar el formulario de edición con los datos del producto
+        window.showEditForm = (product) => {
+            generationSection.classList.remove('hidden');
+            scanningSection.classList.add('hidden');
+            scanResult.innerHTML = '';
+            codeDisplay.classList.add('hidden');
+            geminiSection.classList.add('hidden');
+            
+            // Llenar el formulario con los datos del producto
+            document.getElementById('price').value = product.precio;
+            document.getElementById('note').value = product.nota;
+            document.getElementById('clothing_type').value = product.tipo_de_ropa;
+            document.getElementById('client').value = product.cliente;
+            document.getElementById('brand').value = product.marca;
+            document.getElementById('saleswoman').value = product.vendedora;
+            
+            // Establecer el ID del producto en el campo oculto
+            editProductIdInput.value = product.product_id;
+            
+            // Cambiar el texto del botón de envío
+            submitBtn.textContent = 'Guardar Cambios';
+            
+            showAppMessage("Modo de edición activado. Realiza los cambios y presiona 'Guardar Cambios'.", 'info');
+        }
+
+        // Manejador del botón para generar descripciones con Gemini API
+        generateDescBtn.addEventListener('click', async () => {
+            const price = document.getElementById('price').value;
+            const clothingType = document.getElementById('clothing_type').value;
+            const note = document.getElementById('note').value;
+            const brand = document.getElementById('brand').value;
+
+            // Simple validation
+            if (!price || !clothingType) {
+                showAppMessage("Por favor, introduce al menos un precio y el tipo de ropa.", 'error');
+                return;
+            }
+
+            // Show loading state
+            generateDescBtn.textContent = 'Generando...';
+            generateDescBtn.disabled = true;
+
+            const prompt = `Crea una descripción de producto de 2-3 oraciones y una idea de publicación para redes sociales (por ejemplo, Instagram). El producto es:
+                            - Tipo de ropa: ${clothingType}
+                            - Precio: $${price}
+                            - Marca: ${brand || 'N/A'}
+                            - Nota: ${note || 'N/A'}`;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    systemInstruction: {
+                        parts: [{ text: "Actúa como un copywriter de moda experto. Tu objetivo es crear textos de marketing concisos y atractivos para productos de ropa. La respuesta debe ser en formato Markdown con un título 'Descripción de Producto' y otro 'Idea para Redes Sociales'. No incluyas hashtags en la respuesta." }]
+                    },
+                };
+                
+                let response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error en la solicitud: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar el texto.";
+                geminiOutput.value = generatedText;
+                showAppMessage("¡Descripción generada con éxito!", 'success');
+                geminiSection.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error al llamar a la API de Gemini:", error);
+                showAppMessage(`Error al generar el texto: ${error.message}`, 'error');
+                geminiOutput.value = "Hubo un problema al generar el texto. Por favor, inténtalo de nuevo.";
+            } finally {
+                // Reset button state
+                generateDescBtn.textContent = '✨ Generar Descripción ✨';
+                generateDescBtn.disabled = false;
+            }
+        });
+
+        // Manejador del botón de copiar
+        copyDescBtn.addEventListener('click', () => {
+            geminiOutput.select();
+            document.execCommand('copy');
+            showAppMessage("Texto copiado al portapapeles.", 'success');
+        });
 
     </script>
     <style>
@@ -385,6 +488,7 @@
         <!-- Sección de Generación -->
         <div id="generation-section" class="space-y-6">
             <form id="product-form" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6">
+                <input type="hidden" id="edit-product-id" name="edit-product-id">
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
                         <label for="price" class="block text-sm font-semibold text-gray-700 mb-1">Precio</label>
@@ -427,13 +531,32 @@
                     <input type="file" id="photo" name="photo" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition duration-200">
                 </div>
 
-                <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-lg shadow-xl hover:bg-indigo-700 transition duration-300 text-lg">
+                <button type="submit" id="submit-btn" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-lg shadow-xl hover:bg-indigo-700 transition duration-300 text-lg">
                     Generar Código
                 </button>
             </form>
             
             <div id="code-display" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner text-center hidden">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Códigos Generados</h2>
+            </div>
+
+            <!-- Sección de Gemini API -->
+            <div id="gemini-section" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6 hidden">
+                <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Genera Contenido con ✨IA✨</h2>
+                <div class="flex justify-center">
+                    <button id="generate-desc-btn" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-full shadow-lg hover:bg-purple-700 transition duration-300">
+                        ✨ Generar Descripción ✨
+                    </button>
+                </div>
+                <div class="relative mt-4">
+                    <textarea id="gemini-output" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-200" rows="6" placeholder="El texto generado por IA aparecerá aquí..."></textarea>
+                    <button id="copy-desc-btn" class="absolute top-2 right-2 p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 013 3v11a3 3 0 01-3 3H6a3 3 0 01-3-3V5a3 3 0 013-3z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -445,26 +568,5 @@
         </div>
     </div>
 
-    <script>
-        document.getElementById('show-generation-btn').addEventListener('click', () => {
-            document.getElementById('generation-section').classList.remove('hidden');
-            document.getElementById('scanning-section').classList.add('hidden');
-            document.getElementById('code-display').classList.add('hidden');
-            document.getElementById('scan-result').innerHTML = '';
-            if (window.html5QrCode) {
-                window.html5QrCode.stop().catch(console.error);
-            }
-        });
-
-        document.getElementById('product-form').addEventListener('submit', () => {
-            document.getElementById('code-display').classList.remove('hidden');
-        });
-
-        document.getElementById('scan-btn').addEventListener('click', () => {
-            document.getElementById('generation-section').classList.add('hidden');
-            document.getElementById('scanning-section').classList.remove('hidden');
-        });
-
-    </script>
 </body>
 </html>
