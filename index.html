@@ -16,14 +16,26 @@
         import { getFirestore, doc, getDoc, setDoc, collection, query, where, addDoc, getDocs, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-        // Configuración de Firebase y PWA
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
+        // CONFIGURACIÓN DE FIREBASE (PROPORCIONADA POR EL USUARIO)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIGUo2-YFCHKF6Nc8I-lB_NmGZiQ5pHJI",
+            authDomain: "cryptotracker-8a6fd.firebaseapp.com",
+            projectId: "cryptotracker-8a6fd",
+            storageBucket: "cryptotracker-8a6fd.firebasestorage.app",
+            messagingSenderId: "720112375781",
+            appId: "1:720112375781:web:1cdb1f26c20f6cd0ea810c",
+            measurementId: "G-JPVB3GMDV4"
+        };
+        
+        // Variables de Firebase
         let app, db, auth;
         let userId = '';
         let isAuthReady = false;
+        
+        // El ID de la aplicación se obtiene del entorno
+        const appId = 'default-app-id';
 
+        // Inicialización de Firebase al cargar el documento
         document.addEventListener('DOMContentLoaded', () => {
             initializeAppAndAuth();
         });
@@ -31,13 +43,6 @@
         // Inicialización de Firebase
         function initializeAppAndAuth() {
             setLogLevel('debug');
-            console.log("Iniciando la aplicación y la autenticación...");
-            if (Object.keys(firebaseConfig).length === 0) {
-                console.error("Firebase config is not available.");
-                showAppMessage("Error: La configuración de Firebase no está disponible.", 'error');
-                return;
-            }
-
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
@@ -45,33 +50,23 @@
                 console.log("Firebase y Firestore inicializados.");
                 
                 // Usar onAuthStateChanged para gestionar el estado de autenticación
-                onAuthStateChanged(auth, (user) => {
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
                         console.log("Autenticación exitosa. User ID:", userId);
                     } else {
-                        signInAnonymously(auth)
-                            .then(() => {
-                                userId = auth.currentUser.uid;
-                                console.log("Autenticado de forma anónima. User ID:", userId);
-                            })
-                            .catch(e => {
-                                console.error("Error al autenticar de forma anónima:", e);
-                                showAppMessage("Error: No se pudo autenticar.", 'error');
-                            });
+                        // Autenticación anónima si no se encuentra un token inicial
+                        await signInAnonymously(auth);
+                        userId = auth.currentUser.uid;
+                        console.log("Autenticado de forma anónima. User ID:", userId);
                     }
                     isAuthReady = true;
                     showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
                     setupHistoryListener();
                 });
-
-                if (typeof __initial_auth_token !== 'undefined') {
-                    signInWithCustomToken(auth, __initial_auth_token)
-                        .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
-                }
             } catch (e) {
                 console.error("Error al inicializar Firebase:", e);
-                showAppMessage("Error al inicializar Firebase. La aplicación podría no funcionar correctamente.", 'error');
+                showAppMessage("Error al inicializar Firebase. Revisa la configuración.", 'error');
             }
         }
         
@@ -148,7 +143,7 @@
             } else {
                 if(isEditing){
                     try {
-                        const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/productos`, productId));
+                        const docSnap = await getDoc(doc(db, `productos/${productId}`));
                         if(docSnap.exists()){
                             productData.foto = docSnap.data().foto;
                         }
@@ -162,7 +157,7 @@
 
         async function saveOrUpdateProduct(productId, productData, isEditing) {
             try {
-                const docRef = doc(db, `artifacts/${appId}/users/${userId}/productos`, productId);
+                const docRef = doc(db, `productos`, productId);
                 await setDoc(docRef, productData);
                 
                 if (isEditing) {
@@ -175,9 +170,6 @@
             } catch (e) {
                 console.error("Error al guardar/actualizar el producto en Firestore:", e);
                 let errorMessage = "Error al procesar el producto. Intenta de nuevo más tarde.";
-                if (e.message.includes("permission-denied")) {
-                    errorMessage = "Error: Permiso denegado. Asegúrate de que las reglas de seguridad de Firestore son correctas.";
-                }
                 showAppMessage(errorMessage, 'error');
             }
         }
@@ -229,12 +221,10 @@
                 height: 100,
             });
 
-            // Añadir manejadores de eventos a los nuevos botones
             document.getElementById('print-btn').addEventListener('click', () => printCode());
             document.getElementById('download-btn').addEventListener('click', () => downloadCode(data));
             document.getElementById('share-btn').addEventListener('click', () => shareCode(data));
             
-            // Mostrar la sección de visualización de códigos
             codeDisplay.classList.remove('hidden');
         }
 
@@ -386,14 +376,14 @@
             }
 
             try {
-                const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/productos`, productId);
+                const productDocRef = doc(db, `productos`, productId);
                 const productDocSnap = await getDoc(productDocRef);
 
                 if (productDocSnap.exists()) {
                     const product = productDocSnap.data();
                     const scanDate = new Date().toISOString();
                     
-                    const scansCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/scans`);
+                    const scansCollectionRef = collection(db, `scans`);
                     await addDoc(scansCollectionRef, {
                         product_id: productId,
                         scan_date: scanDate,
@@ -584,8 +574,7 @@
         // Listener para el historial de productos en tiempo real
         function setupHistoryListener() {
             if (!isAuthReady || !userId) return;
-
-            const productsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/productos`);
+            const productsCollectionRef = collection(db, `productos`);
             const q = query(productsCollectionRef, orderBy('fecha_de_registro', 'desc'));
 
             onSnapshot(q, (querySnapshot) => {
@@ -632,110 +621,113 @@
 
         <div id="app-message" class="hidden"></div>
         
-        <div class="flex justify-center flex-wrap space-x-2 md:space-x-4 space-y-2 md:space-y-0 mb-8">
-            <button id="show-generation-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">
-                Generar Código
-            </button>
-            <button id="scan-btn" class="px-6 py-3 bg-green-500 text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition duration-300">
-                Escanear Código
-            </button>
-            <button id="show-history-btn" class="px-6 py-3 bg-purple-500 text-white font-bold rounded-full shadow-lg hover:bg-purple-600 transition duration-300">
-                Ver Historial
-            </button>
-        </div>
-
-        <!-- Sección de Generación -->
-        <div id="generation-section" class="space-y-6">
-            <form id="product-form" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6">
-                <input type="hidden" id="edit-product-id" name="edit-product-id">
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="price" class="block text-sm font-semibold text-gray-700 mb-1">Precio</label>
-                        <input type="number" id="price" name="price" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Ej: 50.00">
-                    </div>
-                    <div>
-                        <label for="clothing_type" class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Ropa</label>
-                        <select id="clothing_type" name="clothing_type" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
-                            <option value="Importada">Importada</option>
-                            <option value="Nuevo">Nuevo</option>
-                            <option value="Nuevo Importado">Nuevo Importado</option>
-                            <option value="Prenda">Prenda</option>
-                            <option value="Prenda Nueva">Prenda Nueva</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div>
-                    <label for="registration_date" class="block text-sm font-semibold text-gray-700 mb-1">Fecha de Registro</label>
-                    <input type="datetime-local" id="registration_date" name="registration_date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
-                </div>
-
-                <div>
-                    <label for="note" class="block text-sm font-semibold text-gray-700 mb-1">Nota</label>
-                    <textarea id="note" name="note" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" rows="3" placeholder="Añade detalles del producto..."></textarea>
-                </div>
-
-                <div class="grid md:grid-cols-3 gap-6">
-                    <div>
-                        <label for="client" class="block text-sm font-semibold text-gray-700 mb-1">Cliente (Opcional)</label>
-                        <input type="text" id="client" name="client" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Nombre del cliente">
-                    </div>
-                    <div>
-                        <label for="brand" class="block text-sm font-semibold text-gray-700 mb-1">Marca (Opcional)</label>
-                        <input type="text" id="brand" name="brand" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Marca de la prenda">
-                    </div>
-                    <div>
-                        <label for="saleswoman" class="block text-sm font-semibold text-gray-700 mb-1">Vendedora (Opcional)</label>
-                        <input type="text" id="saleswoman" name="saleswoman" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Nombre de la vendedora">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="photo" class="block text-sm font-semibold text-gray-700 mb-1">Foto (Opcional)</label>
-                    <input type="file" id="photo" name="photo" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition duration-200">
-                </div>
-
-                <button type="submit" id="submit-btn" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-lg shadow-xl hover:bg-indigo-700 transition duration-300 text-lg">
+        <!-- El contenido principal ahora está visible por defecto -->
+        <div id="main-content">
+            <div class="flex justify-center flex-wrap space-x-2 md:space-x-4 space-y-2 md:space-y-0 mb-8">
+                <button id="show-generation-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">
                     Generar Código
                 </button>
-            </form>
+                <button id="scan-btn" class="px-6 py-3 bg-green-500 text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition duration-300">
+                    Escanear Código
+                </button>
+                <button id="show-history-btn" class="px-6 py-3 bg-purple-500 text-white font-bold rounded-full shadow-lg hover:bg-purple-600 transition duration-300">
+                    Ver Historial
+                </button>
+            </div>
+
+            <!-- Sección de Generación -->
+            <div id="generation-section" class="space-y-6">
+                <form id="product-form" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6">
+                    <input type="hidden" id="edit-product-id" name="edit-product-id">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="price" class="block text-sm font-semibold text-gray-700 mb-1">Precio</label>
+                            <input type="number" id="price" name="price" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Ej: 50.00">
+                        </div>
+                        <div>
+                            <label for="clothing_type" class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Ropa</label>
+                            <select id="clothing_type" name="clothing_type" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
+                                <option value="Importada">Importada</option>
+                                <option value="Nuevo">Nuevo</option>
+                                <option value="Nuevo Importado">Nuevo Importado</option>
+                                <option value="Prenda">Prenda</option>
+                                <option value="Prenda Nueva">Prenda Nueva</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="registration_date" class="block text-sm font-semibold text-gray-700 mb-1">Fecha de Registro</label>
+                        <input type="datetime-local" id="registration_date" name="registration_date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
+                    </div>
+
+                    <div>
+                        <label for="note" class="block text-sm font-semibold text-gray-700 mb-1">Nota</label>
+                        <textarea id="note" name="note" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" rows="3" placeholder="Añade detalles del producto..."></textarea>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="client" class="block text-sm font-semibold text-gray-700 mb-1">Cliente (Opcional)</label>
+                            <input type="text" id="client" name="client" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Nombre del cliente">
+                        </div>
+                        <div>
+                            <label for="brand" class="block text-sm font-semibold text-gray-700 mb-1">Marca (Opcional)</label>
+                            <input type="text" id="brand" name="brand" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Marca de la prenda">
+                        </div>
+                        <div>
+                            <label for="saleswoman" class="block text-sm font-semibold text-gray-700 mb-1">Vendedora (Opcional)</label>
+                            <input type="text" id="saleswoman" name="saleswoman" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Nombre de la vendedora">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="photo" class="block text-sm font-semibold text-gray-700 mb-1">Foto (Opcional)</label>
+                        <input type="file" id="photo" name="photo" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition duration-200">
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-lg shadow-xl hover:bg-indigo-700 transition duration-300 text-lg">
+                        Generar Código
+                    </button>
+                </form>
+                
+                <div id="code-display" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner text-center hidden">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Códigos Generados</h2>
+                </div>
+
+                <!-- Sección de Gemini API -->
+                <div id="gemini-section" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Genera Contenido con ✨IA✨</h2>
+                    <div class="flex justify-center">
+                        <button id="generate-desc-btn" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-full shadow-lg hover:bg-purple-700 transition duration-300">
+                            ✨ Generar Descripción ✨
+                        </button>
+                    </div>
+                    <div class="relative mt-4">
+                        <textarea id="gemini-output" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-200" rows="6" placeholder="El texto generado por IA aparecerá aquí..."></textarea>
+                        <button id="copy-desc-btn" class="absolute top-2 right-2 p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 013 3v11a3 3 0 01-3 3H6a3 3 0 01-3-3V5a3 3 0 013-3z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Escaneo -->
+            <div id="scanning-section" class="hidden p-6 md:p-10 bg-gray-50 rounded-2xl shadow-inner space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Escáner</h2>
+                <div id="reader" class="w-full max-w-md mx-auto rounded-xl overflow-hidden"></div>
+                <div id="scan-result" class="mt-4 p-4"></div>
+            </div>
             
-            <div id="code-display" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner text-center hidden">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Códigos Generados</h2>
-            </div>
-
-            <!-- Sección de Gemini API -->
-            <div id="gemini-section" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Genera Contenido con ✨IA✨</h2>
-                <div class="flex justify-center">
-                    <button id="generate-desc-btn" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-full shadow-lg hover:bg-purple-700 transition duration-300">
-                        ✨ Generar Descripción ✨
-                    </button>
+            <!-- Sección de Historial -->
+            <div id="history-section" class="hidden p-6 md:p-10 bg-gray-50 rounded-2xl shadow-inner space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Historial de Productos Creados</h2>
+                <div id="history-list" class="space-y-4">
+                    <p class="text-gray-500 text-center">Cargando historial...</p>
                 </div>
-                <div class="relative mt-4">
-                    <textarea id="gemini-output" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-200" rows="6" placeholder="El texto generado por IA aparecerá aquí..."></textarea>
-                    <button id="copy-desc-btn" class="absolute top-2 right-2 p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition duration-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 013 3v11a3 3 0 01-3 3H6a3 3 0 01-3-3V5a3 3 0 013-3z" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sección de Escaneo -->
-        <div id="scanning-section" class="hidden p-6 md:p-10 bg-gray-50 rounded-2xl shadow-inner space-y-6">
-            <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Escáner</h2>
-            <div id="reader" class="w-full max-w-md mx-auto rounded-xl overflow-hidden"></div>
-            <div id="scan-result" class="mt-4 p-4"></div>
-        </div>
-        
-        <!-- Sección de Historial -->
-        <div id="history-section" class="hidden p-6 md:p-10 bg-gray-50 rounded-2xl shadow-inner space-y-6">
-            <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Historial de Productos Creados</h2>
-            <div id="history-list" class="space-y-4">
-                <p class="text-gray-500 text-center">Cargando historial...</p>
             </div>
         </div>
     </div>
