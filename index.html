@@ -22,7 +22,7 @@
 
         let app, db, auth;
         let userId = '';
-        let isAuthReady = false;
+        let appReadyPromise = null;
         
         document.addEventListener('DOMContentLoaded', () => {
             initializeAppAndAuth();
@@ -31,6 +31,7 @@
         // Inicialización de Firebase
         function initializeAppAndAuth() {
             setLogLevel('debug');
+            console.log("Iniciando la aplicación y la autenticación...");
             if (Object.keys(firebaseConfig).length === 0) {
                 console.error("Firebase config is not available.");
                 showAppMessage("Error: La configuración de Firebase no está disponible.", 'error');
@@ -39,27 +40,36 @@
 
             try {
                 app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
                 auth = getAuth(app);
+                db = getFirestore(app);
+                console.log("Firebase y Firestore inicializados.");
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        console.log("Autenticación exitosa. User ID:", userId);
-                        showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
-                    } else {
-                        userId = crypto.randomUUID();
-                        await signInAnonymously(auth);
-                        console.log("Autenticado de forma anónima. User ID:", userId);
-                        showAppMessage("Autenticado de forma anónima. ¡Listo para usar!", 'success');
+                appReadyPromise = new Promise(resolve => {
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            console.log("Autenticación exitosa. User ID:", userId);
+                            showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
+                            resolve();
+                        } else {
+                            try {
+                                await signInAnonymously(auth);
+                                userId = auth.currentUser.uid;
+                                console.log("Autenticado de forma anónima. User ID:", userId);
+                                showAppMessage("Autenticado de forma anónima. ¡Listo para usar!", 'success');
+                                resolve();
+                            } catch (e) {
+                                console.error("Error al autenticar de forma anónima:", e);
+                                showAppMessage("Error: No se pudo autenticar.", 'error');
+                            }
+                        }
+                    });
+
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        signInWithCustomToken(auth, __initial_auth_token)
+                            .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
                     }
-                    isAuthReady = true;
                 });
-
-                if (typeof __initial_auth_token !== 'undefined') {
-                    signInWithCustomToken(auth, __initial_auth_token)
-                        .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
-                }
             } catch (e) {
                 console.error("Error al inicializar Firebase:", e);
                 showAppMessage("Error al inicializar Firebase. La aplicación podría no funcionar correctamente.", 'error');
@@ -99,11 +109,7 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Esperar a que la autenticación esté lista para evitar errores de permisos
-            while (!isAuthReady) {
-                console.log("Esperando por la autenticación...");
-                await new Promise(resolve => setTimeout(resolve, 100)); // Espera 100ms
-            }
+            await appReadyPromise;
 
             const formData = new FormData(form);
             const isEditing = !!formData.get('edit-product-id');
@@ -137,21 +143,24 @@
                 reader.readAsDataURL(imageFile);
             } else {
                 if(isEditing){
-                    productData.foto = (await getDoc(doc(db, `artifacts/${appId}/public/data/productos`, productId))).data().foto;
+                    try {
+                        // Obtener la foto existente del camino correcto
+                        const docSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/productos`, productId));
+                        if(docSnap.exists()){
+                            productData.foto = docSnap.data().foto;
+                        }
+                    } catch (error) {
+                         console.error("Error al obtener la foto existente:", error);
+                    }
                 }
                 await saveOrUpdateProduct(productId, productData, isEditing);
             }
         });
 
         async function saveOrUpdateProduct(productId, productData, isEditing) {
-            // Verificación añadida para asegurar que la base de datos está inicializada
-            if (!db) {
-                showAppMessage("Error: La base de datos no está inicializada. Por favor, recarga la página.", 'error');
-                return;
-            }
-
             try {
-                const docRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
+                // Actualizado a la ruta privada de usuario
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/productos`, productId);
                 await setDoc(docRef, productData);
                 
                 if (isEditing) {
@@ -357,13 +366,11 @@
 
         // Obtener datos del producto de Firestore
         async function fetchProductData(productId) {
-            if (!isAuthReady) {
-                showAppMessage("Aún no se ha completado la autenticación. Por favor, espera un momento.", 'info');
-                return;
-            }
+            await appReadyPromise;
 
             try {
-                const productDocRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
+                // Actualizado a la ruta privada de usuario
+                const productDocRef = doc(db, `artifacts/${appId}/users/${userId}/productos`, productId);
                 const productDocSnap = await getDoc(productDocRef);
 
                 if (productDocSnap.exists()) {
@@ -371,7 +378,7 @@
                     const scanDate = new Date().toISOString();
                     
                     // Guardar el evento de escaneo en la nueva colección
-                    const scansCollectionRef = collection(db, `artifacts/${appId}/public/data/scans`);
+                    const scansCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/scans`);
                     await addDoc(scansCollectionRef, {
                         product_id: productId,
                         scan_date: scanDate,
@@ -407,7 +414,7 @@
                 <li class="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
                     <span class="font-semibold text-gray-700">Fecha de Venta:</span>
                     <span class="text-sm text-gray-500">${formattedDate(scan.scan_date)}</span>
-                    <span class="block text-xs text-gray-400 mt-1">Vendido por: ${scan.scanned_by.substring(0, 8)}...</span>
+                    <span class="block text-xs text-gray-400 mt-1">Vendido por: ${scan.scanned_by}</span>
                 </li>
             `).join('');
 
