@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Inventario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script type="module">
+        // Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        // Configuración de Firebase
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let app, db, auth;
+        let userId = '';
+        let isAuthReady = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeAppAndAuth();
+        });
+        
+        // Inicialización de Firebase
+        function initializeAppAndAuth() {
+            setLogLevel('debug');
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.error("Firebase config is not available. Check your environment settings.");
+                showAppMessage("Error: La configuración de Firebase no está disponible. La aplicación no funcionará correctamente.", 'error');
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Usuario autenticado:", userId);
+                        showAppMessage("Autenticación exitosa. ¡Listo para usar!", 'success');
+                    } else {
+                        userId = crypto.randomUUID();
+                        await signInAnonymously(auth);
+                        console.log("Autenticación anónima exitosa.");
+                        showAppMessage("Autenticado de forma anónima. ¡Listo para usar!", 'success');
+                    }
+                    isAuthReady = true;
+                });
+
+                if (typeof __initial_auth_token !== 'undefined') {
+                    signInWithCustomToken(auth, __initial_auth_token)
+                        .then(() => console.log("Token de autenticación personalizado utilizado."))
+                        .catch(err => console.error("Error al usar el token de autenticación personalizado:", err));
+                }
+            } catch (e) {
+                console.error("Error al inicializar Firebase:", e);
+                showAppMessage("Error al inicializar Firebase. La aplicación podría no funcionar correctamente.", 'error');
+            }
+        }
+
+        // Referencias del DOM
+        const form = document.getElementById('product-form');
+        const codeDisplay = document.getElementById('code-display');
+        const scanResult = document.getElementById('scan-result');
+        const scannerContainer = document.getElementById('reader');
+        const scanBtn = document.getElementById('scan-btn');
+        const generationSection = document.getElementById('generation-section');
+        const scanningSection = document.getElementById('scanning-section');
+        const appMessage = document.getElementById('app-message');
+
+        let html5QrCode;
+
+        // Mostrar mensajes de la aplicación
+        function showAppMessage(message, type = 'info') {
+            appMessage.textContent = message;
+            appMessage.className = `p-3 mt-4 text-sm font-semibold rounded-lg shadow-md transition-all duration-300 ${
+                type === 'success' ? 'bg-green-100 text-green-700' :
+                type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+            }`;
+            appMessage.style.display = 'block';
+        }
+
+        // Manejador del formulario de generación
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isAuthReady) {
+                showAppMessage("Aún no se ha completado la autenticación. Por favor, espera un momento.", 'info');
+                return;
+            }
+
+            const formData = new FormData(form);
+            const productId = crypto.randomUUID();
+            
+            const productData = {
+                product_id: productId,
+                fecha_de_registro: new Date().toISOString(),
+                precio: formData.get('price'),
+                nota: formData.get('note'),
+                tipo_de_ropa: formData.get('clothing_type'),
+                cliente: formData.get('client') || null,
+                marca: formData.get('brand') || null,
+                vendedora: formData.get('saleswoman') || null,
+                foto: null,
+                fecha_de_escaneo: null
+            };
+
+            const imageFile = formData.get('photo');
+            if (imageFile && imageFile.size > 0) {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    productData.foto = event.target.result;
+                    await saveProduct(productId, productData);
+                };
+                reader.onerror = function(error) {
+                    console.error("Error al leer la imagen:", error);
+                    showAppMessage("Error al cargar la imagen. El producto se guardará sin ella.", 'error');
+                    saveProduct(productId, productData);
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                await saveProduct(productId, productData);
+            }
+        });
+
+        async function saveProduct(productId, productData) {
+            try {
+                // Ruta para datos públicos
+                const docRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
+                await setDoc(docRef, productData);
+                showAppMessage("¡Producto guardado y código generado!", 'success');
+                generateCodes(productId);
+            } catch (e) {
+                console.error("Error al guardar el producto en Firestore:", e);
+                showAppMessage("Error al guardar el producto. Intenta de nuevo más tarde.", 'error');
+            }
+        }
+
+        // Generar códigos
+        function generateCodes(data) {
+            codeDisplay.innerHTML = `
+                <div id="qrcode" class="mx-auto my-4 w-48 h-48"></div>
+                <div id="barcode-container" class="mx-auto my-4 flex justify-center">
+                    <svg id="barcode" class="w-64 h-24"></svg>
+                </div>
+                <div class="text-center text-gray-700 font-mono text-sm">
+                    ID de Producto: <span class="font-bold">${data}</span>
+                </div>
+            `;
+            
+            new QRCode(document.getElementById("qrcode"), data);
+            JsBarcode("#barcode", data, {
+                format: "CODE128",
+                displayValue: false,
+                width: 2,
+                height: 100,
+            });
+        }
+
+        // Manejador del escáner
+        scanBtn.addEventListener('click', () => {
+            generationSection.classList.add('hidden');
+            scanningSection.classList.remove('hidden');
+            startScanner();
+        });
+
+        // Iniciar el escáner
+        function startScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    console.log("Escáner detenido.");
+                }).catch(err => {
+                    console.error("Error al detener el escáner:", err);
+                });
+            }
+
+            html5QrCode = new Html5Qrcode("reader");
+            const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+                if (decodedText) {
+                    console.log("Código escaneado:", decodedText);
+                    stopScanner();
+                    fetchProductData(decodedText);
+                }
+            };
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+                .catch(err => {
+                    console.error("Error al iniciar el escáner:", err);
+                    showAppMessage("No se pudo iniciar la cámara. Asegúrate de dar los permisos necesarios.", 'error');
+                });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().catch(err => {
+                    console.error("Error al detener el escáner:", err);
+                });
+            }
+            scanningSection.classList.add('hidden');
+            generationSection.classList.remove('hidden');
+        }
+
+        // Obtener datos del producto de Firestore
+        async function fetchProductData(productId) {
+            if (!isAuthReady) {
+                showAppMessage("Aún no se ha completado la autenticación. Por favor, espera un momento.", 'info');
+                return;
+            }
+
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/productos`, productId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const product = docSnap.data();
+                    const scanDate = new Date().toISOString();
+                    
+                    // Actualizar la fecha de escaneo en la base de datos
+                    await updateDoc(docRef, { fecha_de_escaneo: scanDate });
+
+                    showScannedData({ ...product, fecha_de_escaneo: scanDate });
+                } else {
+                    showAppMessage("¡Producto no encontrado!", 'error');
+                    scanResult.innerHTML = `
+                        <p class="text-red-600 font-semibold text-center">No se encontró información para este código.</p>
+                        <p class="text-gray-500 text-sm text-center">ID: ${productId}</p>
+                    `;
+                }
+            } catch (e) {
+                console.error("Error al obtener el producto:", e);
+                showAppMessage("Error al buscar el producto. Intenta de nuevo más tarde.", 'error');
+            }
+        }
+
+        // Mostrar datos escaneados
+        function showScannedData(product) {
+            const formattedDate = (date) => date ? new Date(date).toLocaleString('es-ES') : 'N/A';
+            scanResult.innerHTML = `
+                <div class="p-6 bg-white rounded-xl shadow-lg border-t-4 border-indigo-500">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Información del Producto</h2>
+                    <div class="space-y-3 text-gray-700">
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">ID de Producto:</span>
+                            <span class="font-mono text-sm break-all">${product.product_id}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Fecha de Registro:</span>
+                            <span>${formattedDate(product.fecha_de_registro)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Fecha de Escaneo:</span>
+                            <span>${formattedDate(product.fecha_de_escaneo)}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Precio:</span>
+                            <span>$${product.precio}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Tipo de Ropa:</span>
+                            <span>${product.tipo_de_ropa}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Vendedora:</span>
+                            <span>${product.vendedora || 'N/A'}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Cliente:</span>
+                            <span>${product.cliente || 'N/A'}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="font-semibold w-1/3">Marca:</span>
+                            <span>${product.marca || 'N/A'}</span>
+                        </div>
+                        <div class="space-y-2 pt-2">
+                            <span class="font-semibold">Nota:</span>
+                            <p class="bg-gray-100 p-3 rounded-lg text-sm">${product.nota || 'N/A'}</p>
+                        </div>
+                        ${product.foto ? `
+                            <div class="mt-4 text-center">
+                                <span class="font-semibold">Foto:</span>
+                                <img src="${product.foto}" alt="Foto del producto" class="mt-2 rounded-lg shadow-md mx-auto max-w-full h-auto">
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+
+    <div class="container mx-auto p-4 md:p-8 bg-white rounded-3xl shadow-2xl max-w-5xl w-full">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-gray-800 mb-4">Gestor de Artículos</h1>
+        <p class="text-center text-lg md:text-xl text-gray-500 mb-8">Genera códigos únicos para tus productos y escanea para ver los detalles.</p>
+
+        <div id="app-message" class="hidden"></div>
+        
+        <div class="flex justify-center space-x-4 mb-8">
+            <button id="show-generation-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">
+                Generar Código
+            </button>
+            <button id="scan-btn" class="px-6 py-3 bg-green-500 text-white font-bold rounded-full shadow-lg hover:bg-green-600 transition duration-300">
+                Escanear Código
+            </button>
+        </div>
+
+        <!-- Sección de Generación -->
+        <div id="generation-section" class="space-y-6">
+            <form id="product-form" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner space-y-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="price" class="block text-sm font-semibold text-gray-700 mb-1">Precio</label>
+                        <input type="number" id="price" name="price" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Ej: 50.00">
+                    </div>
+                    <div>
+                        <label for="clothing_type" class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Ropa</label>
+                        <select id="clothing_type" name="clothing_type" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
+                            <option value="Importada">Importada</option>
+                            <option value="Nuevo">Nuevo</option>
+                            <option value="Nuevo Importado">Nuevo Importado</option>
+                            <option value="Prenda">Prenda</option>
+                            <option value="Prenda Nueva">Prenda Nueva</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="note" class="block text-sm font-semibold text-gray-700 mb-1">Nota</label>
+                    <textarea id="note" name="note" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" rows="3" placeholder="Añade detalles del producto..."></textarea>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="client" class="block text-sm font-semibold text-gray-700 mb-1">Cliente (Opcional)</label>
+                        <input type="text" id="client" name="client" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Nombre del cliente">
+                    </div>
+                    <div>
+                        <label for="brand" class="block text-sm font-semibold text-gray-700 mb-1">Marca (Opcional)</label>
+                        <input type="text" id="brand" name="brand" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Marca de la prenda">
+                    </div>
+                    <div>
+                        <label for="saleswoman" class="block text-sm font-semibold text-gray-700 mb-1">Vendedora (Opcional)</label>
+                        <input type="text" id="saleswoman" name="saleswoman" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" placeholder="Nombre de la vendedora">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="photo" class="block text-sm font-semibold text-gray-700 mb-1">Foto (Opcional)</label>
+                    <input type="file" id="photo" name="photo" accept="image/*" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition duration-200">
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-lg shadow-xl hover:bg-indigo-700 transition duration-300 text-lg">
+                    Generar Código
+                </button>
+            </form>
+            
+            <div id="code-display" class="bg-gray-50 p-6 md:p-10 rounded-2xl shadow-inner text-center hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Códigos Generados</h2>
+            </div>
+        </div>
+
+        <!-- Sección de Escaneo -->
+        <div id="scanning-section" class="hidden p-6 md:p-10 bg-gray-50 rounded-2xl shadow-inner space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Escáner</h2>
+            <div id="reader" class="w-full max-w-md mx-auto rounded-xl overflow-hidden"></div>
+            <div id="scan-result" class="mt-4 p-4"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('show-generation-btn').addEventListener('click', () => {
+            document.getElementById('generation-section').classList.remove('hidden');
+            document.getElementById('scanning-section').classList.add('hidden');
+            document.getElementById('code-display').classList.add('hidden');
+            document.getElementById('scan-result').innerHTML = '';
+            if (window.html5QrCode) {
+                window.html5QrCode.stop().catch(console.error);
+            }
+        });
+
+        document.getElementById('product-form').addEventListener('submit', () => {
+            document.getElementById('code-display').classList.remove('hidden');
+        });
+
+        document.getElementById('scan-btn').addEventListener('click', () => {
+            document.getElementById('generation-section').classList.add('hidden');
+            document.getElementById('scanning-section').classList.remove('hidden');
+        });
+
+    </script>
+</body>
+</html>
