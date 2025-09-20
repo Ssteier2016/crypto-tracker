@@ -113,65 +113,43 @@
         <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
     </div>
 
-    <script type="module">
-        // --- IMPORTACIONES DE FIREBASE ---
-        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- CONFIGURACIÓN Y VARIABLES GLOBALES ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCE1IUirX-UoaM99nRaAaS-vQ7zfpRkcqE",
-            authDomain: "cryptotracker-8a6fd.firebaseapp.com",
-            projectId: "cryptotracker-8a6fd",
-            storageBucket: "cryptotracker-8a6fd.firebasestorage.app",
-            messagingSenderId: "720112375781",
-            appId: "1:720112375781:web:7995dcbd6fe7470aea810c"
-        };
-        const appId = 'default-qr-app';
-
-        let app, db, auth;
-        let userId = null;
-        let isAuthReady = false;
+    <script>
+        // --- VARIABLES GLOBALES ---
+        let prendas = []; // Array de prendas en memoria
         let html5QrCode;
 
-        // --- INICIALIZACIÓN DE FIREBASE ---
-        async function initializeAppAndAuth() {
-            if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-                showAppMessage("Configuración de Firebase incompleta. Revisa el objeto firebaseConfig en el código.", 'error');
-                return;
-            }
+        // --- INICIALIZACIÓN ---
+        function initializeApp() {
+            loadPrendasFromStorage();
+            setupHistoryDisplay(); // Muestra historial inicial
+            showAppMessage("Aplicación lista (datos locales).", 'success');
+            console.log("App inicializada con localStorage.");
+        }
+
+        // --- LOCALSTORAGE FUNCTIONS ---
+        function loadPrendasFromStorage() {
             try {
-                setLogLevel('debug');
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        console.log("Usuario autenticado. ID:", userId);
-                        isAuthReady = true;
-                        setupHistoryListener();
-                        showAppMessage("Aplicación lista.", 'success');
-                    } else {
-                        console.log("Iniciando autenticación anónima...");
-                        try {
-                            await signInAnonymously(auth);
-                            userId = auth.currentUser.uid;
-                            console.log("Autenticación anónima exitosa. ID:", userId);
-                            isAuthReady = true;
-                            setupHistoryListener();
-                            showAppMessage("Aplicación lista.", 'success');
-                        } catch (authError) {
-                            console.error("Error en la autenticación anónima:", authError);
-                            showAppMessage("Error de autenticación. Verifica las reglas de Firebase.", "error");
-                        }
-                    }
-                });
-            } catch (e) {
-                console.error("Error al inicializar Firebase:", e);
-                showAppMessage("Error crítico al conectar con la base de datos.", 'error');
+                const stored = localStorage.getItem('qrPrendas');
+                if (stored) {
+                    prendas = JSON.parse(stored);
+                    console.log(`Cargadas ${prendas.length} prendas desde localStorage.`);
+                } else {
+                    prendas = [];
+                }
+            } catch (error) {
+                console.error("Error cargando localStorage:", error);
+                showAppMessage("Error al cargar datos locales. Usando memoria temporal.", 'error');
+                prendas = [];
+            }
+        }
+
+        function savePrendasToStorage() {
+            try {
+                localStorage.setItem('qrPrendas', JSON.stringify(prendas));
+                console.log(`Guardadas ${prendas.length} prendas en localStorage.`);
+            } catch (error) {
+                console.error("Error guardando localStorage:", error);
+                showAppMessage("Error al guardar datos. Se perderán al cerrar el navegador.", 'error');
             }
         }
 
@@ -205,27 +183,24 @@
             }
         }
         
-        if (document.getElementById('show-generation-btn')) {
-            document.getElementById('show-generation-btn').addEventListener('click', () => {
-                if (qrForm) qrForm.reset();
-                if (qrDisplay) {
-                    qrDisplay.innerHTML = '';
-                    qrDisplay.classList.add('hidden');
-                }
-                if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
-                showView('generation-section');
-            });
-        }
-        if (document.getElementById('show-scanner-btn')) {
-            document.getElementById('show-scanner-btn').addEventListener('click', () => {
-                if (scanResult) scanResult.innerHTML = '';
-                showView('scanner-section');
-                startScanner();
-            });
-        }
-        if (document.getElementById('show-history-btn')) {
-            document.getElementById('show-history-btn').addEventListener('click', () => showView('history-section'));
-        }
+        document.getElementById('show-generation-btn').addEventListener('click', () => {
+            if (qrForm) qrForm.reset();
+            if (qrDisplay) {
+                qrDisplay.innerHTML = '';
+                qrDisplay.classList.add('hidden');
+            }
+            if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+            showView('generation-section');
+        });
+        document.getElementById('show-scanner-btn').addEventListener('click', () => {
+            if (scanResult) scanResult.innerHTML = '';
+            showView('scanner-section');
+            startScanner();
+        });
+        document.getElementById('show-history-btn').addEventListener('click', () => {
+            setupHistoryDisplay();
+            showView('history-section');
+        });
         document.querySelectorAll('.back-to-menu').forEach(btn => {
             btn.addEventListener('click', () => showView('main'));
         });
@@ -311,10 +286,6 @@
         if (qrForm) {
             qrForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                if (!isAuthReady || !userId) {
-                    showAppMessage("Aguarde, la base de datos se está conectando.", 'info');
-                    return;
-                }
 
                 const formData = new FormData(qrForm);
                 const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value);
@@ -338,15 +309,15 @@
 
                 try {
                     console.log("Guardando prenda con ID:", prendaId);
-                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/prendas`, prendaId);
-                    await setDoc(docRef, prendaData);
-                    console.log("Prenda guardada exitosamente.");
-                    showAppMessage("Prenda guardada con éxito.", 'success');
+                    prendas.push(prendaData);
+                    savePrendasToStorage();
+                    console.log("Prenda guardada en localStorage.");
+                    showAppMessage("Prenda guardada localmente con éxito.", 'success');
                     generateQrCode(prendaId);
                     qrForm.reset();
                     if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
                 } catch (error) {
-                    console.error("Error al guardar en Firestore:", error.code, error.message);
+                    console.error("Error al guardar prenda:", error);
                     showAppMessage(`Error al guardar la prenda: ${error.message}`, 'error');
                 }
             });
@@ -354,13 +325,10 @@
 
         function generateQrCode(prendaId) {
             if (!qrDisplay) return;
-            const qrCanvasDiv = document.createElement('div');
-            qrCanvasDiv.id = 'qrcode-canvas';
-            qrCanvasDiv.className = 'flex justify-center';
 
             qrDisplay.innerHTML = `
                 <h3 class="font-bold text-lg mb-4">Código QR Generado</h3>
-                ${qrCanvasDiv.outerHTML}
+                <div id="qrcode-canvas" class="flex justify-center"></div>
                 <p class="text-xs text-gray-500 mt-2 break-all">ID: ${prendaId}</p>
                 <div class="flex flex-col md:flex-row justify-center gap-3 mt-4">
                     <button id="download-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
@@ -376,15 +344,9 @@
                 });
                 console.log("QR generado para ID:", prendaId);
                 
-                if (document.getElementById('download-btn')) {
-                    document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId));
-                }
-                if (document.getElementById('print-btn')) {
-                    document.getElementById('print-btn').addEventListener('click', printCode);
-                }
-                if (document.getElementById('share-btn')) {
-                    document.getElementById('share-btn').addEventListener('click', () => shareCode(prendaId));
-                }
+                document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId));
+                document.getElementById('print-btn').addEventListener('click', printCode);
+                document.getElementById('share-btn').addEventListener('click', () => shareCode(prendaId));
                 
                 qrDisplay.classList.remove('hidden');
             } catch (error) {
@@ -431,7 +393,7 @@
                     showAppMessage('Función de compartir no disponible en este navegador.', 'info');
                 }
             } catch (err) {
-                showAppMessage('Error al compartir.', 'error');
+                 showAppMessage('Error al compartir.', 'error');
             }
         }
         
@@ -455,34 +417,19 @@
             }
         }
 
-        async function onScanSuccess(decodedText, decodedResult) {
+        function onScanSuccess(decodedText, decodedResult) {
             stopScanner();
             const readerDiv = document.getElementById('reader');
             if (readerDiv) readerDiv.style.display = 'none';
-            showAppMessage("Código escaneado. Buscando datos...", "info");
+            showAppMessage("Código escaneado. Buscando datos locales...", "info");
             
-            try {
-                const scanData = {
-                    prendaId: decodedText,
-                    fecha_escaneo: new Date().toISOString(),
-                    escaneado_por: userId
-                };
-                const scansCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/scans`);
-                await addDoc(scansCollectionRef, scanData);
-
-                const docRef = doc(db, `artifacts/${appId}/users/${userId}/prendas`, decodedText);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    displayScannedData(docSnap.data());
-                } else {
-                    if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Prenda no encontrada en tu historial.</div>`;
-                }
-
-            } catch (error) {
-                console.error("Error al procesar escaneo:", error);
-                showAppMessage("Error al buscar la prenda.", "error");
-                if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Ocurrió un error al buscar los datos.</div>`;
+            const prendaEncontrada = prendas.find(p => p.id === decodedText);
+            if (prendaEncontrada) {
+                displayScannedData(prendaEncontrada);
+                showAppMessage("Prenda encontrada en tu historial local.", "success");
+            } else {
+                if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Prenda no encontrada en tu historial local.</div>`;
+                showAppMessage("Prenda no encontrada.", "error");
             }
 
             // Botón para escanear de nuevo
@@ -521,42 +468,34 @@
         }
 
         // --- LÓGICA DE HISTORIAL ---
-        function setupHistoryListener() {
-            if (!isAuthReady || !userId || !historyList) return;
-
-            const q = query(collection(db, `artifacts/${appId}/users/${userId}/prendas`));
+        function setupHistoryDisplay() {
+            if (!historyList) return;
             
-            onSnapshot(q, (querySnapshot) => {
-                console.log("Historial actualizado. Documentos:", querySnapshot.size);
-                if (querySnapshot.empty) {
-                    historyList.innerHTML = '<p class="text-gray-500 text-center">Aún no has registrado ninguna prenda.</p>';
-                    return;
-                }
-                
-                historyList.innerHTML = '';
-                querySnapshot.forEach((doc) => {
-                    const prenda = doc.data();
-                    const fecha = new Date(prenda.fecha_creacion).toLocaleDateString('es-AR');
-                    const item = document.createElement('div');
-                    item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
-                    item.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
-                                <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
-                            </div>
-                            <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
+            console.log("Actualizando historial desde localStorage. Prendas:", prendas.length);
+            if (prendas.length === 0) {
+                historyList.innerHTML = '<p class="text-gray-500 text-center">Aún no has registrado ninguna prenda localmente.</p>';
+                return;
+            }
+            
+            historyList.innerHTML = '';
+            prendas.forEach((prenda) => {
+                const fecha = new Date(prenda.fecha_creacion).toLocaleDateString('es-AR');
+                const item = document.createElement('div');
+                item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
                         </div>
-                    `;
-                    item.querySelector('.view-details-btn').addEventListener('click', () => {
-                        showView('scanner-section');
-                        displayScannedData(prenda);
-                    });
-                    historyList.appendChild(item);
+                        <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
+                    </div>
+                `;
+                item.querySelector('.view-details-btn').addEventListener('click', () => {
+                    showView('scanner-section');
+                    displayScannedData(prenda);
                 });
-            }, (error) => {
-                console.error("Error en historial:", error);
-                if (historyList) historyList.innerHTML = '<p class="text-red-500 text-center">No se pudo cargar el historial.</p>';
+                historyList.appendChild(item);
             });
         }
         
@@ -585,7 +524,7 @@
         }
 
         // --- INICIO DE LA APLICACIÓN ---
-        document.addEventListener('DOMContentLoaded', initializeAppAndAuth);
+        document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
