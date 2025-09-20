@@ -40,25 +40,25 @@
                         <label for="precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
                         <input type="number" id="precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
-                     <div>
+                    <div>
                         <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
                         <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
                         <div class="mt-2 space-y-2">
-                           <div class="flex items-center">
-                               <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                               <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
-                           </div>
-                           <div class="flex items-center">
-                               <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                               <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
-                           </div>
                             <div class="flex items-center">
-                               <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                               <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
-                           </div>
+                                <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -75,7 +75,7 @@
                     </div>
                     <div class="pt-2 border-t border-gray-200">
                         <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
-                           ✨ Generar Descripción Inteligente
+                            ✨ Generar Descripción Inteligente
                         </button>
                     </div>
                     <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
@@ -92,7 +92,7 @@
         <!-- Sección de Escaneo -->
         <section id="scanner-section" class="hidden">
             <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-             <div class="bg-white p-4 rounded-xl shadow-lg">
+            <div class="bg-white p-4 rounded-xl shadow-lg">
                 <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
             </div>
             <div id="scan-result" class="mt-6"></div>
@@ -100,7 +100,7 @@
 
         <!-- Sección de Historial -->
         <section id="history-section" class="hidden">
-             <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de Prendas</h2>
                 <div id="history-list" class="space-y-4">
@@ -109,9 +109,8 @@
             </div>
         </section>
 
-         <!-- Notificaciones -->
+        <!-- Notificaciones -->
         <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
-
     </div>
 
     <script type="module">
@@ -151,19 +150,19 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Usuario autenticado. ID:", userId);  // Log para depuración
+                        console.log("Usuario autenticado. ID:", userId);
                         isAuthReady = true;
                         setupHistoryListener();
                         showAppMessage("Aplicación lista.", 'success');
                     } else {
-                        console.log("Iniciando autenticación anónima...");  // Log para depuración
+                        console.log("Iniciando autenticación anónima...");
                         try {
-                           await signInAnonymously(auth);
-                           userId = auth.currentUser.uid;
-                           console.log("Autenticación anónima exitosa. ID:", userId);
-                           isAuthReady = true;
-                           setupHistoryListener();
-                           showAppMessage("Aplicación lista.", 'success');
+                            await signInAnonymously(auth);
+                            userId = auth.currentUser.uid;
+                            console.log("Autenticación anónima exitosa. ID:", userId);
+                            isAuthReady = true;
+                            setupHistoryListener();
+                            showAppMessage("Aplicación lista.", 'success');
                         } catch (authError) {
                             console.error("Error en la autenticación anónima:", authError);
                             showAppMessage("Error de autenticación. Verifica las reglas de Firebase.", "error");
@@ -208,13 +207,13 @@
         
         if (document.getElementById('show-generation-btn')) {
             document.getElementById('show-generation-btn').addEventListener('click', () => {
-                 if (qrForm) qrForm.reset();
-                 if (qrDisplay) {
-                     qrDisplay.innerHTML = '';
-                     qrDisplay.classList.add('hidden');
-                 }
-                 if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
-                 showView('generation-section');
+                if (qrForm) qrForm.reset();
+                if (qrDisplay) {
+                    qrDisplay.innerHTML = '';
+                    qrDisplay.classList.add('hidden');
+                }
+                if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+                showView('generation-section');
             });
         }
         if (document.getElementById('show-scanner-btn')) {
@@ -260,8 +259,8 @@
                 `;
 
                 try {
-                    const apiKey = "";  // ¡AGREGA TU CLAVE DE GEMINI AQUÍ!
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                    const apiKey = "AIzaSyALOQSrgOQwtjuy7b84UymWaI3a58EF0MU";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
                     const payload = {
                         contents: [{ parts: [{ text: prompt }] }],
@@ -274,7 +273,7 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error(`Error en la API de Gemini: ${response.status}`);
+                        throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
                     }
 
                     const result = await response.json();
@@ -338,16 +337,16 @@
                 };
 
                 try {
-                    console.log("Guardando prenda con ID:", prendaId);  // Log para depuración
+                    console.log("Guardando prenda con ID:", prendaId);
                     const docRef = doc(db, `artifacts/${appId}/users/${userId}/prendas`, prendaId);
                     await setDoc(docRef, prendaData);
-                    console.log("Prenda guardada exitosamente.");  // Log para depuración
+                    console.log("Prenda guardada exitosamente.");
                     showAppMessage("Prenda guardada con éxito.", 'success');
                     generateQrCode(prendaId);
                     qrForm.reset();
                     if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
                 } catch (error) {
-                    console.error("Error al guardar en Firestore:", error.code, error.message);  // Log detallado
+                    console.error("Error al guardar en Firestore:", error.code, error.message);
                     showAppMessage(`Error al guardar la prenda: ${error.message}`, 'error');
                 }
             });
@@ -375,7 +374,7 @@
                     width: 180,
                     height: 180
                 });
-                console.log("QR generado para ID:", prendaId);  // Log para depuración
+                console.log("QR generado para ID:", prendaId);
                 
                 if (document.getElementById('download-btn')) {
                     document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId));
@@ -432,7 +431,7 @@
                     showAppMessage('Función de compartir no disponible en este navegador.', 'info');
                 }
             } catch (err) {
-                 showAppMessage('Error al compartir.', 'error');
+                showAppMessage('Error al compartir.', 'error');
             }
         }
         
@@ -528,7 +527,7 @@
             const q = query(collection(db, `artifacts/${appId}/users/${userId}/prendas`));
             
             onSnapshot(q, (querySnapshot) => {
-                console.log("Historial actualizado. Documentos:", querySnapshot.size);  // Log para depuración
+                console.log("Historial actualizado. Documentos:", querySnapshot.size);
                 if (querySnapshot.empty) {
                     historyList.innerHTML = '<p class="text-gray-500 text-center">Aún no has registrado ninguna prenda.</p>';
                     return;
@@ -587,7 +586,6 @@
 
         // --- INICIO DE LA APLICACIÓN ---
         document.addEventListener('DOMContentLoaded', initializeAppAndAuth);
-
     </script>
 </body>
 </html>
