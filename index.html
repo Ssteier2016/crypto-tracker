@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de QR para Indumentaria</title>
+    <meta name="theme-color" content="#4f46e5">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="app-container" class="max-w-2xl mx-auto p-4 md:p-6">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-indigo-600">Gestor de QR</h1>
+            <p class="text-gray-600 mt-2">Crea, escanea y gestiona los códigos de tus prendas.</p>
+        </header>
+
+        <!-- Menú Principal -->
+        <main id="main-menu" class="space-y-4">
+            <button id="show-generation-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-plus-circle mr-3"></i> Generar QR
+            </button>
+            <button id="show-scanner-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-qrcode mr-3"></i> Escanear QR
+            </button>
+            <button id="show-history-btn" class="w-full bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-gray-800 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-history mr-3"></i> Historial de Prendas
+            </button>
+        </main>
+
+        <!-- Sección de Generación -->
+        <section id="generation-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
+                <form id="qr-form" class="space-y-4">
+                    <div>
+                        <label for="precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
+                        <input type="number" id="precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                     <div>
+                        <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
+                        <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <div class="mt-2 space-y-2">
+                           <div class="flex items-center">
+                               <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                               <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                           </div>
+                           <div class="flex items-center">
+                               <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                               <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+                           </div>
+                            <div class="flex items-center">
+                               <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                               <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                           </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="cliente" class="block text-sm font-medium text-gray-700">Cliente (Opcional)</label>
+                        <input type="text" id="cliente" name="cliente" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
+                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="nota" class="block text-sm font-medium text-gray-700">Nota (Opcional)</label>
+                        <textarea id="nota" name="nota" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
+                </form>
+            </div>
+            <div id="qr-display" class="hidden mt-6 bg-white p-6 rounded-xl shadow-lg text-center"></div>
+        </section>
+
+        <!-- Sección de Escaneo -->
+        <section id="scanner-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+             <div class="bg-white p-4 rounded-xl shadow-lg">
+                <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
+            </div>
+            <div id="scan-result" class="mt-6"></div>
+        </section>
+
+        <!-- Sección de Historial -->
+        <section id="history-section" class="hidden">
+             <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de Prendas</h2>
+                <div id="history-list" class="space-y-4">
+                    <p class="text-gray-500 text-center">Cargando historial...</p>
+                </div>
+            </div>
+        </section>
+
+         <!-- Notificaciones -->
+        <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
+
+    </div>
+
+    <script type="module">
+        // --- IMPORTACIONES DE FIREBASE ---
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURACIÓN Y VARIABLES GLOBALES ---
+        
+        // ¡IMPORTANTE! Las variables __app_id, __firebase_config y __initial_auth_token
+        // son proporcionadas por el entorno de ejecución. No es necesario modificarlas.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-qr-app';
+        let firebaseConfig;
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        } catch (e) {
+            console.error("Error al parsear la configuración de Firebase:", e);
+            firebaseConfig = {}; // Usar configuración vacía si hay error
+        }
+        
+        let app, db, auth;
+        let userId = null;
+        let isAuthReady = false;
+        let html5QrCode;
+
+        // --- INICIALIZACIÓN DE FIREBASE ---
+        async function initializeAppAndAuth() {
+            if (!firebaseConfig.apiKey) {
+                showAppMessage("Configuración de Firebase no encontrada. La aplicación no puede funcionar.", 'error');
+                return;
+            }
+            try {
+                setLogLevel('debug');
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Usuario autenticado. ID:", userId);
+                    } else {
+                        // Si __initial_auth_token está disponible, úsalo. Si no, inicia sesión anónimamente.
+                        try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                            userId = auth.currentUser.uid;
+                        } catch (authError) {
+                            console.error("Error en la autenticación:", authError);
+                            showAppMessage("Error de autenticación. No se podrán guardar datos.", "error");
+                        }
+                    }
+                    
+                    if (userId) {
+                        isAuthReady = true;
+                        setupHistoryListener();
+                        showAppMessage("Aplicación lista.", 'success');
+                    }
+                });
+            } catch (e) {
+                console.error("Error al inicializar Firebase:", e);
+                showAppMessage("Error crítico al conectar con la base de datos.", 'error');
+            }
+        }
+
+        // --- MANEJO DEL DOM Y NAVEGACIÓN ---
+        const mainMenu = document.getElementById('main-menu');
+        const generationSection = document.getElementById('generation-section');
+        const scannerSection = document.getElementById('scanner-section');
+        const historySection = document.getElementById('history-section');
+        const qrForm = document.getElementById('qr-form');
+        const qrDisplay = document.getElementById('qr-display');
+        const scanResult = document.getElementById('scan-result');
+        const historyList = document.getElementById('history-list');
+
+        const sections = [generationSection, scannerSection, historySection];
+
+        function showView(viewId) {
+            mainMenu.classList.add('hidden');
+            sections.forEach(section => section.classList.add('hidden'));
+            stopScanner(); // Detiene el escáner al cambiar de vista
+
+            if (viewId === 'main') {
+                mainMenu.classList.remove('hidden');
+            } else {
+                document.getElementById(viewId).classList.remove('hidden');
+            }
+        }
+        
+        document.getElementById('show-generation-btn').addEventListener('click', () => {
+             qrForm.reset();
+             qrDisplay.innerHTML = '';
+             qrDisplay.classList.add('hidden');
+             showView('generation-section')
+        });
+        document.getElementById('show-scanner-btn').addEventListener('click', () => {
+            scanResult.innerHTML = '';
+            showView('scanner-section');
+            startScanner();
+        });
+        document.getElementById('show-history-btn').addEventListener('click', () => showView('history-section'));
+        document.querySelectorAll('.back-to-menu').forEach(btn => {
+            btn.addEventListener('click', () => showView('main'));
+        });
+
+        // --- LÓGICA DE GENERACIÓN DE QR ---
+        qrForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isAuthReady || !userId) {
+                showAppMessage("Aguarde, la base de datos se está conectando.", 'info');
+                return;
+            }
+
+            const formData = new FormData(qrForm);
+            const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value);
+
+            if (tiposDeRopa.length === 0) {
+                showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+                return;
+            }
+            
+            const prendaId = crypto.randomUUID();
+            const prendaData = {
+                id: prendaId,
+                precio: formData.get('precio'),
+                talle: formData.get('talle'),
+                tipos_de_ropa: tiposDeRopa,
+                cliente: formData.get('cliente') || '',
+                vendedora: formData.get('vendedora') || '',
+                nota: formData.get('nota') || '',
+                fecha_creacion: new Date().toISOString()
+            };
+
+            try {
+                // Ruta privada para los datos de cada usuario
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/prendas`, prendaId);
+                await setDoc(docRef, prendaData);
+                showAppMessage("Prenda guardada con éxito.", 'success');
+                generateQrCode(prendaId);
+                qrForm.reset();
+            } catch (error) {
+                console.error("Error al guardar en Firestore:", error);
+                showAppMessage("Error al guardar la prenda.", 'error');
+            }
+        });
+
+        function generateQrCode(prendaId) {
+            qrDisplay.innerHTML = `
+                <h3 class="font-bold text-lg mb-4">Código QR Generado</h3>
+                <div id="qrcode-canvas" class="flex justify-center"></div>
+                <p class="text-xs text-gray-500 mt-2 break-all">ID: ${prendaId}</p>
+                <div class="flex flex-col md:flex-row justify-center gap-3 mt-4">
+                    <button id="download-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
+                    <button id="print-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-print mr-2"></i>Imprimir</button>
+                    <button id="share-btn" class="py-2 px-4 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition"><i class="fas fa-share-alt mr-2"></i>Compartir</button>
+                </div>`;
+            
+            new QRCode(document.getElementById("qrcode-canvas"), {
+                text: prendaId,
+                width: 180,
+                height: 180
+            });
+            
+            document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId));
+            document.getElementById('print-btn').addEventListener('click', printCode);
+            document.getElementById('share-btn').addEventListener('click', () => shareCode(prendaId));
+            
+            qrDisplay.classList.remove('hidden');
+        }
+
+        // --- ACCIONES DEL QR (DESCARGAR, IMPRIMIR, COMPARTIR) ---
+        function downloadCode(prendaId) {
+            const canvas = document.querySelector('#qrcode-canvas canvas');
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `qr-prenda-${prendaId}.png`;
+            link.click();
+        }
+
+        function printCode() {
+            const qrCanvas = document.querySelector('#qrcode-canvas canvas');
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>Imprimir QR</title></head><body style="text-align:center; margin-top: 50px;"><img src="' + qrCanvas.toDataURL() + '"></body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        async function shareCode(prendaId) {
+            const shareData = {
+                title: 'QR de Prenda',
+                text: `Código QR para la prenda con ID: ${prendaId}`,
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    showAppMessage('¡Compartido con éxito!', 'success');
+                } else {
+                    showAppMessage('La función de compartir no está disponible en este navegador.', 'info');
+                }
+            } catch (err) {
+                 showAppMessage('Error al compartir.', 'error');
+            }
+        }
+        
+        // --- LÓGICA DE ESCANEO ---
+        function startScanner() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                .catch(err => console.log("No se pudo iniciar el escáner.", err));
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.log("Error al detener el escáner.", err));
+            }
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            stopScanner();
+            showAppMessage("Código escaneado. Buscando datos...", "info");
+            
+            try {
+                // Registrar el escaneo
+                const scanData = {
+                    prendaId: decodedText,
+                    fecha_escaneo: new Date().toISOString(),
+                    escaneado_por: userId
+                };
+                const scansCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/scans`);
+                await addDoc(scansCollectionRef, scanData);
+
+                // Buscar la prenda
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/prendas`, decodedText);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    displayScannedData(docSnap.data());
+                } else {
+                    scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Prenda no encontrada en tu historial.</div>`;
+                }
+
+            } catch (error) {
+                console.error("Error al procesar el escaneo:", error);
+                showAppMessage("Error al buscar la información de la prenda.", "error");
+            }
+        }
+        
+        function onScanFailure(error) {
+            // No hacer nada, es normal que falle a menudo.
+        }
+
+        function displayScannedData(data) {
+            const fecha = new Date(data.fecha_creacion).toLocaleDateString('es-AR');
+            scanResult.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-indigo-500">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalle de la Prenda</h2>
+                    <div class="space-y-2 text-gray-700">
+                        <p><strong>Precio:</strong> $${data.precio}</p>
+                        <p><strong>Talle:</strong> ${data.talle}</p>
+                        <p><strong>Tipo de Ropa:</strong> ${data.tipos_de_ropa.join(', ')}</p>
+                        <p><strong>Cliente:</strong> ${data.cliente || 'No especificado'}</p>
+                        <p><strong>Vendedora:</strong> ${data.vendedora || 'No especificada'}</p>
+                        <p><strong>Nota:</strong> ${data.nota || 'Sin notas'}</p>
+                        <p><strong>Fecha de Registro:</strong> ${fecha}</p>
+                    </div>
+                </div>`;
+        }
+
+        // --- LÓGICA DE HISTORIAL ---
+        function setupHistoryListener() {
+            if (!isAuthReady || !userId) return;
+
+            const q = query(collection(db, `artifacts/${appId}/users/${userId}/prendas`));
+            
+            onSnapshot(q, (querySnapshot) => {
+                if (querySnapshot.empty) {
+                    historyList.innerHTML = '<p class="text-gray-500 text-center">Aún no has registrado ninguna prenda.</p>';
+                    return;
+                }
+                
+                historyList.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const prenda = doc.data();
+                    const fecha = new Date(prenda.fecha_creacion).toLocaleDateString('es-AR');
+                    const item = document.createElement('div');
+                    item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                                <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
+                            </div>
+                            <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
+                        </div>
+                    `;
+                    item.querySelector('.view-details-btn').addEventListener('click', () => {
+                        showView('scanner-section');
+                        displayScannedData(prenda);
+                    });
+                    historyList.appendChild(item);
+                });
+            }, (error) => {
+                console.error("Error al obtener el historial:", error);
+                historyList.innerHTML = '<p class="text-red-500 text-center">No se pudo cargar el historial.</p>';
+            });
+        }
+        
+        // --- UTILIDADES ---
+        function showAppMessage(message, type = 'info') {
+            const messageContainer = document.getElementById('app-message');
+            const messageDiv = document.createElement('div');
+            
+            let bgColor, textColor;
+            switch(type) {
+                case 'success': bgColor = 'bg-green-500'; textColor = 'text-white'; break;
+                case 'error': bgColor = 'bg-red-500'; textColor = 'text-white'; break;
+                default: bgColor = 'bg-blue-500'; textColor = 'text-white'; break;
+            }
+
+            messageDiv.className = `p-3 rounded-lg shadow-xl mb-2 text-sm font-semibold ${bgColor} ${textColor} transition-opacity duration-300`;
+            messageDiv.textContent = message;
+
+            messageContainer.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.classList.add('opacity-0');
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 3000);
+        }
+
+        // --- INICIO DE LA APLICACIÓN ---
+        document.addEventListener('DOMContentLoaded', initializeAppAndAuth);
+
+    </script>
+</body>
+</html>
