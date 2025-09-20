@@ -121,15 +121,17 @@
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN Y VARIABLES GLOBALES ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-qr-app';
-        let firebaseConfig;
-        try {
-            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        } catch (e) {
-            console.error("Error al parsear la configuración de Firebase:", e);
-            firebaseConfig = {};
-        }
-        
+        // **EDITADO**: Se usa la configuración directamente para evitar problemas en Render.
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIGUo2-YFCHKF6Nc8I-lB_NmGZiQ5pHJI",
+            authDomain: "cryptotracker-8a6fd.firebaseapp.com",
+            projectId: "cryptotracker-8a6fd",
+            storageBucket: "cryptotracker-8a6fd.firebasestorage.app",
+            messagingSenderId: "720112375781",
+            appId: "1:720112375781:web:7995dcbd6fe7470aea810c"
+        };
+        const appId = 'default-qr-app';
+
         let app, db, auth;
         let userId = null;
         let isAuthReady = false;
@@ -153,14 +155,11 @@
                         console.log("Usuario autenticado. ID:", userId);
                     } else {
                         try {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                await signInWithCustomToken(auth, __initial_auth_token);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                            userId = auth.currentUser.uid;
+                           // En un entorno público como Render, siempre usaremos el inicio de sesión anónimo.
+                           await signInAnonymously(auth);
+                           userId = auth.currentUser.uid;
                         } catch (authError) {
-                            console.error("Error en la autenticación:", authError);
+                            console.error("Error en la autenticación anónima:", authError);
                             showAppMessage("Error de autenticación. No se podrán guardar datos.", "error");
                         }
                     }
@@ -333,6 +332,7 @@
                 showAppMessage("Prenda guardada con éxito.", 'success');
                 generateQrCode(prendaId);
                 qrForm.reset();
+                geminiOutputSection.classList.add('hidden');
             } catch (error) {
                 console.error("Error al guardar en Firestore:", error);
                 showAppMessage("Error al guardar la prenda.", 'error');
@@ -366,6 +366,7 @@
         // --- ACCIONES DEL QR (DESCARGAR, IMPRIMIR, COMPARTIR) ---
         function downloadCode(prendaId) {
             const canvas = document.querySelector('#qrcode-canvas canvas');
+            if (!canvas) return;
             const link = document.createElement('a');
             link.href = canvas.toDataURL('image/png');
             link.download = `qr-prenda-${prendaId}.png`;
@@ -374,6 +375,7 @@
 
         function printCode() {
             const qrCanvas = document.querySelector('#qrcode-canvas canvas');
+            if (!qrCanvas) return;
             const printWindow = window.open('', '_blank');
             printWindow.document.write('<html><head><title>Imprimir QR</title></head><body style="text-align:center; margin-top: 50px;"><img src="' + qrCanvas.toDataURL() + '"></body></html>');
             printWindow.document.close();
@@ -546,5 +548,3 @@
     </script>
 </body>
 </html>
-
-
