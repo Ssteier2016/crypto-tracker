@@ -20,7 +20,7 @@
     <div id="app-container" class="max-w-2xl mx-auto p-4 md:p-6">
         <header class="text-center mb-8 flex items-center justify-center">
             <h1 class="text-4xl font-bold text-indigo-600 mr-2">Gestor de QR</h1>
-            <span class="text-xl font-normal text-gray-600">v.1.8</span>
+            <span class="text-sm font-normal text-gray-600">v.1.8</span>
         </header>
 
         <!-- Menú Principal -->
@@ -75,10 +75,6 @@
                         <label class="block text-sm font-medium text-gray-700">Campos Personalizados (Opcional)</label>
                         <div id="custom-fields-container" class="space-y-2"></div>
                         <button type="button" id="add-custom-field" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir campo personalizado</button>
-                    </div>
-                    <div>
-                        <label for="cliente" class="block text-sm font-medium text-gray-700">Cliente (Opcional)</label>
-                        <input type="text" id="cliente" name="cliente" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
@@ -140,10 +136,6 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Campos Personalizados (Opcional)</label>
                         <div id="edit-custom-fields-container" class="space-y-2"></div>
-                    </div>
-                    <div>
-                        <label for="edit-cliente" class="block text-sm font-medium text-gray-700">Cliente (Opcional)</label>
-                        <input type="text" id="edit-cliente" name="cliente" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="edit-vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
@@ -457,11 +449,11 @@
                     precio: formData.get('precio'),
                     talle: formData.get('talle'),
                     tipos_de_ropa: tiposDeRopa,
-                    cliente: formData.get('cliente') || '',
                     vendedora: formData.get('vendedora') || '',
                     nota: formData.get('nota') || '',
                     fecha_creacion: new Date().toISOString(),
-                    ultimo_escaneo: null
+                    ultimo_escaneo: null,
+                    dias_transcurridos: 0 // Inicializa los días transcurridos
                 };
 
                 // Agregar campos personalizados
@@ -603,6 +595,10 @@
             
             const prendaEncontrada = prendas.find(p => p.id === decodedText);
             if (prendaEncontrada) {
+                if (!prendaEncontrada.ultimo_escaneo) {
+                    const diasTranscurridos = Math.floor((new Date() - new Date(prendaEncontrada.fecha_creacion)) / (1000 * 60 * 60 * 24));
+                    prendaEncontrada.dias_transcurridos = diasTranscurridos; // Congela los días al escanear
+                }
                 prendaEncontrada.ultimo_escaneo = new Date().toISOString();
                 savePrendasToStorage();
                 displayScannedData(prendaEncontrada);
@@ -631,6 +627,7 @@
         function displayScannedData(data) {
             const fechaCreacion = new Date(data.fecha_creacion).toLocaleString('es-AR');
             const fechaEscaneo = data.ultimo_escaneo ? new Date(data.ultimo_escaneo).toLocaleString('es-AR') : 'No escaneada aún';
+            const diasTranscurridos = data.dias_transcurridos || (data.ultimo_escaneo ? Math.floor((new Date(data.ultimo_escaneo) - new Date(data.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0);
             if (scanResult) {
                 scanResult.innerHTML = `
                     <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-indigo-500">
@@ -639,11 +636,11 @@
                             <p><strong>Precio:</strong> $${data.precio}</p>
                             <p><strong>Talle:</strong> ${data.talle}</p>
                             <p><strong>Tipo de Ropa:</strong> ${data.tipos_de_ropa.join(', ')}</p>
-                            <p><strong>Cliente:</strong> ${data.cliente || 'No especificado'}</p>
                             <p><strong>Vendedora:</strong> ${data.vendedora || 'No especificada'}</p>
                             <p><strong>Nota:</strong> ${data.nota || 'Sin notas'}</p>
                             <p><strong>Fecha de Registro:</strong> ${fechaCreacion}</p>
                             <p><strong>Último Escaneo:</strong> ${fechaEscaneo}</p>
+                            <p><strong>Días transcurridos:</strong> ${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''}</p>
                         </div>
                     </div>`;
             }
@@ -669,7 +666,6 @@
                 p.id.toLowerCase().includes(searchTerm) ||
                 p.talle.toLowerCase().includes(searchTerm) ||
                 p.tipos_de_ropa.join(' ').toLowerCase().includes(searchTerm) ||
-                (p.cliente || '').toLowerCase().includes(searchTerm) ||
                 (p.vendedora || '').toLowerCase().includes(searchTerm)
             );
 
@@ -679,7 +675,7 @@
 
             stockCount.textContent = `Stock actual: ${stock}`;
 
-      // Calcular sumas
+            // Calcular sumas
             const totalNotSold = notSold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
             const totalSold = sold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
             const speculation = totalNotSold - totalSold;
@@ -689,13 +685,14 @@
             notSoldList.innerHTML = '';
             notSold.forEach((prenda) => {
                 const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
+                const diasTranscurridos = Math.floor((new Date() - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
                 const item = document.createElement('div');
                 item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
                 item.innerHTML = `
                     <div class="flex justify-between items-center">
                         <div>
                             <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
-                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
+                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} sin escanear)</p>
                         </div>
                         <div class="flex gap-2">
                             <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
@@ -716,13 +713,14 @@
             soldList.innerHTML = '';
             sold.forEach((prenda) => {
                 const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
+                const diasTranscurridos = prenda.dias_transcurridos || Math.floor((new Date(prenda.ultimo_escaneo) - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
                 const item = document.createElement('div');
                 item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
                 item.innerHTML = `
                     <div class="flex justify-between items-center">
                         <div>
                             <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
-                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
+                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} hasta escanear)</p>
                         </div>
                         <div class="flex gap-2">
                             <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
@@ -753,7 +751,6 @@
             document.getElementById('edit-id').value = prenda.id;
             document.getElementById('edit-precio').value = prenda.precio;
             document.getElementById('edit-talle').value = prenda.talle;
-            document.getElementById('edit-cliente').value = prenda.cliente;
             document.getElementById('edit-vendedora').value = prenda.vendedora;
             document.getElementById('edit-nota').value = prenda.nota;
 
@@ -780,341 +777,341 @@
         }
 
         if (editForm) {
-            editForm.addEventListener('submit', (e) => {
-                e.preventDefault();
+    editForm.addEventListener('submit', (e) => {
+        e.preventDefault();
 
-                const formData = new FormData(editForm);
-                const tiposDeRopa = Array.from(document.querySelectorAll('#edit-tipo-ropa-container input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+        const formData = new FormData(editForm);
+        const tiposDeRopa = Array.from(document.querySelectorAll('#edit-tipo-ropa-container input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
 
-                if (tiposDeRopa.length === 0) {
-                    showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
-                    return;
-                }
-
-                const updatedPrenda = {
-                    id: editingId,
-                    precio: formData.get('precio'),
-                    talle: formData.get('talle'),
-                    tipos_de_ropa: tiposDeRopa,
-                    cliente: formData.get('cliente') || '',
-                    vendedora: formData.get('vendedora') || '',
-                    nota: formData.get('nota') || '',
-                    fecha_creacion: prendas.find(p => p.id === editingId).fecha_creacion,
-                    ultimo_escaneo: prendas.find(p => p.id === editingId).ultimo_escaneo
-                };
-
-                // Agregar campos personalizados
-                const customFields = Array.from(document.querySelectorAll('#edit-custom-fields-container input[type="text"]'));
-                customFields.forEach((input, index) => {
-                    if (input.value.trim()) {
-                        updatedPrenda[`custom_field_${index}`] = input.value;
-                    }
-                });
-
-                try {
-                    const index = prendas.findIndex(p => p.id === editingId);
-                    if (index !== -1) {
-                        prendas[index] = updatedPrenda;
-                        savePrendasToStorage();
-                        showAppMessage("Prenda actualizada con éxito.", 'success');
-                        setupHistoryDisplay();
-                        showView('history-section');
-                    }
-                } catch (error) {
-                    console.error("Error al actualizar prenda:", error);
-                    showAppMessage("Error al actualizar la prenda.", 'error');
-                }
-            });
+        if (tiposDeRopa.length === 0) {
+            showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+            return;
         }
 
-        // --- ELIMINAR PRENDA ---
-        function deletePrenda(id) {
-            if (confirm("¿Estás seguro de eliminar esta prenda?")) {
-                prendas = prendas.filter(p => p.id !== id);
+        const updatedPrenda = {
+            id: editingId,
+            precio: formData.get('precio'),
+            talle: formData.get('talle'),
+            tipos_de_ropa: tiposDeRopa,
+            vendedora: formData.get('vendedora') || '',
+            nota: formData.get('nota') || '',
+            fecha_creacion: prendas.find(p => p.id === editingId).fecha_creacion,
+            ultimo_escaneo: prendas.find(p => p.id === editingId).ultimo_escaneo,
+            dias_transcurridos: prendas.find(p => p.id === editingId).dias_transcurridos || 0
+        };
+
+        // Agregar campos personalizados
+        const customFields = Array.from(document.querySelectorAll('#edit-custom-fields-container input[type="text"]'));
+        customFields.forEach((input, index) => {
+            if (input.value.trim()) {
+                updatedPrenda[`custom_field_${index}`] = input.value;
+            }
+        });
+
+        try {
+            const index = prendas.findIndex(p => p.id === editingId);
+            if (index !== -1) {
+                prendas[index] = updatedPrenda;
                 savePrendasToStorage();
+                showAppMessage("Prenda actualizada con éxito.", 'success');
                 setupHistoryDisplay();
-                showAppMessage("Prenda eliminada con éxito.", 'success');
+                showView('history-section');
+            }
+        } catch (error) {
+            console.error("Error al actualizar prenda:", error);
+            showAppMessage("Error al actualizar la prenda.", 'error');
+        }
+    });
+}
+
+// --- ELIMINAR PRENDA ---
+function deletePrenda(id) {
+    if (confirm("¿Estás seguro de eliminar esta prenda?")) {
+        prendas = prendas.filter(p => p.id !== id);
+        savePrendasToStorage();
+        setupHistoryDisplay();
+        showAppMessage("Prenda eliminada con éxito.", 'success');
+    }
+}
+
+// --- EXPORTAR ---
+if (exportExcelBtn) {
+    exportExcelBtn.addEventListener('click', () => exportToExcel());
+}
+
+if (exportCsvBtn) {
+    exportCsvBtn.addEventListener('click', () => exportToCsv());
+}
+
+function exportToExcel() {
+    const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => {
+        const row = {
+            ID: p.id,
+            Precio: p.precio,
+            Talle: p.talle,
+            'Tipos de Ropa': p.tipos_de_ropa.join(', '),
+            Vendedora: p.vendedora,
+            Nota: p.nota,
+            'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
+            'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
+            'Días Transcurridos': p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
+        };
+        for (let key in p) {
+            if (key.startsWith('custom_field_')) {
+                row[key] = p[key];
             }
         }
+        return row;
+    }));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Prendas');
+    XLSX.writeFile(workbook, 'historial_prendas.xlsx');
+    showAppMessage("Exportado a Excel con éxito.", 'success');
+}
 
-        // --- EXPORTAR ---
-        if (exportExcelBtn) {
-            exportExcelBtn.addEventListener('click', () => exportToExcel());
-        }
-
-        if (exportCsvBtn) {
-            exportCsvBtn.addEventListener('click', () => exportToCsv());
-        }
-
-        function exportToExcel() {
-            const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => {
-                const row = {
-                    ID: p.id,
-                    Precio: p.precio,
-                    Talle: p.talle,
-                    'Tipos de Ropa': p.tipos_de_ropa.join(', '),
-                    Cliente: p.cliente,
-                    Vendedora: p.vendedora,
-                    Nota: p.nota,
-                    'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
-                    'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A'
-                };
-                for (let key in p) {
-                    if (key.startsWith('custom_field_')) {
-                        row[key] = p[key];
-                    }
+function exportToCsv() {
+    const csvData = [
+        ['ID', 'Precio', 'Talle', 'Tipos de Ropa', 'Vendedora', 'Nota', 'Fecha de Registro', 'Último Escaneo', 'Días Transcurridos'],
+        ...prendas.map(p => {
+            const row = [
+                p.id,
+                p.precio,
+                p.talle,
+                p.tipos_de_ropa.join(', '),
+                p.vendedora,
+                p.nota,
+                new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
+                p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
+            ];
+            for (let key in p) {
+                if (key.startsWith('custom_field_') && p[key]) {
+                    row.push(p[key]);
                 }
-                return row;
-            }));
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Prendas');
-            XLSX.writeFile(workbook, 'historial_prendas.xlsx');
-            showAppMessage("Exportado a Excel con éxito.", 'success');
-        }
-
-        function exportToCsv() {
-            const csvData = [
-                ['ID', 'Precio', 'Talle', 'Tipos de Ropa', 'Cliente', 'Vendedora', 'Nota', 'Fecha de Registro', 'Último Escaneo'],
-                ...prendas.map(p => {
-                    const row = [
-                        p.id,
-                        p.precio,
-                        p.talle,
-                        p.tipos_de_ropa.join(', '),
-                        p.cliente,
-                        p.vendedora,
-                        p.nota,
-                        new Date(p.fecha_creacion).toLocaleString('es-AR'),
-                        p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A'
-                    ];
-                    for (let key in p) {
-                        if (key.startsWith('custom_field_') && p[key]) {
-                            row.push(p[key]);
-                        }
-                    }
-                    return row;
-                })
-            ].map(row => row.join(',')).join('\n');
-
-            const blob = new Blob([csvData], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'historial_prendas.csv';
-            link.click();
-            showAppMessage("Exportado a CSV con éxito. Puedes importarlo a Google Sheets.", 'success');
-        }
-
-        // --- MÉTRICAS GRÁFICO ---
-        function setupMetricsChart() {
-            const ctx = document.getElementById('stock-chart').getContext('2d');
-            const events = [];
-
-            prendas.forEach(p => {
-                events.push({ date: new Date(p.fecha_creacion), type: 'create' });
-                if (p.ultimo_escaneo) {
-                    events.push({ date: new Date(p.ultimo_escaneo), type: 'scan' });
-                }
-            });
-
-            events.sort((a, b) => a.date - b.date);
-
-            const labels = [];
-            const data = [];
-            let stock = 0;
-
-            events.forEach(event => {
-                if (event.type === 'create') stock++;
-                else if (event.type === 'scan') stock--;
-                labels.push(event.date.toLocaleString('es-AR'));
-                data.push(stock);
-            });
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Stock a lo largo del tiempo',
-                        data: data,
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: { title: { display: true, text: 'Tiempo' } },
-                        y: { title: { display: true, text: 'Stock' } }
-                    }
-                }
-            });
-        }
-
-        // --- FUNCIONES PARA CAMPOS PERSONALIZADOS ---
-        function addCustomField() {
-            const container = document.getElementById('custom-fields-container');
-            const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'flex items-center space-x-2';
-            fieldDiv.innerHTML = `
-                <input type="text" placeholder="Campo personalizado ${customFieldCount + 1}" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                <button type="button" class="remove-field-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-            `;
-            container.appendChild(fieldDiv);
-            customFieldCount++;
-            fieldDiv.querySelector('.remove-field-btn').addEventListener('click', () => {
-                fieldDiv.remove();
-                customFieldCount--;
-            });
-        }
-
-        function resetCustomFields() {
-            if (customFieldsContainer) customFieldsContainer.innerHTML = '';
-            customFieldCount = 0;
-        }
-
-        function addEditCustomField(value = '') {
-            const container = document.getElementById('edit-custom-fields-container');
-            const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'flex items-center space-x-2';
-            fieldDiv.innerHTML = `
-                <input type="text" value="${value}" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                <button type="button" class="remove-field-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-            `;
-            container.appendChild(fieldDiv);
-            fieldDiv.querySelector('.remove-field-btn').addEventListener('click', () => {
-                fieldDiv.remove();
-            });
-        }
-
-        function resetEditCustomFields() {
-            if (editCustomFieldsContainer) editCustomFieldsContainer.innerHTML = '';
-        }
-
-        // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
-        function addCustomTipo() {
-            const container = document.getElementById('tipo-ropa-container');
-            const tipoDiv = document.createElement('div');
-            tipoDiv.className = 'flex items-center';
-            tipoDiv.innerHTML = `
-                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                <input type="text" placeholder="Tipo personalizado" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-            `;
-            container.appendChild(tipoDiv);
-            customTipoCount++;
-            tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
-                tipoDiv.remove();
-                customTipoCount--;
-            });
-            // Vincular el valor del input al checkbox
-            const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
-            const input = tipoDiv.querySelector('input[type="text"]');
-            input.addEventListener('input', () => {
-                if (input.value.trim()) {
-                    checkbox.value = input.value.trim();
-                } else {
-                    checkbox.value = '';
-                }
-            });
-        }
-
-        function resetCustomTipos() {
-            if (tipoRopaContainer) tipoRopaContainer.innerHTML = `
-                <div class="flex items-center">
-                    <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
-                </div>
-                <div class="flex items-center">
-                    <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
-                </div>
-                <div class="flex items-center">
-                    <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
-                </div>
-            `;
-            customTipoCount = 0;
-        }
-
-        function addEditCustomTipo(value = '') {
-            const container = document.getElementById('edit-tipo-ropa-container');
-            const tipoDiv = document.createElement('div');
-            tipoDiv.className = 'flex items-center';
-            tipoDiv.innerHTML = `
-                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                <input type="text" value="${value}" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-            `;
-            container.appendChild(tipoDiv);
-            tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
-                tipoDiv.remove();
-            });
-            // Vincular el valor del input al checkbox
-            const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
-            const input = tipoDiv.querySelector('input[type="text"]');
-            input.addEventListener('input', () => {
-                if (input.value.trim()) {
-                    checkbox.value = input.value.trim();
-                } else {
-                    checkbox.value = '';
-                }
-            });
-        }
-
-        function resetEditCustomTipos() {
-            if (editTipoRopaContainer) editTipoRopaContainer.innerHTML = `
-                <div class="flex items-center">
-                    <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
-                </div>
-                <div class="flex items-center">
-                    <input id="edit-tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="edit-tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
-                </div>
-                <div class="flex items-center">
-                    <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
-                </div>
-            `;
-        }
-
-        // --- EVENTOS PARA BOTONES DE AÑADIR ---
-        if (document.getElementById('add-custom-field')) {
-            document.getElementById('add-custom-field').addEventListener('click', addCustomField);
-        }
-        if (document.getElementById('add-custom-tipo')) {
-            document.getElementById('add-custom-tipo').addEventListener('click', addCustomTipo);
-        }
-        if (document.getElementById('add-edit-custom-tipo')) {
-            document.getElementById('add-edit-custom-tipo').addEventListener('click', addEditCustomTipo);
-        }
-
-        // --- UTILIDADES ---
-        function showAppMessage(message, type = 'info') {
-            const messageContainer = document.getElementById('app-message');
-            if (!messageContainer) return;
-            const messageDiv = document.createElement('div');
-            
-            let bgColor, textColor;
-            switch(type) {
-                case 'success': bgColor = 'bg-green-500'; textColor = 'text-white'; break;
-                case 'error': bgColor = 'bg-red-500'; textColor = 'text-white'; break;
-                default: bgColor = 'bg-blue-500'; textColor = 'text-white'; break;
             }
+            return row;
+        })
+    ].map(row => row.join(',')).join('\n');
 
-            messageDiv.className = `p-3 rounded-lg shadow-xl mb-2 text-sm font-semibold ${bgColor} ${textColor} transition-opacity duration-300`;
-            messageDiv.textContent = message;
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'historial_prendas.csv';
+    link.click();
+    showAppMessage("Exportado a CSV con éxito. Puedes importarlo a Google Sheets.", 'success');
+}
 
-            messageContainer.appendChild(messageDiv);
+// --- MÉTRICAS GRÁFICO ---
+function setupMetricsChart() {
+    const ctx = document.getElementById('stock-chart').getContext('2d');
+    const events = [];
 
-            setTimeout(() => {
-                messageDiv.classList.add('opacity-0');
-                setTimeout(() => messageDiv.remove(), 300);
-            }, 3000);
+    prendas.forEach(p => {
+        events.push({ date: new Date(p.fecha_creacion), type: 'create' });
+        if (p.ultimo_escaneo) {
+            events.push({ date: new Date(p.ultimo_escaneo), type: 'scan' });
         }
+    });
 
-        // --- INICIO DE LA APLICACIÓN ---
-        document.addEventListener('DOMContentLoaded', initializeApp);
+    events.sort((a, b) => a.date - b.date);
+
+    const labels = [];
+    const data = [];
+    let stock = 0;
+
+    events.forEach(event => {
+        if (event.type === 'create') stock++;
+        else if (event.type === 'scan') stock--;
+        labels.push(event.date.toLocaleString('es-AR'));
+        data.push(stock);
+    });
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Stock a lo largo del tiempo',
+                data: data,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Tiempo' } },
+                y: { title: { display: true, text: 'Stock' } }
+            }
+        }
+    });
+}
+
+// --- FUNCIONES PARA CAMPOS PERSONALIZADOS ---
+function addCustomField() {
+    const container = document.getElementById('custom-fields-container');
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'flex items-center space-x-2';
+    fieldDiv.innerHTML = `
+        <input type="text" placeholder="Campo personalizado ${customFieldCount + 1}" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        <button type="button" class="remove-field-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(fieldDiv);
+    customFieldCount++;
+    fieldDiv.querySelector('.remove-field-btn').addEventListener('click', () => {
+        fieldDiv.remove();
+        customFieldCount--;
+    });
+}
+
+function resetCustomFields() {
+    if (customFieldsContainer) customFieldsContainer.innerHTML = '';
+    customFieldCount = 0;
+}
+
+function addEditCustomField(value = '') {
+    const container = document.getElementById('edit-custom-fields-container');
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'flex items-center space-x-2';
+    fieldDiv.innerHTML = `
+        <input type="text" value="${value}" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        <button type="button" class="remove-field-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(fieldDiv);
+    fieldDiv.querySelector('.remove-field-btn').addEventListener('click', () => {
+        fieldDiv.remove();
+    });
+}
+
+function resetEditCustomFields() {
+    if (editCustomFieldsContainer) editCustomFieldsContainer.innerHTML = '';
+}
+
+// --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
+function addCustomTipo() {
+    const container = document.getElementById('tipo-ropa-container');
+    const tipoDiv = document.createElement('div');
+    tipoDiv.className = 'flex items-center';
+    tipoDiv.innerHTML = `
+        <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+        <input type="text" placeholder="Tipo personalizado" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(tipoDiv);
+    customTipoCount++;
+    tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
+        tipoDiv.remove();
+        customTipoCount--;
+    });
+    // Vincular el valor del input al checkbox
+    const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
+    const input = tipoDiv.querySelector('input[type="text"]');
+    input.addEventListener('input', () => {
+        if (input.value.trim()) {
+            checkbox.value = input.value.trim();
+        } else {
+            checkbox.value = '';
+        }
+    });
+}
+
+function resetCustomTipos() {
+    if (tipoRopaContainer) tipoRopaContainer.innerHTML = `
+        <div class="flex items-center">
+            <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+        </div>
+        <div class="flex items-center">
+            <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+        </div>
+        <div class="flex items-center">
+            <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+        </div>
+    `;
+    customTipoCount = 0;
+}
+
+function addEditCustomTipo(value = '') {
+    const container = document.getElementById('edit-tipo-ropa-container');
+    const tipoDiv = document.createElement('div');
+    tipoDiv.className = 'flex items-center';
+    tipoDiv.innerHTML = `
+        <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+        <input type="text" value="${value}" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(tipoDiv);
+    tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
+        tipoDiv.remove();
+    });
+    // Vincular el valor del input al checkbox
+    const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
+    const input = tipoDiv.querySelector('input[type="text"]');
+    input.addEventListener('input', () => {
+        if (input.value.trim()) {
+            checkbox.value = input.value.trim();
+        } else {
+            checkbox.value = '';
+        }
+    });
+}
+
+function resetEditCustomTipos() {
+    if (editTipoRopaContainer) editTipoRopaContainer.innerHTML = `
+        <div class="flex items-center">
+            <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+        </div>
+        <div class="flex items-center">
+            <input id="edit-tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="edit-tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+        </div>
+        <div class="flex items-center">
+            <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+        </div>
+    `;
+}
+
+// --- EVENTOS PARA BOTONES DE AÑADIR ---
+if (document.getElementById('add-custom-field')) {
+    document.getElementById('add-custom-field').addEventListener('click', addCustomField);
+}
+if (document.getElementById('add-custom-tipo')) {
+    document.getElementById('add-custom-tipo').addEventListener('click', addCustomTipo);
+}
+if (document.getElementById('add-edit-custom-tipo')) {
+    document.getElementById('add-edit-custom-tipo').addEventListener('click', addEditCustomTipo);
+}
+
+// --- UTILIDADES ---
+function showAppMessage(message, type = 'info') {
+    const messageContainer = document.getElementById('app-message');
+    if (!messageContainer) return;
+    const messageDiv = document.createElement('div');
+    
+    let bgColor, textColor;
+    switch(type) {
+        case 'success': bgColor = 'bg-green-500'; textColor = 'text-white'; break;
+        case 'error': bgColor = 'bg-red-500'; textColor = 'text-white'; break;
+        default: bgColor = 'bg-blue-500'; textColor = 'text-white'; break;
+    }
+
+    messageDiv.className = `p-3 rounded-lg shadow-xl mb-2 text-sm font-semibold ${bgColor} ${textColor} transition-opacity duration-300`;
+    messageDiv.textContent = message;
+
+    messageContainer.appendChild(messageDiv);
+
+    setTimeout(() => {
+        messageDiv.classList.add('opacity-0');
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
+}
+
+// --- INICIO DE LA APLICACIÓN ---
+document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
