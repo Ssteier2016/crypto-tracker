@@ -16,409 +16,942 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-    <!-- Menú Principal -->
-    <main id="main-menu" class="space-y-4">
-        <button id="show-generation-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
-            <i class="fas fa-plus-circle mr-3"></i> Generar QR
-        </button>
-        <button id="show-scanner-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center text-lg">
-            <i class="fas fa-qrcode mr-3"></i> Escanear QR
-        </button>
-        <button id="show-history-btn" class="w-full bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-gray-800 transition duration-300 flex items-center justify-center text-lg">
-            <i class="fas fa-history mr-3"></i> Historial de Prendas
-        </button>
-        <button id="show-metrics-btn" class="w-full bg-teal-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-teal-700 transition duration-300 flex items-center justify-center text-lg">
-            <i class="fas fa-chart-line mr-3"></i> Métricas
-        </button>
-    </main>
+<body class="bg-gray-100 font-sans">
+    <div id="app-container" class="max-w-2xl mx-auto p-4 md:p-6">
+        <header class="text-center mb-8 flex items-center justify-center">
+            <h1 class="text-4xl font-bold text-indigo-600 mr-2">Gestor de QR</h1>
+            <span class="text-xl font-normal text-gray-600">v.1.8</span>
+        </header>
 
-    <!-- Sección de Generación -->
-    <section id="generation-section" class="hidden">
-        <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-        <div class="bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
-            <form id="qr-form" class="space-y-4">
-                <div>
-                    <label for="precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
-                    <input type="number" id="precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div>
-                    <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
-                    <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
-                    <div id="tipo-ropa-container" class="mt-2 space-y-2">
-                        <div class="flex items-center">
-                            <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                            <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                            <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
-                        </div>
-                        <div class="flex items-center">
-                            <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                            <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
-                        </div>
+        <!-- Menú Principal -->
+        <main id="main-menu" class="space-y-4">
+            <button id="show-generation-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-plus-circle mr-3"></i> Generar QR
+            </button>
+            <button id="show-scanner-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-qrcode mr-3"></i> Escanear QR
+            </button>
+            <button id="show-history-btn" class="w-full bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-gray-800 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-history mr-3"></i> Historial de Prendas
+            </button>
+            <button id="show-metrics-btn" class="w-full bg-teal-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-teal-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-chart-line mr-3"></i> Métricas
+            </button>
+        </main>
+
+        <!-- Sección de Generación -->
+        <section id="generation-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
+                <form id="qr-form" class="space-y-4">
+                    <div>
+                        <label for="precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
+                        <input type="number" id="precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
-                    <button type="button" id="add-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
-                </div>
-                <div>
-                    <label for="cliente" class="block text-sm font-medium text-gray-700">Cliente (Opcional)</label>
-                    <input type="text" id="cliente" name="cliente" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div>
-                    <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
-                    <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Campos Personalizados (Opcional)</label>
-                    <div id="custom-fields-container" class="space-y-2"></div>
-                    <button type="button" id="add-custom-field" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir campo personalizado</button>
-                </div>
-                <div>
-                    <label for="nota" class="block text-sm font-medium text-gray-700">Nota (Opcional)</label>
-                    <textarea id="nota" name="nota" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-                </div>
-                <div class="pt-2 border-t border-gray-200">
-                    <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
-                        ✨ Generar Descripción Inteligente
-                    </button>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
-            </form>
-        </div>
-        <div id="gemini-output-section" class="hidden mt-6 bg-purple-50 p-6 rounded-xl shadow-inner">
-            <h3 class="text-xl font-bold text-purple-800 mb-3">Sugerencia de la IA</h3>
-            <textarea id="gemini-output" readonly class="w-full h-40 p-2 border border-purple-200 rounded-md bg-white resize-none"></textarea>
-            <button id="copy-desc-btn" class="mt-2 py-2 px-4 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 transition"><i class="fas fa-copy mr-2"></i>Copiar Texto</button>
-        </div>
-        <div id="qr-display" class="hidden mt-6 bg-white p-6 rounded-xl shadow-lg text-center"></div>
-    </section>
-
-    <!-- Sección de Escaneo -->
-    <section id="scanner-section" class="hidden">
-        <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-        <div class="bg-white p-4 rounded-xl shadow-lg">
-            <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
-        </div>
-        <div id="scan-result" class="mt-6"></div>
-    </section>
-
-    <!-- Sección de Historial -->
-    <section id="history-section" class="hidden">
-        <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-        <div class="bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de Prendas</h2>
-            <div class="mb-4">
-                <input type="text" id="search-bar" placeholder="Buscar por ID, Talle, Tipo, Cliente o Vendedora..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <div>
+                        <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
+                        <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <div id="tipo-ropa-container" class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                            </div>
+                        </div>
+                        <button type="button" id="add-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Campos Personalizados (Opcional)</label>
+                        <div id="custom-fields-container" class="space-y-2"></div>
+                        <button type="button" id="add-custom-field" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir campo personalizado</button>
+                    </div>
+                    <div>
+                        <label for="cliente" class="block text-sm font-medium text-gray-700">Cliente (Opcional)</label>
+                        <input type="text" id="cliente" name="cliente" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
+                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="nota" class="block text-sm font-medium text-gray-700">Nota (Opcional)</label>
+                        <textarea id="nota" name="nota" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div class="pt-2 border-t border-gray-200">
+                        <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
+                            ✨ Generar Descripción Inteligente
+                        </button>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
+                </form>
             </div>
-            <div class="flex justify-between mb-4">
-                <p id="stock-count" class="text-lg font-semibold text-gray-800">Stock actual: 0</p>
-                <p id="sold-sum" class="text-lg font-semibold text-red-700">Vendidos: $0</p>
-                <p id="speculation-sum" class="text-lg font-semibold text-green-700">Especulación: $0</p>
+            <div id="gemini-output-section" class="hidden mt-6 bg-purple-50 p-6 rounded-xl shadow-inner">
+                <h3 class="text-xl font-bold text-purple-800 mb-3">Sugerencia de la IA</h3>
+                <textarea id="gemini-output" readonly class="w-full h-40 p-2 border border-purple-200 rounded-md bg-white resize-none"></textarea>
+                <button id="copy-desc-btn" class="mt-2 py-2 px-4 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 transition"><i class="fas fa-copy mr-2"></i>Copiar Texto</button>
             </div>
-            <div class="flex justify-between mb-4">
-                <button id="export-excel-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-file-excel mr-2"></i>Exportar a Excel</button>
-                <button id="export-csv-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-file-csv mr-2"></i>Exportar a CSV (para Google Sheets)</button>
+            <div id="qr-display" class="hidden mt-6 bg-white p-6 rounded-xl shadow-lg text-center"></div>
+        </section>
+
+        <!-- Sección de Edición -->
+        <section id="edit-section" class="hidden">
+            <button class="back-to-history text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Editar Prenda</h2>
+                <form id="edit-form" class="space-y-4">
+                    <input type="hidden" id="edit-id" name="id">
+                    <div>
+                        <label for="edit-precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
+                        <input type="number" id="edit-precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-talle" class="block text-sm font-medium text-gray-700">Talle *</label>
+                        <input type="text" id="edit-talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <div id="edit-tipo-ropa-container" class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="edit-tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                            </div>
+                        </div>
+                        <button type="button" id="add-edit-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Campos Personalizados (Opcional)</label>
+                        <div id="edit-custom-fields-container" class="space-y-2"></div>
+                    </div>
+                    <div>
+                        <label for="edit-cliente" class="block text-sm font-medium text-gray-700">Cliente (Opcional)</label>
+                        <input type="text" id="edit-cliente" name="cliente" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
+                        <input type="text" id="edit-vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-nota" class="block text-sm font-medium text-gray-700">Nota (Opcional)</label>
+                        <textarea id="edit-nota" name="nota" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Guardar Cambios</button>
+                </form>
             </div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2">No Vendidos</h3>
-            <div id="not-sold-list" class="space-y-4 mb-6"></div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2">Vendidos</h3>
-            <div id="sold-list" class="space-y-4"></div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Sección de Métricas -->
-    <section id="metrics-section" class="hidden">
-        <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-        <div class="bg-white p-6 rounded-xl shadow-lg">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Métricas de Stock</h2>
-            <canvas id="stock-chart" width="400" height="200"></canvas>
-        </div>
-    </section>
+        <!-- Sección de Escaneo -->
+        <section id="scanner-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-4 rounded-xl shadow-lg">
+                <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
+            </div>
+            <div id="scan-result" class="mt-6"></div>
+        </section>
 
-    <!-- Notificaciones -->
-    <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
-</div>
+        <!-- Sección de Historial -->
+        <section id="history-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de Prendas</h2>
+                <div class="mb-4">
+                    <input type="text" id="search-bar" placeholder="Buscar por ID, Talle, Tipo, Cliente o Vendedora..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="flex justify-between mb-4">
+                    <p id="stock-count" class="text-lg font-semibold text-gray-800">Stock actual: 0</p>
+                    <p id="sold-sum" class="text-lg font-semibold text-red-700">Vendidos: $0</p>
+                    <p id="speculation-sum" class="text-lg font-semibold text-green-700">Especulación: $0</p>
+                </div>
+                <div class="flex justify-between mb-4">
+                    <button id="export-excel-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-file-excel mr-2"></i>Exportar a Excel</button>
+                    <button id="export-csv-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-file-csv mr-2"></i>Exportar a CSV (para Google Sheets)</button>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">No Vendidos</h3>
+                <div id="not-sold-list" class="space-y-4 mb-6"></div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Vendidos</h3>
+                <div id="sold-list" class="space-y-4"></div>
+            </div>
+        </section>
 
-<script>
-    // --- VARIABLES GLOBALES ---
-    let prendas = [];
-    let html5QrCode;
-    let deferredPrompt; // Para PWA instalación
-    let editingId = null; // Para edición
+        <!-- Sección de Métricas -->
+        <section id="metrics-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Métricas de Stock</h2>
+                <canvas id="stock-chart" width="400" height="200"></canvas>
+            </div>
+        </section>
 
-    // --- INICIALIZACIÓN ---
-    function initializeApp() {
-        loadPrendasFromStorage();
-        setupHistoryDisplay();
-        setupPwaInstall();
-        showAppMessage("Aplicación lista (datos locales).", 'success');
-        console.log("App inicializada con localStorage.");
-    }
+        <!-- Notificaciones -->
+        <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
+    </div>
 
-    // --- PWA INSTALACIÓN ---
-    function setupPwaInstall() {
-        const installBtn = document.getElementById('install-btn');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (installBtn) installBtn.classList.remove('hidden');
-            console.log("Evento beforeinstallprompt disparado.");
-        });
+    <script>
+        // --- VARIABLES GLOBALES ---
+        let prendas = [];
+        let html5QrCode;
+        let deferredPrompt; // Para PWA instalación
+        let editingId = null; // Para edición
+        let customFieldCount = 0;
+        let customTipoCount = 0;
 
-        if (installBtn) {
-            installBtn.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log(`Resultado de instalación: ${outcome}`);
-                    deferredPrompt = null;
-                    installBtn.classList.add('hidden');
-                }
+        // --- INICIALIZACIÓN ---
+        function initializeApp() {
+            loadPrendasFromStorage();
+            setupHistoryDisplay();
+            setupPwaInstall();
+            showAppMessage("Aplicación lista (datos locales).", 'success');
+            console.log("App inicializada con localStorage.");
+        }
+
+        // --- PWA INSTALACIÓN ---
+        function setupPwaInstall() {
+            const installBtn = document.getElementById('install-btn');
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (installBtn) installBtn.classList.remove('hidden');
+                console.log("Evento beforeinstallprompt disparado.");
+            });
+
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`Resultado de instalación: ${outcome}`);
+                        deferredPrompt = null;
+                        installBtn.classList.add('hidden');
+                    }
+                });
+            }
+
+            window.addEventListener('appinstalled', () => {
+                showAppMessage("¡Aplicación instalada con éxito!", 'success');
+                console.log("App instalada como PWA.");
             });
         }
 
-        window.addEventListener('appinstalled', () => {
-            showAppMessage("¡Aplicación instalada con éxito!", 'success');
-            console.log("App instalada como PWA.");
-        });
-    }
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log("Service Worker registrado:", reg))
+                    .catch(err => console.error("Error al registrar Service Worker:", err));
+            });
+        }
 
-    // --- SERVICE WORKER REGISTRATION ---
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log("Service Worker registrado:", reg))
-                .catch(err => console.error("Error al registrar Service Worker:", err));
-        });
-    }
-
-    // --- LOCALSTORAGE FUNCTIONS ---
-    function loadPrendasFromStorage() {
-        try {
-            const stored = localStorage.getItem('qrPrendas');
-            if (stored) {
-                prendas = JSON.parse(stored);
-                console.log(`Cargadas ${prendas.length} prendas desde localStorage.`);
-            } else {
+        // --- LOCALSTORAGE FUNCTIONS ---
+        function loadPrendasFromStorage() {
+            try {
+                const stored = localStorage.getItem('qrPrendas');
+                if (stored) {
+                    prendas = JSON.parse(stored);
+                    console.log(`Cargadas ${prendas.length} prendas desde localStorage.`);
+                } else {
+                    prendas = [];
+                }
+            } catch (error) {
+                console.error("Error cargando localStorage:", error);
+                showAppMessage("Error al cargar datos locales. Usando memoria temporal.", 'error');
                 prendas = [];
             }
-        } catch (error) {
-            console.error("Error cargando localStorage:", error);
-            showAppMessage("Error al cargar datos locales. Usando memoria temporal.", 'error');
-            prendas = [];
         }
-    }
 
-    function savePrendasToStorage() {
-        try {
-            localStorage.setItem('qrPrendas', JSON.stringify(prendas));
-            console.log(`Guardadas ${prendas.length} prendas en localStorage.`);
-        } catch (error) {
-            console.error("Error guardando localStorage:", error);
-            showAppMessage("Error al guardar datos. Se perderán al cerrar el navegador.", 'error');
-        }
-    }
-
-    // --- MANEJO DEL DOM Y NAVEGACIÓN ---
-    const mainMenu = document.getElementById('main-menu');
-    const generationSection = document.getElementById('generation-section');
-    const editSection = document.getElementById('edit-section');
-    const scannerSection = document.getElementById('scanner-section');
-    const historySection = document.getElementById('history-section');
-    const metricsSection = document.getElementById('metrics-section');
-    const qrForm = document.getElementById('qr-form');
-    const editForm = document.getElementById('edit-form');
-    const qrDisplay = document.getElementById('qr-display');
-    const scanResult = document.getElementById('scan-result');
-    const notSoldList = document.getElementById('not-sold-list');
-    const soldList = document.getElementById('sold-list');
-    const stockCount = document.getElementById('stock-count');
-    const speculationSum = document.getElementById('speculation-sum');
-    const searchBar = document.getElementById('search-bar');
-    const generateDescBtn = document.getElementById('generate-desc-btn');
-    const geminiOutputSection = document.getElementById('gemini-output-section');
-    const geminiOutput = document.getElementById('gemini-output');
-    const copyDescBtn = document.getElementById('copy-desc-btn');
-    const exportExcelBtn = document.getElementById('export-excel-btn');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-
-    const sections = [generationSection, editSection, scannerSection, historySection, metricsSection];
-
-    function showView(viewId) {
-        mainMenu.classList.add('hidden');
-        sections.forEach(section => section.classList.add('hidden'));
-        stopScanner();
-        if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
-
-        if (viewId === 'main') {
-            mainMenu.classList.remove('hidden');
-        } else {
-            const targetSection = document.getElementById(viewId);
-            if (targetSection) targetSection.classList.remove('hidden');
-        }
-    }
-    
-    document.getElementById('show-generation-btn').addEventListener('click', () => {
-        if (qrForm) qrForm.reset();
-        if (qrDisplay) {
-            qrDisplay.innerHTML = '';
-            qrDisplay.classList.add('hidden');
-        }
-        if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
-        showView('generation-section');
-        resetCustomFields(); // Resetear campos personalizados al abrir la sección de generación
-    });
-    document.getElementById('show-scanner-btn').addEventListener('click', () => {
-        if (scanResult) scanResult.innerHTML = '';
-        showView('scanner-section');
-        startScanner();
-    });
-    document.getElementById('show-history-btn').addEventListener('click', () => {
-        setupHistoryDisplay();
-        showView('history-section');
-    });
-    document.getElementById('show-metrics-btn').addEventListener('click', () => {
-        setupMetricsChart();
-        showView('metrics-section');
-    });
-    document.querySelectorAll('.back-to-menu').forEach(btn => {
-        btn.addEventListener('click', () => showView('main'));
-    });
-    document.querySelector('.back-to-history').addEventListener('click', () => showView('history-section'));
-
-    // --- LÓGICA DE GENERACIÓN DE DESCRIPCIÓN INTELIGENTE ---
-    if (generateDescBtn) {
-        generateDescBtn.addEventListener('click', async () => {
-            const precio = document.getElementById('precio').value;
-            const talle = document.getElementById('talle').value;
-            const nota = document.getElementById('nota').value;
-            const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value);
-
-            if (!precio || !talle || tiposDeRopa.length === 0) {
-                showAppMessage("Completa Precio, Talle y Tipo de Ropa para generar la descripción.", 'error');
-                return;
-            }
-
-            generateDescBtn.disabled = true;
-            generateDescBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Generando...`;
-
-            const prompt = `
-                Actúa como un experto en marketing de moda para redes sociales en Argentina.
-                Crea una descripción atractiva y corta (2-3 frases) para una prenda de ropa y una idea creativa para una publicación en Instagram (sin hashtags).
-                La respuesta debe estar en español de Argentina y usar formato Markdown con los títulos "### Descripción del Producto" y "### Idea para Red Social".
-
-                Detalles de la prenda:
-                - Tipo: ${tiposDeRopa.join(', ')}
-                - Talle: ${talle}
-                - Precio: $${precio} ARS
-                - Notas adicionales: ${nota || 'Ninguna'}
-            `;
-
+        function savePrendasToStorage() {
             try {
-                const apiKey = "AIzaSyALOQSrgOQwtjuy7b84UymWaI3a58EF0MU";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                localStorage.setItem('qrPrendas', JSON.stringify(prendas));
+                console.log(`Guardadas ${prendas.length} prendas en localStorage.`);
+            } catch (error) {
+                console.error("Error guardando localStorage:", error);
+                showAppMessage("Error al guardar datos. Se perderán al cerrar el navegador.", 'error');
+            }
+        }
 
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
+        // --- MANEJO DEL DOM Y NAVEGACIÓN ---
+        const mainMenu = document.getElementById('main-menu');
+        const generationSection = document.getElementById('generation-section');
+        const editSection = document.getElementById('edit-section');
+        const scannerSection = document.getElementById('scanner-section');
+        const historySection = document.getElementById('history-section');
+        const metricsSection = document.getElementById('metrics-section');
+        const qrForm = document.getElementById('qr-form');
+        const editForm = document.getElementById('edit-form');
+        const qrDisplay = document.getElementById('qr-display');
+        const scanResult = document.getElementById('scan-result');
+        const notSoldList = document.getElementById('not-sold-list');
+        const soldList = document.getElementById('sold-list');
+        const stockCount = document.getElementById('stock-count');
+        const soldSum = document.getElementById('sold-sum');
+        const speculationSum = document.getElementById('speculation-sum');
+        const searchBar = document.getElementById('search-bar');
+        const generateDescBtn = document.getElementById('generate-desc-btn');
+        const geminiOutputSection = document.getElementById('gemini-output-section');
+        const geminiOutput = document.getElementById('gemini-output');
+        const copyDescBtn = document.getElementById('copy-desc-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        const customFieldsContainer = document.getElementById('custom-fields-container');
+        const tipoRopaContainer = document.getElementById('tipo-ropa-container');
+        const editCustomFieldsContainer = document.getElementById('edit-custom-fields-container');
+        const editTipoRopaContainer = document.getElementById('edit-tipo-ropa-container');
+
+        const sections = [generationSection, editSection, scannerSection, historySection, metricsSection];
+
+        function showView(viewId) {
+            mainMenu.classList.add('hidden');
+            sections.forEach(section => section.classList.add('hidden'));
+            stopScanner();
+            if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+
+            if (viewId === 'main') {
+                mainMenu.classList.remove('hidden');
+            } else {
+                const targetSection = document.getElementById(viewId);
+                if (targetSection) targetSection.classList.remove('hidden');
+            }
+        }
+        
+        document.getElementById('show-generation-btn').addEventListener('click', () => {
+            if (qrForm) qrForm.reset();
+            if (qrDisplay) {
+                qrDisplay.innerHTML = '';
+                qrDisplay.classList.add('hidden');
+            }
+            if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+            resetCustomFields();
+            resetCustomTipos();
+            showView('generation-section');
+        });
+        document.getElementById('show-scanner-btn').addEventListener('click', () => {
+            if (scanResult) scanResult.innerHTML = '';
+            showView('scanner-section');
+            startScanner();
+        });
+        document.getElementById('show-history-btn').addEventListener('click', () => {
+            setupHistoryDisplay();
+            showView('history-section');
+        });
+        document.getElementById('show-metrics-btn').addEventListener('click', () => {
+            setupMetricsChart();
+            showView('metrics-section');
+        });
+        document.querySelectorAll('.back-to-menu').forEach(btn => {
+            btn.addEventListener('click', () => showView('main'));
+        });
+        document.querySelector('.back-to-history').addEventListener('click', () => {
+            showView('history-section');
+            resetEditCustomFields();
+            resetEditCustomTipos();
+        });
+
+        // --- LÓGICA DE GENERACIÓN DE DESCRIPCIÓN INTELIGENTE ---
+        if (generateDescBtn) {
+            generateDescBtn.addEventListener('click', async () => {
+                const precio = document.getElementById('precio')?.value;
+                const talle = document.getElementById('talle')?.value;
+                const nota = document.getElementById('nota')?.value;
+                const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+
+                if (!precio || !talle || tiposDeRopa.length === 0) {
+                    showAppMessage("Completa Precio, Talle y Tipo de Ropa para generar la descripción.", 'error');
+                    return;
+                }
+
+                generateDescBtn.disabled = true;
+                generateDescBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Generando...`;
+
+                const prompt = `
+                    Actúa como un experto en marketing de moda para redes sociales en Argentina.
+                    Crea una descripción atractiva y corta (2-3 frases) para una prenda de ropa y una idea creativa para una publicación en Instagram (sin hashtags).
+                    La respuesta debe estar en español de Argentina y usar formato Markdown con los títulos "### Descripción del Producto" y "### Idea para Red Social".
+
+                    Detalles de la prenda:
+                    - Tipo: ${tiposDeRopa.join(', ')}
+                    - Talle: ${talle}
+                    - Precio: $${precio} ARS
+                    - Notas adicionales: ${nota || 'Ninguna'}
+                `;
+
+                try {
+                    const apiKey = "AIzaSyALOQSrgOQwtjuy7b84UymWaI3a58EF0MU";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (generatedText) {
+                        geminiOutput.value = generatedText;
+                        geminiOutputSection.classList.remove('hidden');
+                        showAppMessage("Descripción generada con éxito.", 'success');
+                    } else {
+                        throw new Error("La respuesta de la API estaba vacía.");
+                    }
+
+                } catch (error) {
+                    console.error("Error al llamar a Gemini API:", error);
+                    showAppMessage(`Error al generar descripción: ${error.message}`, 'error');
+                } finally {
+                    generateDescBtn.disabled = false;
+                    generateDescBtn.innerHTML = `✨ Generar Descripción Inteligente`;
+                }
+            });
+        }
+
+        if (copyDescBtn) {
+            copyDescBtn.addEventListener('click', () => {
+                geminiOutput.select();
+                document.execCommand('copy');
+                showAppMessage("Texto copiado al portapapeles.", 'success');
+            });
+        }
+
+        // --- LÓGICA DE GENERACIÓN DE QR ---
+        if (qrForm) {
+            qrForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const formData = new FormData(qrForm);
+                const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+
+                if (tiposDeRopa.length === 0) {
+                    showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+                    return;
+                }
+                
+                const prendaId = crypto.randomUUID();
+                const prendaData = {
+                    id: prendaId,
+                    precio: formData.get('precio'),
+                    talle: formData.get('talle'),
+                    tipos_de_ropa: tiposDeRopa,
+                    cliente: formData.get('cliente') || '',
+                    vendedora: formData.get('vendedora') || '',
+                    nota: formData.get('nota') || '',
+                    fecha_creacion: new Date().toISOString(),
+                    ultimo_escaneo: null
                 };
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                // Agregar campos personalizados
+                const customFields = Array.from(document.querySelectorAll('#custom-fields-container input[type="text"]'));
+                customFields.forEach((input, index) => {
+                    if (input.value.trim()) {
+                        prendaData[`custom_field_${index}`] = input.value;
+                    }
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
+                try {
+                    console.log("Guardando prenda con ID:", prendaId);
+                    prendas.push(prendaData);
+                    savePrendasToStorage();
+                    console.log("Prenda guardada en localStorage.");
+                    showAppMessage("Prenda guardada localmente con éxito.", 'success');
+                    generateQrCode(prendaId);
+                    qrForm.reset();
+                    resetCustomFields();
+                    resetCustomTipos();
+                    if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+                } catch (error) {
+                    console.error("Error al guardar prenda:", error);
+                    showAppMessage(`Error al guardar la prenda: ${error.message}`, 'error');
                 }
+            });
+        }
 
-                const result = await response.json();
-                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        function generateQrCode(prendaId) {
+            if (!qrDisplay) return;
 
-                if (generatedText) {
-                    geminiOutput.value = generatedText;
-                    geminiOutputSection.classList.remove('hidden');
-                    showAppMessage("Descripción generada con éxito.", 'success');
-                } else {
-                    throw new Error("La respuesta de la API estaba vacía.");
-                }
-
+            qrDisplay.innerHTML = `
+                <h3 class="font-bold text-lg mb-4">Código QR Generado</h3>
+                <div id="qrcode-canvas" class="flex justify-center"></div>
+                <p class="text-xs text-gray-500 mt-2 break-all">ID: ${prendaId}</p>
+                <div class="flex flex-col md:flex-row justify-center gap-3 mt-4">
+                    <button id="download-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
+                    <button id="print-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-print mr-2"></i>Imprimir</button>
+                    <button id="share-btn" class="py-2 px-4 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition"><i class="fas fa-share-alt mr-2"></i>Compartir</button>
+                </div>`;
+            
+            try {
+                new QRCode(document.getElementById("qrcode-canvas"), {
+                    text: prendaId,
+                    width: 180,
+                    height: 180
+                });
+                console.log("QR generado para ID:", prendaId);
+                
+                document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId));
+                document.getElementById('print-btn').addEventListener('click', printCode);
+                document.getElementById('share-btn').addEventListener('click', () => shareQrImage(prendaId));
+                
+                qrDisplay.classList.remove('hidden');
             } catch (error) {
-                console.error("Error al llamar a Gemini API:", error);
-                showAppMessage(`Error al generar descripción: ${error.message}`, 'error');
-            } finally {
-                generateDescBtn.disabled = false;
-                generateDescBtn.innerHTML = `✨ Generar Descripción Inteligente`;
+                console.error("Error al generar QR:", error);
+                showAppMessage("Error al generar el código QR.", 'error');
             }
-        });
-    }
+        }
 
-    if (copyDescBtn) {
-        copyDescBtn.addEventListener('click', () => {
-            geminiOutput.select();
-            document.execCommand('copy');
-            showAppMessage("Texto copiado al portapapeles.", 'success');
-        });
-    }
-
-    // --- LÓGICA DE GENERACIÓN DE QR ---
-    if (qrForm) {
-        qrForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(qrForm);
-            const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value);
-
-            if (tiposDeRopa.length === 0) {
-                showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+        // --- ACCIONES DEL QR ---
+        function downloadCode(prendaId) {
+            const canvas = document.querySelector('#qrcode-canvas canvas');
+            if (!canvas) {
+                showAppMessage("Error: No se encontró el QR para descargar.", 'error');
                 return;
             }
-            
-            const prendaId = crypto.randomUUID();
-            const prendaData = {
-                id: prendaId,
-                precio: formData.get('precio'),
-                talle: formData.get('talle'),
-                tipos_de_ropa: tiposDeRopa,
-                cliente: formData.get('cliente') || '',
-                vendedora: formData.get('vendedora') || '',
-                nota: formData.get('nota') || '',
-                fecha_creacion: new Date().toISOString(),
-                ultimo_escaneo: null
-            };
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `qr-prenda-${prendaId}.png`;
+            link.click();
+        }
 
-            // Agregar campos personalizados
-            const customFields = Array.from(document.querySelectorAll('#custom-fields-container input'));
-            customFields.forEach((input, index) => {
-                prendaData[`custom_field_${index}`] = input.value;
-            });
+        function printCode() {
+            const qrCanvas = document.querySelector('#qrcode-canvas canvas');
+            if (!qrCanvas) {
+                showAppMessage("Error: No se encontró el QR para imprimir.", 'error');
+                return;
+            }
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>Imprimir QR</title></head><body style="text-align:center; margin-top: 50px;"><img src="' + qrCanvas.toDataURL() + '"></body></html>');
+            printWindow.document.close();
+            printWindow.onload = () => printWindow.print();
+        }
+
+        async function shareQrImage(prendaId) {
+            const canvas = document.querySelector('#qrcode-canvas canvas');
+            if (!canvas) {
+                showAppMessage("Error: No se encontró el QR para compartir.", 'error');
+                return;
+            }
 
             try {
-                console.log("Guardando prenda con ID:", prendaId);
-                prendas.push(prendaData);
-                savePrendasToStorage();
-                console.log("Prenda guardada en localStorage.");
-                showAppMessage("Prenda guardada localmente con éxito.", 'success');
-                generateQrCode(prendaId);
-                qrForm.reset();
-                resetCustomFields();
-                if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
-            } catch (error) {
-                console.error("Error al guardar prenda:", error);
-                showAppMessage(`Error al guardar la prenda: ${error.message}`, 'error');
-            }
-        });
-    }
+                const blob = await new Promise(resolve => canvas.toBlob(resolve));
+                const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
+                const shareData = {
+                    files: [file],
+                    title: 'QR de Prenda',
+                    text: `Código QR para la prenda con ID: ${prendaId}`,
+                };
 
-    // --- FUNCIONES PARA CAMPOS PERSONALIZADOS ---
-    let customFieldCount = 0;
-    const addCustomFieldBtn = document.getElementById('add-custom-field');
-    if (addCustomFieldBtn) {
-        addCustomFieldBtn.addEventListener('click', () => {
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    showAppMessage('¡Compartido con éxito!', 'success');
+                } else {
+                    showAppMessage('No se puede compartir la imagen en este navegador. Intenta descargar y compartir manualmente.', 'info');
+                }
+            } catch (err) {
+                console.error("Error al compartir imagen:", err);
+                showAppMessage('Error al compartir la imagen.', 'error');
+            }
+        }
+        
+        // --- LÓGICA DE ESCANEO ---
+        function startScanner() {
+            if (!document.getElementById('reader')) return;
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                .catch(err => { 
+                    console.error("Error al iniciar escáner:", err);
+                    showAppMessage("No se pudo iniciar la cámara. Revisa permisos.", 'error');
+                });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.log("Error al detener escáner:", err));
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            stopScanner();
+            const readerDiv = document.getElementById('reader');
+            if (readerDiv) readerDiv.style.display = 'none';
+            showAppMessage("Código escaneado. Buscando datos locales...", "info");
+            
+            const prendaEncontrada = prendas.find(p => p.id === decodedText);
+            if (prendaEncontrada) {
+                prendaEncontrada.ultimo_escaneo = new Date().toISOString();
+                savePrendasToStorage();
+                displayScannedData(prendaEncontrada);
+                showAppMessage("Prenda encontrada en tu historial local.", "success");
+            } else {
+                if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Prenda no encontrada en tu historial local.</div>`;
+                showAppMessage("Prenda no encontrada.", "error");
+            }
+
+            // Botón para escanear de nuevo
+            const scanAgainBtn = document.createElement('button');
+            scanAgainBtn.innerHTML = `<i class="fas fa-qrcode mr-2"></i> Escanear de nuevo`;
+            scanAgainBtn.className = 'w-full mt-4 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition';
+            scanAgainBtn.onclick = () => {
+                if (scanResult) scanResult.innerHTML = '';
+                if (readerDiv) readerDiv.style.display = 'block';
+                startScanner();
+            };
+            if (scanResult) scanResult.appendChild(scanAgainBtn);
+        }
+        
+        function onScanFailure(error) {
+            // Silencioso
+        }
+
+        function displayScannedData(data) {
+            const fechaCreacion = new Date(data.fecha_creacion).toLocaleString('es-AR');
+            const fechaEscaneo = data.ultimo_escaneo ? new Date(data.ultimo_escaneo).toLocaleString('es-AR') : 'No escaneada aún';
+            if (scanResult) {
+                scanResult.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-indigo-500">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalle de la Prenda</h2>
+                        <div class="space-y-2 text-gray-700">
+                            <p><strong>Precio:</strong> $${data.precio}</p>
+                            <p><strong>Talle:</strong> ${data.talle}</p>
+                            <p><strong>Tipo de Ropa:</strong> ${data.tipos_de_ropa.join(', ')}</p>
+                            <p><strong>Cliente:</strong> ${data.cliente || 'No especificado'}</p>
+                            <p><strong>Vendedora:</strong> ${data.vendedora || 'No especificada'}</p>
+                            <p><strong>Nota:</strong> ${data.nota || 'Sin notas'}</p>
+                            <p><strong>Fecha de Registro:</strong> ${fechaCreacion}</p>
+                            <p><strong>Último Escaneo:</strong> ${fechaEscaneo}</p>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        // --- LÓGICA DE HISTORIAL ---
+        function setupHistoryDisplay() {
+            if (!notSoldList || !soldList || !stockCount || !soldSum || !speculationSum || !searchBar) return;
+            
+            console.log("Actualizando historial desde localStorage. Prendas:", prendas.length);
+            if (prendas.length === 0) {
+                notSoldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas no vendidas.</p>';
+                soldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas vendidas.</p>';
+                stockCount.textContent = 'Stock actual: 0';
+                soldSum.textContent = 'Vendidos: $0';
+                speculationSum.textContent = 'Especulación: $0';
+                return;
+            }
+
+            // Filtrar prendas según el texto de búsqueda
+            const searchTerm = searchBar.value.toLowerCase();
+            const filteredPrendas = prendas.filter(p => 
+                p.id.toLowerCase().includes(searchTerm) ||
+                p.talle.toLowerCase().includes(searchTerm) ||
+                p.tipos_de_ropa.join(' ').toLowerCase().includes(searchTerm) ||
+                (p.cliente || '').toLowerCase().includes(searchTerm) ||
+                (p.vendedora || '').toLowerCase().includes(searchTerm)
+            );
+
+            const notSold = filteredPrendas.filter(p => !p.ultimo_escaneo);
+            const sold = filteredPrendas.filter(p => p.ultimo_escaneo);
+            const stock = notSold.length;
+
+            stockCount.textContent = `Stock actual: ${stock}`;
+
+      // Calcular sumas
+            const totalNotSold = notSold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
+            const totalSold = sold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
+            const speculation = totalNotSold - totalSold;
+            soldSum.textContent = `Vendidos: $${totalSold.toFixed(2)}`;
+            speculationSum.textContent = `Especulación: $${speculation.toFixed(2)}`;
+
+            notSoldList.innerHTML = '';
+            notSold.forEach((prenda) => {
+                const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
+                const item = document.createElement('div');
+                item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
+                            <button class="delete-btn bg-red-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-600">Eliminar</button>
+                            <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
+                        </div>
+                    </div>
+                `;
+                item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
+                item.querySelector('.delete-btn').addEventListener('click', () => deletePrenda(prenda.id));
+                item.querySelector('.view-details-btn').addEventListener('click', () => {
+                    showView('scanner-section');
+                    displayScannedData(prenda);
+                });
+                notSoldList.appendChild(item);
+            });
+
+            soldList.innerHTML = '';
+            sold.forEach((prenda) => {
+                const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
+                const item = document.createElement('div');
+                item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                            <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
+                            <button class="delete-btn bg-red-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-600">Eliminar</button>
+                            <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
+                        </div>
+                    </div>
+                `;
+                item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
+                item.querySelector('.delete-btn').addEventListener('click', () => deletePrenda(prenda.id));
+                item.querySelector('.view-details-btn').addEventListener('click', () => {
+                    showView('scanner-section');
+                    displayScannedData(prenda);
+                });
+                soldList.appendChild(item);
+            });
+
+            // Actualizar al escribir en el buscador
+            searchBar.addEventListener('input', setupHistoryDisplay);
+        }
+
+        // --- EDICIÓN DE PRENDA ---
+        function editPrenda(id) {
+            const prenda = prendas.find(p => p.id === id);
+            if (!prenda) return;
+
+            editingId = id;
+            document.getElementById('edit-id').value = prenda.id;
+            document.getElementById('edit-precio').value = prenda.precio;
+            document.getElementById('edit-talle').value = prenda.talle;
+            document.getElementById('edit-cliente').value = prenda.cliente;
+            document.getElementById('edit-vendedora').value = prenda.vendedora;
+            document.getElementById('edit-nota').value = prenda.nota;
+
+            // Resetear y poblar tipos de ropa
+            resetEditCustomTipos();
+            document.querySelectorAll('#edit-tipo-ropa-container input[name="tipo_ropa"]').forEach(cb => {
+                cb.checked = prenda.tipos_de_ropa.includes(cb.value);
+            });
+            prenda.tipos_de_ropa.forEach(tipo => {
+                if (!['Importada', 'Prenda', 'Nuevo'].includes(tipo)) {
+                    addEditCustomTipo(tipo);
+                }
+            });
+
+            // Resetear y poblar campos personalizados
+            resetEditCustomFields();
+            for (let key in prenda) {
+                if (key.startsWith('custom_field_') && prenda[key]) {
+                    addEditCustomField(prenda[key]);
+                }
+            }
+
+            showView('edit-section');
+        }
+
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const formData = new FormData(editForm);
+                const tiposDeRopa = Array.from(document.querySelectorAll('#edit-tipo-ropa-container input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+
+                if (tiposDeRopa.length === 0) {
+                    showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+                    return;
+                }
+
+                const updatedPrenda = {
+                    id: editingId,
+                    precio: formData.get('precio'),
+                    talle: formData.get('talle'),
+                    tipos_de_ropa: tiposDeRopa,
+                    cliente: formData.get('cliente') || '',
+                    vendedora: formData.get('vendedora') || '',
+                    nota: formData.get('nota') || '',
+                    fecha_creacion: prendas.find(p => p.id === editingId).fecha_creacion,
+                    ultimo_escaneo: prendas.find(p => p.id === editingId).ultimo_escaneo
+                };
+
+                // Agregar campos personalizados
+                const customFields = Array.from(document.querySelectorAll('#edit-custom-fields-container input[type="text"]'));
+                customFields.forEach((input, index) => {
+                    if (input.value.trim()) {
+                        updatedPrenda[`custom_field_${index}`] = input.value;
+                    }
+                });
+
+                try {
+                    const index = prendas.findIndex(p => p.id === editingId);
+                    if (index !== -1) {
+                        prendas[index] = updatedPrenda;
+                        savePrendasToStorage();
+                        showAppMessage("Prenda actualizada con éxito.", 'success');
+                        setupHistoryDisplay();
+                        showView('history-section');
+                    }
+                } catch (error) {
+                    console.error("Error al actualizar prenda:", error);
+                    showAppMessage("Error al actualizar la prenda.", 'error');
+                }
+            });
+        }
+
+        // --- ELIMINAR PRENDA ---
+        function deletePrenda(id) {
+            if (confirm("¿Estás seguro de eliminar esta prenda?")) {
+                prendas = prendas.filter(p => p.id !== id);
+                savePrendasToStorage();
+                setupHistoryDisplay();
+                showAppMessage("Prenda eliminada con éxito.", 'success');
+            }
+        }
+
+        // --- EXPORTAR ---
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', () => exportToExcel());
+        }
+
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', () => exportToCsv());
+        }
+
+        function exportToExcel() {
+            const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => {
+                const row = {
+                    ID: p.id,
+                    Precio: p.precio,
+                    Talle: p.talle,
+                    'Tipos de Ropa': p.tipos_de_ropa.join(', '),
+                    Cliente: p.cliente,
+                    Vendedora: p.vendedora,
+                    Nota: p.nota,
+                    'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                    'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A'
+                };
+                for (let key in p) {
+                    if (key.startsWith('custom_field_')) {
+                        row[key] = p[key];
+                    }
+                }
+                return row;
+            }));
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Prendas');
+            XLSX.writeFile(workbook, 'historial_prendas.xlsx');
+            showAppMessage("Exportado a Excel con éxito.", 'success');
+        }
+
+        function exportToCsv() {
+            const csvData = [
+                ['ID', 'Precio', 'Talle', 'Tipos de Ropa', 'Cliente', 'Vendedora', 'Nota', 'Fecha de Registro', 'Último Escaneo'],
+                ...prendas.map(p => {
+                    const row = [
+                        p.id,
+                        p.precio,
+                        p.talle,
+                        p.tipos_de_ropa.join(', '),
+                        p.cliente,
+                        p.vendedora,
+                        p.nota,
+                        new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                        p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A'
+                    ];
+                    for (let key in p) {
+                        if (key.startsWith('custom_field_') && p[key]) {
+                            row.push(p[key]);
+                        }
+                    }
+                    return row;
+                })
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'historial_prendas.csv';
+            link.click();
+            showAppMessage("Exportado a CSV con éxito. Puedes importarlo a Google Sheets.", 'success');
+        }
+
+        // --- MÉTRICAS GRÁFICO ---
+        function setupMetricsChart() {
+            const ctx = document.getElementById('stock-chart').getContext('2d');
+            const events = [];
+
+            prendas.forEach(p => {
+                events.push({ date: new Date(p.fecha_creacion), type: 'create' });
+                if (p.ultimo_escaneo) {
+                    events.push({ date: new Date(p.ultimo_escaneo), type: 'scan' });
+                }
+            });
+
+            events.sort((a, b) => a.date - b.date);
+
+            const labels = [];
+            const data = [];
+            let stock = 0;
+
+            events.forEach(event => {
+                if (event.type === 'create') stock++;
+                else if (event.type === 'scan') stock--;
+                labels.push(event.date.toLocaleString('es-AR'));
+                data.push(stock);
+            });
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Stock a lo largo del tiempo',
+                        data: data,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo' } },
+                        y: { title: { display: true, text: 'Stock' } }
+                    }
+                }
+            });
+        }
+
+        // --- FUNCIONES PARA CAMPOS PERSONALIZADOS ---
+        function addCustomField() {
             const container = document.getElementById('custom-fields-container');
             const fieldDiv = document.createElement('div');
             fieldDiv.className = 'flex items-center space-x-2';
@@ -432,25 +965,38 @@
                 fieldDiv.remove();
                 customFieldCount--;
             });
-        });
-    }
+        }
 
-    function resetCustomFields() {
-        const container = document.getElementById('custom-fields-container');
-        if (container) container.innerHTML = '';
-        customFieldCount = 0;
-    }
+        function resetCustomFields() {
+            if (customFieldsContainer) customFieldsContainer.innerHTML = '';
+            customFieldCount = 0;
+        }
 
-    // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
-    let customTipoCount = 0;
-    const addCustomTipoBtn = document.getElementById('add-custom-tipo');
-    if (addCustomTipoBtn) {
-        addCustomTipoBtn.addEventListener('click', () => {
+        function addEditCustomField(value = '') {
+            const container = document.getElementById('edit-custom-fields-container');
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'flex items-center space-x-2';
+            fieldDiv.innerHTML = `
+                <input type="text" value="${value}" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <button type="button" class="remove-field-btn text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(fieldDiv);
+            fieldDiv.querySelector('.remove-field-btn').addEventListener('click', () => {
+                fieldDiv.remove();
+            });
+        }
+
+        function resetEditCustomFields() {
+            if (editCustomFieldsContainer) editCustomFieldsContainer.innerHTML = '';
+        }
+
+        // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
+        function addCustomTipo() {
             const container = document.getElementById('tipo-ropa-container');
             const tipoDiv = document.createElement('div');
             tipoDiv.className = 'flex items-center';
             tipoDiv.innerHTML = `
-                <input type="checkbox" name="tipo_ropa" value="" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
                 <input type="text" placeholder="Tipo personalizado" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                 <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
             `;
@@ -460,300 +1006,115 @@
                 tipoDiv.remove();
                 customTipoCount--;
             });
-        });
-    }
-
-    // --- LÓGICA DE GENERACIÓN DE QR (adaptada para tipos personalizados) ---
-    if (qrForm) {
-        qrForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(qrForm);
-            const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling.value); // Captura tipos personalizados
-
-            if (tiposDeRopa.length === 0) {
-                showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
-                return;
-            }
-            
-            const prendaId = crypto.randomUUID();
-            const prendaData = {
-                id: prendaId,
-                precio: formData.get('precio'),
-                talle: formData.get('talle'),
-                tipos_de_ropa: tiposDeRopa,
-                cliente: formData.get('cliente') || '',
-                vendedora: formData.get('vendedora') || '',
-                nota: formData.get('nota') || '',
-                fecha_creacion: new Date().toISOString(),
-                ultimo_escaneo: null
-            };
-
-            // Agregar campos personalizados
-            const customFields = Array.from(document.querySelectorAll('#custom-fields-container input'));
-            customFields.forEach((input, index) => {
-                prendaData[`custom_field_${index}`] = input.value;
-            });
-
-            try {
-                console.log("Guardando prenda con ID:", prendaId);
-                prendas.push(prendaData);
-                savePrendasToStorage();
-                console.log("Prenda guardada en localStorage.");
-                showAppMessage("Prenda guardada localmente con éxito.", 'success');
-                generateQrCode(prendaId);
-                qrForm.reset();
-                resetCustomFields();
-                if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
-            } catch (error) {
-                console.error("Error al guardar prenda:", error);
-                showAppMessage(`Error al guardar la prenda: ${error.message}`, 'error');
-            }
-        });
-    }
-
-    // --- LÓGICA DE HISTORIAL ---
-    function setupHistoryDisplay() {
-        if (!notSoldList || !soldList || !stockCount || !speculationSum || !searchBar) return;
-        
-        console.log("Actualizando historial desde localStorage. Prendas:", prendas.length);
-        if (prendas.length === 0) {
-            notSoldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas no vendidas.</p>';
-            soldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas vendidas.</p>';
-            stockCount.textContent = 'Stock actual: 0';
-            speculationSum.textContent = 'Especulación: $0';
-            return;
-        }
-
-        // Filtrar prendas según el texto de búsqueda
-        const searchTerm = searchBar.value.toLowerCase();
-        const filteredPrendas = prendas.filter(p => 
-            p.id.toLowerCase().includes(searchTerm) ||
-            p.talle.toLowerCase().includes(searchTerm) ||
-            p.tipos_de_ropa.join(' ').toLowerCase().includes(searchTerm) ||
-            (p.cliente || '').toLowerCase().includes(searchTerm) ||
-            (p.vendedora || '').toLowerCase().includes(searchTerm)
-        );
-
-        const notSold = filteredPrendas.filter(p => !p.ultimo_escaneo);
-        const sold = filteredPrendas.filter(p => p.ultimo_escaneo);
-        const stock = notSold.length;
-
-        stockCount.textContent = `Stock actual: ${stock}`;
-
-        // Calcular especulación: suma de no vendidos menos suma de vendidos
-        const totalNotSold = notSold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
-        const totalSold = sold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
-        const speculation = totalNotSold - totalSold;
-        speculationSum.textContent = `Especulación: $${speculation.toFixed(2)}`;
-
-        notSoldList.innerHTML = '';
-        notSold.forEach((prenda) => {
-            const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
-            const item = document.createElement('div');
-            item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
-            item.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
-                        <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
-                        <button class="delete-btn bg-red-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-600">Eliminar</button>
-                        <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
-                    </div>
-                </div>
-            `;
-            item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
-            item.querySelector('.delete-btn').addEventListener('click', () => deletePrenda(prenda.id));
-            item.querySelector('.view-details-btn').addEventListener('click', () => {
-                showView('scanner-section');
-                displayScannedData(prenda);
-            });
-            notSoldList.appendChild(item);
-        });
-
-        soldList.innerHTML = '';
-        sold.forEach((prenda) => {
-            const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
-            const item = document.createElement('div');
-            item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
-            item.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
-                        <p class="text-sm text-gray-600">$${prenda.precio} - Registrado el ${fecha}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
-                        <button class="delete-btn bg-red-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-600">Eliminar</button>
-                        <button class="view-details-btn bg-indigo-100 text-indigo-700 text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-200">Ver</button>
-                    </div>
-                </div>
-            `;
-            item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
-            item.querySelector('.delete-btn').addEventListener('click', () => deletePrenda(prenda.id));
-            item.querySelector('.view-details-btn').addEventListener('click', () => {
-                showView('scanner-section');
-                displayScannedData(prenda);
-            });
-            soldList.appendChild(item);
-        });
-    }
-
-    // --- EDICIÓN DE PRENDA ---
-    function editPrenda(id) {
-        const prenda = prendas.find(p => p.id === id);
-        if (!prenda) return;
-
-        editingId = id;
-        document.getElementById('edit-precio').value = prenda.precio;
-        document.getElementById('edit-talle').value = prenda.talle;
-        document.getElementById('edit-cliente').value = prenda.cliente;
-        document.getElementById('edit-vendedora').value = prenda.vendedora;
-        document.getElementById('edit-nota').value = prenda.nota;
-
-        document.querySelectorAll('#edit-section input[name="tipo_ropa"]').forEach(cb => {
-            cb.checked = prenda.tipos_de_ropa.includes(cb.value);
-        });
-
-        showView('edit-section');
-    }
-
-    // --- ELIMINAR PRENDA ---
-    function deletePrenda(id) {
-        if (confirm("¿Estás seguro de eliminar esta prenda?")) {
-            prendas = prendas.filter(p => p.id !== id);
-            savePrendasToStorage();
-            setupHistoryDisplay();
-            showAppMessage("Prenda eliminada con éxito.", 'success');
-        }
-    }
-
-    // --- EXPORTAR ---
-    if (exportExcelBtn) {
-        exportExcelBtn.addEventListener('click', () => exportToExcel());
-    }
-
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', () => exportToCsv());
-    }
-
-    function exportToExcel() {
-        const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => ({
-            ID: p.id,
-            Precio: p.precio,
-            Talle: p.talle,
-            'Tipos de Ropa': p.tipos_de_ropa.join(', '),
-            Cliente: p.cliente,
-            Vendedora: p.vendedora,
-            Nota: p.nota,
-            'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
-            'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A'
-        })));
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Prendas');
-        XLSX.writeFile(workbook, 'historial_prendas.xlsx');
-        showAppMessage("Exportado a Excel con éxito.", 'success');
-    }
-
-    function exportToCsv() {
-        const csvData = [
-            ['ID', 'Precio', 'Talle', 'Tipos de Ropa', 'Cliente', 'Vendedora', 'Nota', 'Fecha de Registro', 'Último Escaneo'],
-            ...prendas.map(p => [
-                p.id,
-                p.precio,
-                p.talle,
-                p.tipos_de_ropa.join(', '),
-                p.cliente,
-                p.vendedora,
-                p.nota,
-                new Date(p.fecha_creacion).toLocaleString('es-AR'),
-                p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A'
-            ])
-        ].map(row => row.join(',')).join('\n');
-
-        const blob = new Blob([csvData], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'historial_prendas.csv';
-        link.click();
-        showAppMessage("Exportado a CSV con éxito. Puedes importarlo a Google Sheets.", 'success');
-    }
-
-    // --- MÉTRICAS GRÁFICO ---
-    function setupMetricsChart() {
-        const ctx = document.getElementById('stock-chart').getContext('2d');
-        const events = [];
-
-        prendas.forEach(p => {
-            events.push({ date: new Date(p.fecha_creacion), type: 'create' });
-            if (p.ultimo_escaneo) {
-                events.push({ date: new Date(p.ultimo_escaneo), type: 'scan' });
-            }
-        });
-
-        events.sort((a, b) => a.date - b.date);
-
-        const labels = [];
-        const data = [];
-        let stock = 0;
-
-        events.forEach(event => {
-            if (event.type === 'create') stock++;
-            else if (event.type === 'scan') stock--;
-            labels.push(event.date.toLocaleString('es-AR'));
-            data.push(stock);
-        });
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Stock a lo largo del tiempo',
-                    data: data,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                scales: {
-                    x: { title: { display: true, text: 'Tiempo' } },
-                    y: { title: { display: true, text: 'Stock' } }
+            // Vincular el valor del input al checkbox
+            const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
+            const input = tipoDiv.querySelector('input[type="text"]');
+            input.addEventListener('input', () => {
+                if (input.value.trim()) {
+                    checkbox.value = input.value.trim();
+                } else {
+                    checkbox.value = '';
                 }
-            }
-        });
-    }
-
-    // --- UTILIDADES ---
-    function showAppMessage(message, type = 'info') {
-        const messageContainer = document.getElementById('app-message');
-        if (!messageContainer) return;
-        const messageDiv = document.createElement('div');
-        
-        let bgColor, textColor;
-        switch(type) {
-            case 'success': bgColor = 'bg-green-500'; textColor = 'text-white'; break;
-            case 'error': bgColor = 'bg-red-500'; textColor = 'text-white'; break;
-            default: bgColor = 'bg-blue-500'; textColor = 'text-white'; break;
+            });
         }
 
-        messageDiv.className = `p-3 rounded-lg shadow-xl mb-2 text-sm font-semibold ${bgColor} ${textColor} transition-opacity duration-300`;
-        messageDiv.textContent = message;
+        function resetCustomTipos() {
+            if (tipoRopaContainer) tipoRopaContainer.innerHTML = `
+                <div class="flex items-center">
+                    <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                </div>
+                <div class="flex items-center">
+                    <input id="tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+                </div>
+                <div class="flex items-center">
+                    <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                </div>
+            `;
+            customTipoCount = 0;
+        }
 
-        messageContainer.appendChild(messageDiv);
+        function addEditCustomTipo(value = '') {
+            const container = document.getElementById('edit-tipo-ropa-container');
+            const tipoDiv = document.createElement('div');
+            tipoDiv.className = 'flex items-center';
+            tipoDiv.innerHTML = `
+                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                <input type="text" value="${value}" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(tipoDiv);
+            tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
+                tipoDiv.remove();
+            });
+            // Vincular el valor del input al checkbox
+            const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
+            const input = tipoDiv.querySelector('input[type="text"]');
+            input.addEventListener('input', () => {
+                if (input.value.trim()) {
+                    checkbox.value = input.value.trim();
+                } else {
+                    checkbox.value = '';
+                }
+            });
+        }
 
-        setTimeout(() => {
-            messageDiv.classList.add('opacity-0');
-            setTimeout(() => messageDiv.remove(), 300);
-        }, 3000);
-    }
+        function resetEditCustomTipos() {
+            if (editTipoRopaContainer) editTipoRopaContainer.innerHTML = `
+                <div class="flex items-center">
+                    <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                </div>
+                <div class="flex items-center">
+                    <input id="edit-tipo_prenda" name="tipo_ropa" type="checkbox" value="Prenda" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="edit-tipo_prenda" class="ml-3 block text-sm text-gray-900">Prenda</label>
+                </div>
+                <div class="flex items-center">
+                    <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                </div>
+            `;
+        }
 
-    // --- INICIO DE LA APLICACIÓN ---
-    document.addEventListener('DOMContentLoaded', initializeApp);
-</script>
+        // --- EVENTOS PARA BOTONES DE AÑADIR ---
+        if (document.getElementById('add-custom-field')) {
+            document.getElementById('add-custom-field').addEventListener('click', addCustomField);
+        }
+        if (document.getElementById('add-custom-tipo')) {
+            document.getElementById('add-custom-tipo').addEventListener('click', addCustomTipo);
+        }
+        if (document.getElementById('add-edit-custom-tipo')) {
+            document.getElementById('add-edit-custom-tipo').addEventListener('click', addEditCustomTipo);
+        }
+
+        // --- UTILIDADES ---
+        function showAppMessage(message, type = 'info') {
+            const messageContainer = document.getElementById('app-message');
+            if (!messageContainer) return;
+            const messageDiv = document.createElement('div');
+            
+            let bgColor, textColor;
+            switch(type) {
+                case 'success': bgColor = 'bg-green-500'; textColor = 'text-white'; break;
+                case 'error': bgColor = 'bg-red-500'; textColor = 'text-white'; break;
+                default: bgColor = 'bg-blue-500'; textColor = 'text-white'; break;
+            }
+
+            messageDiv.className = `p-3 rounded-lg shadow-xl mb-2 text-sm font-semibold ${bgColor} ${textColor} transition-opacity duration-300`;
+            messageDiv.textContent = message;
+
+            messageContainer.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.classList.add('opacity-0');
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 3000);
+        }
+
+        // --- INICIO DE LA APLICACIÓN ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
 </body>
 </html>
