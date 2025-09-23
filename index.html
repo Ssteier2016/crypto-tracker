@@ -201,27 +201,28 @@
         let sheetsDoc;
 
         // --- INICIALIZACIÓN DE GOOGLE SHEETS ---
-        async function initializeGoogleSheets() {
-            try {
-                const { GoogleSpreadsheet } = GoogleSpreadsheet;
-                sheetsDoc = new GoogleSpreadsheet(GOOGLE_SHEETS_CONFIG.spreadsheetId);
-                
-                await sheetsDoc.useServiceAccountAuth({
-                    client_email: GOOGLE_SHEETS_CONFIG.clientEmail,
-                    private_key: GOOGLE_SHEETS_CONFIG.privateKey.replace(/\\n/g, '\n'),
-                });
-                
-                await sheetsDoc.loadInfo();
-                const sheet = sheetsDoc.sheetsByTitle[GOOGLE_SHEETS_CONFIG.sheetName] || sheetsDoc.sheetsByIndex[0];
-                await sheet.loadHeaderRow();
-                console.log('Google Sheets conectado exitosamente.');
-                showAppMessage('Integración con Google Sheets activa.', 'success');
-            } catch (error) {
-                console.error('Error inicializando Google Sheets:', error);
-                showAppMessage('Error conectando con Google Sheets. Usando solo localStorage.', 'error');
-            }
-        }
-
+        // --- INICIALIZACIÓN DE GOOGLE SHEETS ---
+async function initializeGoogleSheets() {
+    try {
+        // Cargar dinámicamente la biblioteca
+        const { GoogleSpreadsheet } = await import('https://unpkg.com/google-spreadsheet@4.1.2/index.js');
+        sheetsDoc = new GoogleSpreadsheet(GOOGLE_SHEETS_CONFIG.spreadsheetId);
+        
+        await sheetsDoc.useServiceAccountAuth({
+            client_email: GOOGLE_SHEETS_CONFIG.clientEmail,
+            private_key: GOOGLE_SHEETS_CONFIG.privateKey.replace(/\\n/g, '\n'),
+        });
+        
+        await sheetsDoc.loadInfo();
+        const sheet = sheetsDoc.sheetsByTitle[GOOGLE_SHEETS_CONFIG.sheetName] || sheetsDoc.sheetsByIndex[0];
+        await sheet.loadHeaderRow();
+        console.log('Google Sheets conectado exitosamente.');
+        showAppMessage('Integración con Google Sheets activa.', 'success');
+    } catch (error) {
+        console.error('Error inicializando Google Sheets:', error);
+        showAppMessage('Error conectando con Google Sheets. Usando solo localStorage.', 'error');
+    }
+}
         // --- GUARDAR EN GOOGLE SHEETS ---
         async function saveToGoogleSheets(prendaData, isUpdate = false) {
             if (!sheetsDoc) return;
