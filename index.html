@@ -175,46 +175,27 @@
         </section>
 
         <!-- Sección de Métricas -->
-        <section id="metrics-section" class="hidden">
-            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Métricas de Stock</h2>
-                <canvas id="stock-chart" width="400" height="200"></canvas>
-                <div id="period-sums" class="mt-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Suma de Precios Generados por Periodo</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Día</p>
-                            <p id="sum-day" class="text-green-700">$0</p>
-                        </div>
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Semana</p>
-                            <p id="sum-week" class="text-green-700">$0</p>
-                        </div>
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Quincena</p>
-                            <p id="sum-fortnight" class="text-green-700">$0</p>
-                        </div>
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Mes</p>
-                            <p id="sum-month" class="text-green-700">$0</p>
-                        </div>
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Trimestral</p>
-                            <p id="sum-quarter" class="text-green-700">$0</p>
-                        </div>
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Semestral</p>
-                            <p id="sum-semester" class="text-green-700">$0</p>
-                        </div>
-                        <div class="p-2 bg-gray-100 rounded-lg text-center">
-                            <p class="font-bold">Anual</p>
-                            <p id="sum-year" class="text-green-700">$0</p>
-                        </div>
-                    </div>
-                </div>
+       <!-- Sección de Métricas -->
+<section id="metrics-section" class="hidden">
+    <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+    <div class="bg-white p-6 rounded-xl shadow-lg">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Métricas de Stock</h2>
+        <canvas id="stock-chart" width="400" height="200"></canvas>
+        <div id="calendar-metrics" class="mt-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Almanaque de Actividades</h3>
+            <div class="grid grid-cols-7 gap-2 text-center">
+                <div class="font-bold">Dom</div>
+                <div class="font-bold">Lun</div>
+                <div class="font-bold">Mar</div>
+                <div class="font-bold">Mié</div>
+                <div class="font-bold">Jue</div>
+                <div class="font-bold">Vie</div>
+                <div class="font-bold">Sáb</div>
             </div>
-        </section>
+            <div id="calendar-days" class="grid grid-cols-7 gap-2 mt-2 text-center"></div>
+        </div>
+    </div>
+</section>
 
         <!-- Notificaciones -->
         <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
@@ -928,48 +909,62 @@
         }
 
         // --- MÉTRICAS ALMANAQUE ---
-        function setupCalendarMetrics() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const startDay = firstDay.getDay();
+        // --- MÉTRICAS ALMANAQUE ---
+function setupCalendarMetrics() {
+    const calendarDays = document.getElementById('calendar-days');
+    if (!calendarDays) {
+        console.error("Elemento calendar-days no encontrado en el DOM.");
+        return;
+    }
 
-            const generatedCount = {};
-            const scannedCount = {};
-            prendas.forEach(p => {
-                const date = new Date(p.fecha_creacion);
-                if (date.getMonth() === month && date.getFullYear() === year) {
-                    const day = date.getDate();
-                    generatedCount[day] = (generatedCount[day] || 0) + 1;
-                }
-                if (p.ultimo_escaneo) {
-                    const scanDate = new Date(p.ultimo_escaneo);
-                    if (scanDate.getMonth() === month && scanDate.getFullYear() === year) {
-                        const day = scanDate.getDate();
-                        scannedCount[day] = (scannedCount[day] || 0) + 1;
-                    }
-                }
-            });
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDay = firstDay.getDay();
 
-            calendarDays.innerHTML = '';
-            for (let i = 0; i < startDay; i++) {
-                calendarDays.innerHTML += '<div></div>';
-            }
-            for (let day = 1; day <= daysInMonth; day++) {
-                const genCount = generatedCount[day] || 0;
-                const scanCount = scannedCount[day] || 0;
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'p-1 rounded-full';
-                dayDiv.innerHTML = `${day}<br><span class="text-green-500">${genCount} G</span><br><span class="text-blue-500">${scanCount} S</span>`;
-                if (genCount > 0 || scanCount > 0) {
-                    dayDiv.classList.add('bg-gray-100');
-                }
-                calendarDays.appendChild(dayDiv);
+    const generatedCount = {};
+    const scannedCount = {};
+    prendas.forEach(p => {
+        const date = new Date(p.fecha_creacion);
+        if (date.getMonth() === month && date.getFullYear() === year) {
+            const day = date.getDate();
+            generatedCount[day] = (generatedCount[day] || 0) + 1;
+        }
+        if (p.ultimo_escaneo) {
+            const scanDate = new Date(p.ultimo_escaneo);
+            if (scanDate.getMonth() === month && scanDate.getFullYear() === year) {
+                const day = scanDate.getDate();
+                scannedCount[day] = (scannedCount[day] || 0) + 1;
             }
         }
+    });
+
+    calendarDays.innerHTML = '';
+    for (let i = 0; i < startDay; i++) {
+        calendarDays.innerHTML += '<div></div>';
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+        const genCount = generatedCount[day] || 0;
+        const scanCount = scannedCount[day] || 0;
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'p-1 rounded-full';
+        dayDiv.innerHTML = `${day}<br><span class="text-green-500">${genCount} G</span><br><span class="text-blue-500">${scanCount} S</span>`;
+        if (genCount > 0 || scanCount > 0) {
+            dayDiv.classList.add('bg-gray-100');
+        }
+        calendarDays.appendChild(dayDiv);
+    }
+}
+
+// --- MANEJO DEL DOM Y NAVEGACIÓN ---
+document.getElementById('show-metrics-btn').addEventListener('click', () => {
+    setupMetricsChart();
+    setupCalendarMetrics(); // Llamada solo al mostrar métricas
+    showView('metrics-section');
+});
 
         // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
         function addCustomTipo() {
