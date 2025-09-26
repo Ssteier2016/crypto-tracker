@@ -838,20 +838,17 @@
         }
 
         function exportToExcel() {
-            const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => {
-                const row = {
-                    ID: p.id,
-                    Precio: p.precio,
-                    Talle: p.talle,
-                    'Tipos de Ropa': p.tipos_de_ropa.join(', '),
-                    Vendedora: p.vendedora,
-                    Nota: p.nota,
-                    'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
-                    'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
-                    'Días Transcurridos': p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
-                };
-                return row;
-            }));
+            const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => ({
+                ID: p.id,
+                Precio: p.precio,
+                Talle: p.talle,
+                'Tipos de Ropa': p.tipos_de_ropa.join(', '),
+                Vendedora: p.vendedora,
+                Nota: p.nota,
+                'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
+                'Días Transcurridos': p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
+            })));
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Prendas');
             XLSX.writeFile(workbook, 'historial_prendas.xlsx');
@@ -861,20 +858,17 @@
         function exportToCsv() {
             const csvData = [
                 ['ID', 'Precio', 'Talle', 'Tipos de Ropa', 'Vendedora', 'Nota', 'Fecha de Registro', 'Último Escaneo', 'Días Transcurridos'],
-                ...prendas.map(p => {
-                    const row = [
-                        p.id,
-                        p.precio,
-                        p.talle,
-                        p.tipos_de_ropa.join(', '),
-                        p.vendedora,
-                        p.nota,
-                        new Date(p.fecha_creacion).toLocaleString('es-AR'),
-                        p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
-                        p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
-                    ];
-                    return row;
-                })
+                ...prendas.map(p => [
+                    p.id,
+                    p.precio,
+                    p.talle,
+                    p.tipos_de_ropa.join(', '),
+                    p.vendedora,
+                    p.nota,
+                    new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                    p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
+                    p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
+                ])
             ].map(row => row.join(',')).join('\n');
 
             const blob = new Blob([csvData], { type: 'text/csv' });
@@ -933,6 +927,12 @@
 
         // --- MÉTRICAS ALMANAQUE ---
         function setupCalendarMetrics() {
+            const calendarDays = document.getElementById('calendar-days');
+            if (!calendarDays) {
+                console.error("Elemento calendar-days no encontrado en el DOM.");
+                return;
+            }
+
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth();
@@ -973,60 +973,6 @@
                 }
                 calendarDays.appendChild(dayDiv);
             }
-        }
-
-        // --- MÉTRICAS POR PERIODO ---
-        function setupPeriodSums() {
-            const now = new Date();
-            const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-
-            const sums = {
-                [thisMonth.toLocaleString('es-AR', { month: 'long', year: 'numeric' })]: 0,
-                [lastMonth.toLocaleString('es-AR', { month: 'long', year: 'numeric' })]: 0,
-                [twoMonthsAgo.toLocaleString('es-AR', { month: 'long', year: 'numeric' })]: 0
-            };
-
-            prendas.forEach(p => {
-                const creationDate = new Date(p.fecha_creacion);
-                if (creationDate >= twoMonthsAgo && creationDate < thisMonth) {
-                    const monthYear = creationDate.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
-                    sums[monthYear] += parseFloat(p.precio || 0);
-                }
-            });
-
-            // Actualizar tabla
-            periodTableBody.innerHTML = '';
-            Object.entries(sums).forEach(([period, sum]) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="border border-gray-300 p-2">${period}</td>
-                    <td class="border border-gray-300 p-2">$${sum.toFixed(2)}</td>
-                `;
-                periodTableBody.appendChild(row);
-            });
-
-            // Actualizar gráfico
-            const ctx = periodChart.getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(sums),
-                    datasets: [{
-                        label: 'Suma de Precios Generados',
-                        data: Object.values(sums),
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Suma (ARS)' } }
-                    }
-                }
-            });
         }
 
         // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
@@ -1125,4 +1071,3 @@
     </script>
 </body>
 </html>
-    
