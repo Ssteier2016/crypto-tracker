@@ -194,14 +194,15 @@
                     <div id="calendar-days" class="grid grid-cols-7 gap-2 mt-2 text-center"></div>
                 </div>
                 <div id="period-sums" class="mt-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Suma de Precios Generados por Periodo</h3>
-                    <canvas id="period-chart" width="400" height="200"></canvas>
-                    <div id="period-table" class="mt-4">
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Almanaque de Periodos</h3>
+                    <div id="period-table-container" class="mt-4 overflow-x-auto">
                         <table class="w-full text-left border-collapse border border-gray-300">
                             <thead>
                                 <tr>
                                     <th class="border border-gray-300 p-2">Periodo</th>
-                                    <th class="border border-gray-300 p-2">Suma ($)</th>
+                                    <th class="border border-gray-300 p-2">Total ($)</th>
+                                    <th class="border border-gray-300 p-2 text-green-600">No Escaneados ($ / %)</th>
+                                    <th class="border border-gray-300 p-2 text-blue-600">Escaneados ($ / %)</th>
                                 </tr>
                             </thead>
                             <tbody id="period-table-body"></tbody>
@@ -222,6 +223,7 @@
         let deferredPrompt; // Para PWA instalación
         let editingId = null; // Para edición
         let customTipoCount = 0;
+        let stockChart = null; // Variable para manejar el gráfico
 
         // --- INICIALIZACIÓN ---
         function initializeApp() {
@@ -685,7 +687,7 @@
 
             stockCount.textContent = `Stock actual: ${stock}`;
 
-            // Calcular sumas
+        // Calcular sumas
             const totalNotSold = notSold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
             const totalSold = sold.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
             const speculation = totalNotSold - totalSold;
@@ -883,6 +885,11 @@
         // --- MÉTRICAS GRÁFICO ---
         function setupMetricsChart() {
             const ctx = document.getElementById('stock-chart').getContext('2d');
+            // Destruir gráfico existente si ya existe
+            if (stockChart) {
+                stockChart.destroy();
+            }
+
             const events = [];
 
             prendas.forEach(p => {
@@ -905,7 +912,7 @@
                 data.push(stock);
             });
 
-            new Chart(ctx, {
+            stockChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -975,6 +982,88 @@
             }
         }
 
+        // --- MÉTRICAS POR PERIODO CON FILTROS AVANZADOS ---
+        function setupPeriodSums() {
+            const periodTableBody = document.getElementById('period-table-body');
+            if (!periodTableBody) return;
+
+            // Filtros avanzados
+            const filterTalle = document.getElementById('filter-talle')?.value || '';
+            const filterTipo = document.getElementById('filter-tipo')?.value || '';
+            const filterVendedora = document.getElementById('filter-vendedora')?.value || '';
+            const filterMinPrecio = document.getElementById('filter-min-precio')?.value ? parseFloat(document.getElementById('filter-min-precio').value) : 0;
+            const filterMaxPrecio = document.getElementById('filter-max-precio')?.value ? parseFloat(document.getElementById('filter-max-precio').value) : Infinity;
+
+            // Filtrar prendas según los filtros
+            const filteredPrendas = prendas.filter(p => {
+                const matchesTalle = !filterTalle || p.talle.toLowerCase().includes(filterTalle.toLowerCase());
+                const matchesTipo = !filterTipo || p.tipos_de_ropa.some(t => t.toLowerCase().includes(filterTipo.toLowerCase()));
+                const matchesVendedora = !filterVendedora || (p.vendedora || '').toLowerCase().includes(filterVendedora.toLowerCase());
+                const matchesPrecio = p.precio >= filterMinPrecio && p.precio <= filterMaxPrecio;
+                return matchesTalle && matchesTipo && matchesVendedora && matchesPrecio;
+            });
+
+            // Calcular periodos
+            const now = new Date();
+            const periods = {
+                'Día Actual': { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()), end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) },
+                'Semana Actual': { start: new Date(now.setDate(now.getDate() - now.getDay())), end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - now.getDay()) + 1) },
+                'Mes Actual': { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) },
+                'Trimestre Actual': { start: new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), end: new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0) },
+                'Semestre Actual': { start: new Date(now.getFullYear(), Math.floor(now.getMonth() / 6) * 6, 1), end: new Date(now.getFullYear(), Math.floor(now.getMonth() / 6) * 6 + 6, 0) },
+                'Año Actual': { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) },
+                'Total': { start: null, end: null }
+            };
+
+            periodTableBody.innerHTML = '';
+            let grandTotal = 0;
+            let grandTotalNotScanned = 0;
+            let grandTotalScanned = 0;
+
+            Object.entries(periods).forEach(([periodName, { start, end }]) => {
+                const periodPrendas = filteredPrendas.filter(p => {
+                    const creationDate = new Date(p.fecha_creacion);
+                    if (start && end) {
+                        return creationDate >= start && creationDate <= end;
+                    }
+                    return true; // Para 'Total'
+                });
+
+                const total = periodPrendas.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
+                const notScanned = periodPrendas.filter(p => !p.ultimo_escaneo);
+                const scanned = periodPrendas.filter(p => p.ultimo_escaneo);
+                const totalNotScanned = notScanned.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
+                const totalScanned = scanned.reduce((sum, p) => sum + parseFloat(p.precio || 0), 0);
+                const percentageNotScanned = total > 0 ? (totalNotScanned / total * 100).toFixed(2) : 0;
+                const percentageScanned = total > 0 ? (totalScanned / total * 100).toFixed(2) : 0;
+
+                grandTotal += total;
+                grandTotalNotScanned += totalNotScanned;
+                grandTotalScanned += totalScanned;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border border-gray-300 p-2">${periodName}</td>
+                    <td class="border border-gray-300 p-2">$${total.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-green-600">$${totalNotScanned.toFixed(2)} (${percentageNotScanned}%)</td>
+                    <td class="border border-gray-300 p-2 text-blue-600">$${totalScanned.toFixed(2)} (${percentageScanned}%)</td>
+                `;
+                periodTableBody.appendChild(row);
+            });
+
+            // Fila de total general
+            const totalRow = document.createElement('tr');
+            const totalPercentageNotScanned = grandTotal > 0 ? (grandTotalNotScanned / grandTotal * 100).toFixed(2) : 0;
+            const totalPercentageScanned = grandTotal > 0 ? (grandTotalScanned / grandTotal * 100).toFixed(2) : 0;
+            totalRow.innerHTML = `
+                <td class="border border-gray-300 p-2 font-bold">Total General</td>
+                <td class="border border-gray-300 p-2 font-bold">$${grandTotal.toFixed(2)}</td>
+                <td class="border border-gray-300 p-2 text-green-600 font-bold">$${grandTotalNotScanned.toFixed(2)} (${totalPercentageNotScanned}%)</td>
+                <td class="border border-gray-300 p-2 text-blue-600 font-bold">$${grandTotalScanned.toFixed(2)} (${totalPercentageScanned}%)</td>
+            `;
+            periodTableBody.appendChild(totalRow);
+        }
+
         // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
         function addCustomTipo() {
             const container = document.getElementById('tipo-ropa-container');
@@ -991,7 +1080,6 @@
                 tipoDiv.remove();
                 customTipoCount--;
             });
-            // Vincular el valor del input al checkbox
             const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
             const input = tipoDiv.querySelector('input[type="text"]');
             input.addEventListener('input', () => {
@@ -1026,7 +1114,6 @@
                 tipoDiv.remove();
                 customTipoCount--;
             });
-            // Vincular el valor del input al checkbox
             const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
             const input = tipoDiv.querySelector('input[type="text"]');
             input.addEventListener('input', () => {
