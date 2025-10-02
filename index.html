@@ -834,7 +834,7 @@
         // --- ELIMINAR PRENDA ---
 function deletePrenda(id) {
     if (confirm("¿Estás seguro de eliminar esta prenda?")) {
-        const password = prompt("Ingrese la contraseña para eliminar (505):");
+        const password = prompt("Ingrese la contraseña para eliminar :");
         if (password === "505") {
             prendas = prendas.filter(p => p.id !== id);
             savePrendasToStorage();
