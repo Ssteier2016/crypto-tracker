@@ -484,96 +484,8 @@
             });
         }
 
-        function generateQrCode(prendaId) {
-            if (!qrDisplay) return;
+        
 
-            const prenda = prendas.find(p => p.id === prendaId);
-            qrDisplay.innerHTML = `
-                <h3 class="font-bold text-lg mb-4">Código QR Generado</h3>
-                <div id="qrcode-canvas" class="flex justify-center"></div>
-                <p class="text-xs text-gray-500 mt-2 break-all">ID: ${prendaId}</p>
-                <div class="mt-4 text-gray-700">
-                    <p><strong>Precio:</strong> $${prenda.precio}</p>
-                    <p><strong>Talle:</strong> ${prenda.talle}</p>
-                    <p><strong>Tipo de Ropa:</strong> ${prenda.tipos_de_ropa.join(', ')}</p>
-                </div>
-                <div class="flex flex-col md:flex-row justify-center gap-3 mt-4">
-                    <button id="download-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
-                    <button id="print-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-print mr-2"></i>Imprimir</button>
-                    <button id="share-btn" class="py-2 px-4 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition"><i class="fas fa-share-alt mr-2"></i>Compartir</button>
-                </div>`;
-            
-            try {
-                new QRCode(document.getElementById("qrcode-canvas"), {
-                    text: prendaId,
-                    width: 180,
-                    height: 180
-                });
-                console.log("QR generado para ID:", prendaId);
-                
-                document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId));
-                document.getElementById('print-btn').addEventListener('click', printCode);
-                document.getElementById('share-btn').addEventListener('click', () => shareQrImage(prendaId));
-                
-                qrDisplay.classList.remove('hidden');
-            } catch (error) {
-                console.error("Error al generar QR:", error);
-                showAppMessage("Error al generar el código QR.", 'error');
-            }
-        }
-
-        // --- ACCIONES DEL QR ---
-        function downloadCode(prendaId) {
-            const canvas = document.querySelector('#qrcode-canvas canvas');
-            if (!canvas) {
-                showAppMessage("Error: No se encontró el QR para descargar.", 'error');
-                return;
-            }
-            const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/png');
-            link.download = `qr-prenda-${prendaId}.png`;
-            link.click();
-        }
-
-        function printCode() {
-            const qrCanvas = document.querySelector('#qrcode-canvas canvas');
-            if (!qrCanvas) {
-                showAppMessage("Error: No se encontró el QR para imprimir.", 'error');
-                return;
-            }
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>Imprimir QR</title></head><body style="text-align:center; margin-top: 50px;"><img src="' + qrCanvas.toDataURL() + '"></body></html>');
-            printWindow.document.close();
-            printWindow.onload = () => printWindow.print();
-        }
-
-        async function shareQrImage(prendaId) {
-            const canvas = document.querySelector('#qrcode-canvas canvas');
-            if (!canvas) {
-                showAppMessage("Error: No se encontró el QR para compartir.", 'error');
-                return;
-            }
-
-            try {
-                const blob = await new Promise(resolve => canvas.toBlob(resolve));
-                const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
-                const shareData = {
-                    files: [file],
-                    title: 'QR de Prenda',
-                    text: `Código QR para la prenda con ID: ${prendaId}`,
-                };
-
-                if (navigator.canShare && navigator.canShare(shareData)) {
-                    await navigator.share(shareData);
-                    showAppMessage('¡Compartido con éxito!', 'success');
-                } else {
-                    showAppMessage('No se puede compartir la imagen en este navegador. Intenta descargar y compartir manualmente.', 'info');
-                }
-            } catch (err) {
-                console.error("Error al compartir imagen:", err);
-                showAppMessage('Error al compartir la imagen.', 'error');
-            }
-        }
         
         // --- LÓGICA DE ESCANEO ---
         function startScanner() {
@@ -594,6 +506,106 @@
                 html5QrCode.stop().catch(err => console.log("Error al detener escáner:", err));
             }
         }
+
+        function generateQrCode(prendaId) {
+    if (!qrDisplay) return;
+
+    const prenda = prendas.find(p => p.id === prendaId);
+    qrDisplay.innerHTML = `
+        <h3 class="font-bold text-lg mb-4">Código QR Generado</h3>
+        <div id="qrcode-canvas" class="flex justify-center"></div>
+        <p class="text-xs text-gray-500 mt-2 break-all">ID: ${prendaId}</p>
+        <div class="mt-4 text-gray-700">
+            <p><strong>Precio:</strong> $${prenda.precio}</p>
+            <p><strong>Talle:</strong> ${prenda.talle}</p>
+            <p><strong>Tipo de Ropa:</strong> ${prenda.tipos_de_ropa.join(', ')}</p>
+        </div>
+        <div class="flex flex-col md:flex-row justify-center gap-3 mt-4">
+            <button id="download-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
+            <button id="print-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-print mr-2"></i>Imprimir</button>
+            <button id="share-btn" class="py-2 px-4 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition"><i class="fas fa-share-alt mr-2"></i>Compartir</button>
+        </div>`;
+    
+    try {
+        new QRCode(document.getElementById("qrcode-canvas"), {
+            text: prendaId,
+            width: 180,
+            height: 180
+        });
+        console.log("QR generado para ID:", prendaId);
+        
+        document.getElementById('download-btn').addEventListener('click', () => downloadCode(prendaId, prenda));
+        document.getElementById('print-btn').addEventListener('click', () => printCode(prendaId, prenda));
+        document.getElementById('share-btn').addEventListener('click', () => shareQrImage(prendaId, prenda));
+        
+        qrDisplay.classList.remove('hidden');
+    } catch (error) {
+        console.error("Error al generar QR:", error);
+        showAppMessage("Error al generar el código QR.", 'error');
+    }
+}
+
+// --- ACCIONES DEL QR ---
+function downloadCode(prendaId, prenda) {
+    const canvas = document.querySelector('#qrcode-canvas canvas');
+    if (!canvas) {
+        showAppMessage("Error: No se encontró el QR para descargar.", 'error');
+        return;
+    }
+    const infoText = `ID: ${prendaId}\nPrecio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `qr-prenda-${prendaId}.png`;
+    link.click();
+    // Aquí podrías agregar el texto a un archivo adicional si quisieras, pero por ahora solo se descarga la imagen
+}
+
+function printCode(prendaId, prenda) {
+    const qrCanvas = document.querySelector('#qrcode-canvas canvas');
+    if (!qrCanvas) {
+        showAppMessage("Error: No se encontró el QR para imprimir.", 'error');
+        return;
+    }
+    const infoText = `ID: ${prendaId}\nPrecio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html><head><title>Imprimir QR</title></head>
+        <body style="text-align:center; margin-top: 50px;">
+            <img src="${qrCanvas.toDataURL()}" style="max-width: 100%;">
+            <p style="font-size: 12px; margin-top: 10px;">${infoText}</p>
+        </body></html>`);
+    printWindow.document.close();
+    printWindow.onload = () => printWindow.print();
+}
+
+async function shareQrImage(prendaId, prenda) {
+    const canvas = document.querySelector('#qrcode-canvas canvas');
+    if (!canvas) {
+        showAppMessage("Error: No se encontró el QR para compartir.", 'error');
+        return;
+    }
+
+    try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve));
+        const infoText = `ID: ${prendaId}\nPrecio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+        const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
+        const shareData = {
+            files: [file],
+            title: 'QR de Prenda',
+            text: infoText,
+        };
+
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            showAppMessage('¡Compartido con éxito!', 'success');
+        } else {
+            showAppMessage('No se puede compartir la imagen en este navegador. Intenta descargar y compartir manualmente.', 'info');
+        }
+    } catch (err) {
+        console.error("Error al compartir imagen:", err);
+        showAppMessage('Error al compartir la imagen.', 'error');
+    }
+}
 
         function onScanSuccess(decodedText, decodedResult) {
             stopScanner();
@@ -832,9 +844,10 @@
         }
 
         // --- ELIMINAR PRENDA ---
+// --- ELIMINAR PRENDA ---
 function deletePrenda(id) {
     if (confirm("¿Estás seguro de eliminar esta prenda?")) {
-        const password = prompt("Ingrese la contraseña para eliminar :");
+        const password = prompt("Ingrese la contraseña para eliminar:");
         if (password === "505") {
             prendas = prendas.filter(p => p.id !== id);
             savePrendasToStorage();
