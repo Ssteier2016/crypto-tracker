@@ -552,12 +552,12 @@ function downloadCode(prendaId, prenda) {
         showAppMessage("Error: No se encontró el QR para descargar.", 'error');
         return;
     }
-    const infoText = `ID: ${prendaId}\nPrecio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+    const infoText = `Precio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');
     link.download = `qr-prenda-${prendaId}.png`;
     link.click();
-    // Aquí podrías agregar el texto a un archivo adicional si quisieras, pero por ahora solo se descarga la imagen
+    // Nota: La imagen descargada no incluye el texto directamente, pero podrías generar un archivo combinado si lo necesitas
 }
 
 function printCode(prendaId, prenda) {
@@ -566,7 +566,7 @@ function printCode(prendaId, prenda) {
         showAppMessage("Error: No se encontró el QR para imprimir.", 'error');
         return;
     }
-    const infoText = `ID: ${prendaId}\nPrecio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+    const infoText = `Precio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html><head><title>Imprimir QR</title></head>
@@ -587,7 +587,7 @@ async function shareQrImage(prendaId, prenda) {
 
     try {
         const blob = await new Promise(resolve => canvas.toBlob(resolve));
-        const infoText = `ID: ${prendaId}\nPrecio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+        const infoText = `Precio: $${prenda.precio}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
         const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
         const shareData = {
             files: [file],
@@ -606,6 +606,7 @@ async function shareQrImage(prendaId, prenda) {
         showAppMessage('Error al compartir la imagen.', 'error');
     }
 }
+        
 
         function onScanSuccess(decodedText, decodedResult) {
             stopScanner();
@@ -842,8 +843,7 @@ async function shareQrImage(prendaId, prenda) {
                 }
             });
         }
-
-        // --- ELIMINAR PRENDA ---
+        
 // --- ELIMINAR PRENDA ---
 function deletePrenda(id) {
     if (confirm("¿Estás seguro de eliminar esta prenda?")) {
