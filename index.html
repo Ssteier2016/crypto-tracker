@@ -747,7 +747,7 @@
                 `;
                 item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
                 item.querySelector('.delete-btn').addEventListener('click', () => {
-                    const password = prompt("Ingrese la contraseña para eliminar (505):");
+                    const password = prompt("Ingrese la contraseña para eliminar:");
                     if (password === "505") {
                         deletePrenda(prenda.id);
                     } else {
