@@ -46,8 +46,12 @@
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
                 <form id="qr-form" class="space-y-4">
                     <div>
-                        <label for="precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
-                        <input type="number" id="precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="precio-lista" class="block text-sm font-medium text-gray-700">Precio de Lista (ARS) *</label>
+                        <input type="number" id="precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
@@ -72,12 +76,8 @@
                         <button type="button" id="add-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
                     </div>
                     <div>
-                        <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
-                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label for="nota" class="block text-sm font-medium text-gray-700">Nota (Opcional)</label>
-                        <textarea id="nota" name="nota" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                        <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                     </div>
                     <div class="pt-2 border-t border-gray-200">
                         <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
@@ -102,8 +102,12 @@
                 <form id="edit-form" class="space-y-4">
                     <input type="hidden" id="edit-id" name="id">
                     <div>
-                        <label for="edit-precio" class="block text-sm font-medium text-gray-700">Precio (ARS) *</label>
-                        <input type="number" id="edit-precio" name="precio" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="edit-precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="edit-precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-precio-lista" class="block text-sm font-medium text-gray-700">Precio de Lista (ARS) *</label>
+                        <input type="number" id="edit-precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="edit-talle" class="block text-sm font-medium text-gray-700">Talle *</label>
@@ -132,8 +136,8 @@
                         <input type="text" id="edit-vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div>
-                        <label for="edit-nota" class="block text-sm font-medium text-gray-700">Nota (Opcional)</label>
-                        <textarea id="edit-nota" name="nota" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <label for="edit-descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                        <textarea id="edit-descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                     </div>
                     <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Guardar Cambios</button>
                 </form>
@@ -198,8 +202,8 @@
         // --- VARIABLES GLOBALES ---
         let prendas = [];
         let html5QrCode;
-        let deferredPrompt;
-        let editingId = null;
+        let deferredPrompt; // Para PWA instalación
+        let editingId = null; // Para edición
         let customTipoCount = 0;
         let isPushEnabled = false;
 
@@ -354,13 +358,12 @@
         // --- LÓGICA DE GENERACIÓN DE DESCRIPCIÓN INTELIGENTE ---
         if (generateDescBtn) {
             generateDescBtn.addEventListener('click', async () => {
-                const precioEfectivo = document.getElementById('precio-efectivo')?.value;
-                const precioLista = document.getElementById('precio-lista')?.value;
+                const precio = document.getElementById('precio')?.value;
                 const talle = document.getElementById('talle')?.value;
-                const descripcion = document.getElementById('descripcion')?.value;
+                const nota = document.getElementById('nota')?.value;
                 const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
-                if (!precioEfectivo || !precioLista || !talle || tiposDeRopa.length === 0) {
-                    showAppMessage("Completa Precio Efectivo, Precio de Lista, Talle y Tipo de Ropa para generar la descripción.", 'error');
+                if (!precio || !talle || tiposDeRopa.length === 0) {
+                    showAppMessage("Completa Precio, Talle y Tipo de Ropa para generar la descripción.", 'error');
                     return;
                 }
                 generateDescBtn.disabled = true;
@@ -372,9 +375,8 @@
                     Detalles de la prenda:
                     - Tipo: ${tiposDeRopa.join(', ')}
                     - Talle: ${talle}
-                    - Precio Efectivo: $${precioEfectivo} ARS
-                    - Precio de Lista: $${precioLista} ARS
-                    - Descripción: ${descripcion || 'Ninguna'}
+                    - Precio: $${precio} ARS
+                    - Notas adicionales: ${nota || 'Ninguna'}
                 `;
                 try {
                     const apiKey = "AIzaSyALOQSrgOQwtjuy7b84UymWaI3a58EF0MU";
@@ -428,15 +430,14 @@
                 const prendaId = crypto.randomUUID();
                 const prendaData = {
                     id: prendaId,
-                    precioEfectivo: formData.get('precioEfectivo'),
-                    precioLista: formData.get('precioLista'),
+                    precio: formData.get('precio'),
                     talle: formData.get('talle'),
                     tipos_de_ropa: tiposDeRopa,
                     vendedora: formData.get('vendedora') || '',
-                    descripcion: formData.get('descripcion') || '',
+                    nota: formData.get('nota') || '',
                     fecha_creacion: new Date().toISOString(),
                     ultimo_escaneo: null,
-                    dias_transcurridos: 0
+                    dias_transcurridos: 0 // Inicializa los días transcurridos
                 };
                 try {
                     console.log("Guardando prenda con ID:", prendaId);
@@ -445,7 +446,6 @@
                     console.log("Prenda guardada en localStorage.");
                     showAppMessage("Prenda guardada localmente con éxito.", 'success');
                     generateQrCode(prendaId);
-                    sendPushNotification("Nueva prenda registrada", `Se ha generado un QR con ID: ${prendaId}`);
                     qrForm.reset();
                     resetCustomTipos();
                     if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
@@ -455,7 +455,6 @@
                 }
             });
         }
-
         function generateQrCode(prendaId) {
             if (!qrDisplay) return;
             const prenda = prendas.find(p => p.id === prendaId);
@@ -464,11 +463,9 @@
                 <div id="qrcode-canvas" class="flex justify-center"></div>
                 <p class="text-xs text-gray-500 mt-2 break-all">ID: ${prendaId}</p>
                 <div class="mt-4 text-gray-700">
-                    <p><strong>Precio Efectivo:</strong> $${prenda.precioEfectivo}</p>
-                    <p><strong>Precio de Lista:</strong> $${prenda.precioLista}</p>
+                    <p><strong>Precio:</strong> $${prenda.precio}</p>
                     <p><strong>Talle:</strong> ${prenda.talle}</p>
                     <p><strong>Tipo de Ropa:</strong> ${prenda.tipos_de_ropa.join(', ')}</p>
-                    <p><strong>Descripción:</strong> ${prenda.descripcion || 'Sin descripción'}</p>
                 </div>
                 <div class="flex flex-col md:flex-row justify-center gap-3 mt-4">
                     <button id="download-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
@@ -491,7 +488,6 @@
                 showAppMessage("Error al generar el código QR.", 'error');
             }
         }
-
         // --- ACCIONES DEL QR ---
         function downloadCode(prendaId, prenda) {
             const canvas = document.querySelector('#qrcode-canvas canvas');
@@ -499,46 +495,23 @@
                 showAppMessage("Error: No se encontró el QR para descargar.", 'error');
                 return;
             }
-            const combinedCanvas = document.createElement('canvas');
-            const ctx = combinedCanvas.getContext('2d');
-            combinedCanvas.width = canvas.width;
-            combinedCanvas.height = canvas.height + 100; // Espacio para texto
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
-            ctx.drawImage(canvas, 0, 0);
-            ctx.fillStyle = '#000000';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            const infoText = `Precio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}\nDescripción: ${prenda.descripcion || 'Sin descripción'}`;
-            const lines = infoText.split('\n');
-            lines.forEach((line, index) => {
-                ctx.fillText(line, combinedCanvas.width / 2, canvas.height + 20 + index * 20);
-            });
             const link = document.createElement('a');
-            link.href = combinedCanvas.toDataURL('image/png');
+            link.href = canvas.toDataURL('image/png');
             link.download = `qr-prenda-${prendaId}.png`;
             link.click();
         }
-
-        function printCode(prendaId, prenda) {
+        function printCode() {
             const qrCanvas = document.querySelector('#qrcode-canvas canvas');
             if (!qrCanvas) {
                 showAppMessage("Error: No se encontró el QR para imprimir.", 'error');
                 return;
             }
-            const infoText = `Precio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}\nDescripción: ${prenda.descripcion || 'Sin descripción'}`;
             const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html><head><title>Imprimir QR</title></head>
-                <body style="text-align:center; margin-top: 50px;">
-                    <img src="${qrCanvas.toDataURL()}" style="max-width: 100%;">
-                    <p style="font-size: 12px; margin-top: 10px; white-space: pre-line;">${infoText}</p>
-                </body></html>`);
+            printWindow.document.write('<html><head><title>Imprimir QR</title></head><body style="text-align:center; margin-top: 50px;"><img src="' + qrCanvas.toDataURL() + '"></body></html>');
             printWindow.document.close();
             printWindow.onload = () => printWindow.print();
         }
-
-        async function shareQrImage(prendaId, prenda) {
+        async function shareQrImage(prendaId) {
             const canvas = document.querySelector('#qrcode-canvas canvas');
             if (!canvas) {
                 showAppMessage("Error: No se encontró el QR para compartir.", 'error');
@@ -546,12 +519,11 @@
             }
             try {
                 const blob = await new Promise(resolve => canvas.toBlob(resolve));
-                const infoText = `Precio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}\nDescripción: ${prenda.descripcion || 'Sin descripción'}`;
                 const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
                 const shareData = {
                     files: [file],
                     title: 'QR de Prenda',
-                    text: infoText,
+                    text: `Código QR para la prenda con ID: ${prendaId}`,
                 };
                 if (navigator.canShare && navigator.canShare(shareData)) {
                     await navigator.share(shareData);
@@ -564,7 +536,6 @@
                 showAppMessage('Error al compartir la imagen.', 'error');
             }
         }
-
         // --- LÓGICA DE ESCANEO ---
         function startScanner() {
             if (!document.getElementById('reader')) return;
@@ -578,13 +549,11 @@
                     showAppMessage("No se pudo iniciar la cámara. Revisa permisos.", 'error');
                 });
         }
-
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().catch(err => console.log("Error al detener escáner:", err));
             }
         }
-
         function onScanSuccess(decodedText, decodedResult) {
             stopScanner();
             const readerDiv = document.getElementById('reader');
@@ -615,11 +584,9 @@
             };
             if (scanResult) scanResult.appendChild(scanAgainBtn);
         }
-
         function onScanFailure(error) {
             // Silencioso
         }
-
         function displayScannedData(data) {
             const fechaCreacion = new Date(data.fecha_creacion).toLocaleString('es-AR');
             const fechaEscaneo = data.ultimo_escaneo ? new Date(data.ultimo_escaneo).toLocaleString('es-AR') : 'No escaneada aún';
@@ -683,8 +650,6 @@
                         <div>
                             <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
                             <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} sin escanear)</p>
-                            <p class="text-sm text-gray-600">Descripción: ${prenda.descripcion || 'Sin descripción'}</p>
-                            <div id="qr-history-${prenda.id}" class="mt-2 flex justify-center"></div>
                         </div>
                         <div class="flex gap-2">
                             <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
@@ -707,11 +672,6 @@
                     displayScannedData(prenda);
                 });
                 notSoldList.appendChild(item);
-                new QRCode(item.querySelector(`#qr-history-${prenda.id}`), {
-                    text: prenda.id,
-                    width: 100,
-                    height: 100
-                });
             });
             soldList.innerHTML = '';
             sold.forEach((prenda) => {
@@ -724,8 +684,6 @@
                         <div>
                             <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
                             <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} hasta escanear)</p>
-                            <p class="text-sm text-gray-600">Descripción: ${prenda.descripcion || 'Sin descripción'}</p>
-                            <div id="qr-history-${prenda.id}" class="mt-2 flex justify-center"></div>
                         </div>
                         <div class="flex gap-2">
                             <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
@@ -748,11 +706,6 @@
                     displayScannedData(prenda);
                 });
                 soldList.appendChild(item);
-                new QRCode(item.querySelector(`#qr-history-${prenda.id}`), {
-                    text: prenda.id,
-                    width: 100,
-                    height: 100
-                });
             });
             searchBar.addEventListener('input', setupHistoryDisplay);
         }
