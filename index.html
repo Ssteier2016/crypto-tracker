@@ -430,7 +430,7 @@
             const systemPrompt = `Eres un experto en tendencias de moda y retail de Buenos Aires, Argentina. Tu tarea es analizar los datos de búsqueda recientes para determinar si el tipo de artículo es tendencia actual. Responde con un análisis conciso y claro (2-3 frases), indicando si el artículo es: 'Tendencia Alta', 'Tendencia Media' o 'Tendencia Baja', y justifica brevemente tu conclusión basada en la información de búsqueda. La respuesta debe ser solo el análisis en español.`;
 
             try {
-                const apiKey = ""; // Canvas provides this
+                const apiKey = "AIzaSyCwPJYCrdIbhUvObM0SP6R58TYjTGT3HVg"; // Canvas provides this
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
                 
                 const payload = {
@@ -512,7 +512,7 @@
             `;
 
             try {
-                const apiKey = "";
+                const apiKey = "AIzaSyCwPJYCrdIbhUvObM0SP6R58TYjTGT3HVg";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: [{ text: prompt }] }],
@@ -570,7 +570,7 @@
                     - Descripción: ${descripcion || 'Ninguna'}
                 `;
                 try {
-                    const apiKey = "";
+                    const apiKey = "AIzaSyCwPJYCrdIbhUvObM0SP6R58TYjTGT3HVg";
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
                     const payload = {
                         contents: [{ parts: [{ text: prompt }] }],
@@ -1349,3 +1349,4 @@
     </script>
 </body>
 </html>
+
