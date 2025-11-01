@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de QR para Indumentaria</title>
+    <meta name="theme-color" content="#4f46e5">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="icono.png">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="app-container" class="max-w-2xl mx-auto p-4 md:p-6">
+        <header class="text-center mb-8 flex items-center justify-center">
+            <!-- LOGO: Added logo.png next to the title -->
+            <img src="logo.png" alt="Logo de la aplicación" class="w-8 h-8 mr-3 rounded-md" 
+                onerror="this.onerror=null; this.src='https://placehold.co/32x32/4f46e5/ffffff?text=G&font=sans'">
+            <h1 class="text-4xl font-bold text-indigo-600 mr-2">Gestor de QR</h1>
+            <!-- VERSION: Updated to v.2.7 (Mejora selección de foto) -->
+            <span class="text-xs font-normal text-gray-600">v.2.7 (Mejora selección de foto)</span>
+        </header>
+        <!-- Menú Principal -->
+        <main id="main-menu" class="space-y-4">
+            <button id="show-generation-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-plus-circle mr-3"></i> Generar QR
+            </button>
+            <button id="show-scanner-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-qrcode mr-3"></i> Escanear QR
+            </button>
+            <button id="show-history-btn" class="w-full bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-gray-800 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-history mr-3"></i> Historial de QR
+            </button>
+            <button id="show-metrics-btn" class="w-full bg-teal-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-teal-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-chart-line mr-3"></i> Métricas
+            </button>
+        </main>
+        <!-- Sección de Generación -->
+        <section id="generation-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
+                <form id="qr-form" class="space-y-4">
+                    <!-- CAMPO DE FOTO/CÁMARA/IMPORTAR (MODIFICADO) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Prenda (Opcional)</label>
+                        <div class="flex space-x-3">
+                            <!-- Input para la CÁMARA (Fuerza la apertura de la cámara si es compatible) -->
+                            <input type="file" id="camera-photo-input" name="cameraPhoto" accept="image/*" capture="environment" class="hidden">
+                            <button type="button" id="open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-camera mr-2"></i> Usar Cámara
+                            </button>
+
+                            <!-- Input para IMPORTAR ARCHIVO (Abre el selector de archivos) -->
+                            <input type="file" id="import-photo-input" name="importPhoto" accept="image/*" class="hidden">
+                            <button type="button" id="import-file-btn" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-file-upload mr-2"></i> Importar Foto
+                            </button>
+                        </div>
+                        <div id="photo-preview-container" class="mt-4 hidden">
+                            <p class="text-xs text-gray-500 mb-1">Previsualización:</p>
+                            <img id="photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 w-full">
+                            <button type="button" id="remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
+                        </div>
+                    </div>
+                    <!-- FIN CAMPO FOTO (MODIFICADO) -->
+                    <div>
+                        <label for="precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="precio-lista" class="block text-sm font-medium text-gray-700">Precio de Lista (ARS) *</label>
+                        <input type="number" id="precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
+                        <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <div id="tipo-ropa-container" class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_nacional" class="ml-3 block text-sm text-gray-900">Nacional</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                            </div>
+                        </div>
+                        <button type="button" id="add-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
+                    </div>
+                    <div>
+                        <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
+                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                        <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <div class="pt-2 border-t border-gray-200 space-y-3">
+                        <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
+                            ✨ Generar Descripción Inteligente
+                        </button>
+                        <!-- BOTÓN PARA ANÁLISIS DE RIESGO DE STOCK -->
+                        <button type="button" id="analyze-stock-risk-btn" class="w-full bg-orange-500 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-orange-600 transition duration-300 flex items-center justify-center">
+                            ✨ Analizar Riesgo de Stock
+                        </button>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
+                </form>
+            </div>
+            <div id="gemini-output-section" class="hidden mt-6 bg-purple-50 p-6 rounded-xl shadow-inner">
+                <h3 class="text-xl font-bold text-purple-800 mb-3" id="gemini-output-title">Sugerencia de la IA</h3>
+                <textarea id="gemini-output" readonly class="w-full h-40 p-2 border border-purple-200 rounded-md bg-white resize-none"></textarea>
+                <button id="copy-desc-btn" class="mt-2 py-2 px-4 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 transition"><i class="fas fa-copy mr-2"></i>Copiar Texto</button>
+            </div>
+            <div id="qr-display" class="hidden mt-6 bg-white p-6 rounded-xl shadow-lg text-center"></div>
+        </section>
+        <!-- Sección de Edición -->
+        <section id="edit-section" class="hidden">
+            <button class="back-to-history text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Editar Prenda</h2>
+                <form id="edit-form" class="space-y-4">
+                    <input type="hidden" id="edit-id" name="id">
+                    <!-- CAMPO DE FOTO/CÁMARA/IMPORTAR EDICIÓN (MODIFICADO) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Prenda (Opcional)</label>
+                        <div class="flex space-x-3">
+                            <!-- Input para la CÁMARA (Fuerza la apertura de la cámara si es compatible) -->
+                            <input type="file" id="edit-camera-photo-input" name="editCameraPhoto" accept="image/*" capture="environment" class="hidden">
+                            <button type="button" id="edit-open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-camera mr-2"></i> Usar Cámara
+                            </button>
+
+                            <!-- Input para IMPORTAR ARCHIVO (Abre el selector de archivos) -->
+                            <input type="file" id="edit-import-photo-input" name="editImportPhoto" accept="image/*" class="hidden">
+                            <button type="button" id="edit-import-file-btn" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-file-upload mr-2"></i> Importar Foto
+                            </button>
+                        </div>
+                        <div id="edit-photo-preview-container" class="mt-4 hidden">
+                            <p class="text-xs text-gray-500 mb-1">Previsualización Actual:</p>
+                            <img id="edit-photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 w-full">
+                            <button type="button" id="edit-remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
+                        </div>
+                    </div>
+                    <!-- FIN CAMPO FOTO EDICIÓN (MODIFICADO) -->
+                    <div>
+                        <label for="edit-precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="edit-precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-precio-lista" class="block text-sm font-medium text-gray-700">Precio de Lista (ARS) *</label>
+                        <input type="number" id="edit-precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-talle" class="block text-sm font-medium text-gray-700">Talle *</label>
+                        <input type="text" id="edit-talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <div id="edit-tipo-ropa-container" class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="edit-tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_nacional" class="ml-3 block text-sm text-gray-900">Nacional</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                            </div>
+                        </div>
+                        <button type="button" id="add-edit-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
+                    </div>
+                    <div>
+                        <label for="edit-vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
+                        <input type="text" id="edit-vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="edit-descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                        <textarea id="edit-descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Guardar Cambios</button>
+                </form>
+            </div>
+        </section>
+        <!-- Sección de Escaneo -->
+        <section id="scanner-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-4 rounded-xl shadow-lg">
+                <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
+            </div>
+            <div id="scan-result" class="mt-6"></div>
+        </section>
+        <!-- Sección de Historial -->
+        <section id="history-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de QR</h2>
+                <div class="mb-4">
+                    <input type="text" id="search-bar" placeholder="Buscar por ID, Talle, Tipo, Cliente o Vendedora..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="flex justify-between mb-4">
+                    <p id="stock-count" class="text-lg font-semibold text-gray-800">Stock actual: 0</p>
+                    <p id="sold-sum" class="text-lg font-semibold text-red-700">Vendidos: $0</p>
+                    <p id="speculation-sum" class="text-lg font-semibold text-green-700">Especulación: $0</p>
+                </div>
+                <div class="flex justify-between mb-4">
+                    <button id="export-excel-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-file-excel mr-2"></i>Exportar a Excel</button>
+                    <button id="export-csv-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-file-csv mr-2"></i>Exportar a CSV (para Google Sheets)</button>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">No Vendidos</h3>
+                <div id="not-sold-list" class="space-y-4 mb-6"></div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Vendidos</h3>
+                <div id="sold-list" class="space-y-4"></div>
+            </div>
+        </section>
+        <!-- Sección para Re-mostrar/Gestionar QR desde Historial (CON TÍTULO EXPLICITO) -->
+        <section id="re-qr-section" class="hidden">
+            <button class="back-to-history text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalle y Gestión de QR</h2>
+            <div id="re-qr-display" class="mt-6 bg-white p-6 rounded-xl shadow-lg text-center">
+                <!-- El QR, la foto y las opciones se renderizarán aquí -->
+            </div>
+        </section>
+        <!-- Sección de Métricas -->
+        <section id="metrics-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Métricas de Stock</h2>
+                <canvas id="stock-chart" width="400" height="200"></canvas>
+                <div id="calendar-metrics" class="mt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Almanaque de Actividades</h3>
+                    <div class="grid grid-cols-7 gap-2 text-center">
+                        <div class="font-bold">Dom</div>
+                        <div class="font-bold">Lun</div>
+                        <div class="font-bold">Mar</div>
+                        <div class="font-bold">Mié</div>
+                        <div class="font-bold">Jue</div>
+                        <div class="font-bold">Vie</div>
+                        <div class="font-bold">Sáb</div>
+                    </div>
+                    <div id="calendar-days" class="grid grid-cols-7 gap-2 mt-2 text-center"></div>
+                </div>
+            </div>
+        </section>
+        <!-- Notificaciones -->
+        <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
+    </div>
+
+    <!-- Modal de Análisis de Estrategia (NUEVO) -->
+    <div id="strategy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+            <h3 id="modal-title" class="text-2xl font-bold text-indigo-600 mb-4"></h3>
+            <div id="modal-content" class="space-y-3 text-gray-700 text-left"></div>
+            <button id="close-modal-btn" class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition">Cerrar</button>
+        </div>
+    </div>
+    <script>
+        // --- CONSTANTE DE CONTRASEÑA ACTUALIZADA ---
+        const DELETE_PASSWORD = "1440"; // Contraseña actualizada de 505 a 1440
+
+        // --- VARIABLES GLOBALES ---
+        let prendas = [];
+        let html5QrCode;
+        let deferredPrompt;
+        let editingId = null;
+        let customTipoCount = 0;
+        let isPushEnabled = false;
+        let currentPhotoBase64 = null;
+        let isAudioPlaying = false; // Estado para el botón TTS
+
+        // --- REFERENCIAS AL MODAL ---
+        const strategyModal = document.getElementById('strategy-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => {
+                if (strategyModal) strategyModal.classList.add('hidden');
+            });
+        }
+
+        // --- FUNCIONES DE MODAL ---
+        function showModal(title, content) {
+            if (modalTitle) modalTitle.textContent = title;
+            if (modalContent) modalContent.innerHTML = content;
+            if (strategyModal) strategyModal.classList.remove('hidden');
+        }
+
+        // --- FUNCIÓN UTILITARIA PARA CONVERTIR ARCHIVO A BASE64 ---
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // --- MANEJO DE IMAGENES (REFACTORIZADO) ---
+        function setupImageHandlers(isEdit = false) {
+            const prefix = isEdit ? 'edit-' : '';
+            
+            // Referencias a los nuevos inputs y botones
+            const cameraInput = document.getElementById(`${prefix}camera-photo-input`);
+            const importInput = document.getElementById(`${prefix}import-photo-input`);
+            const cameraBtn = document.getElementById(`${prefix}open-camera-btn`);
+            const importBtn = document.getElementById(`${prefix}import-file-btn`);
+            
+            // Referencias a la previsualización y eliminación
+            const photoPreview = document.getElementById(`${prefix}photo-preview`);
+            const photoPreviewContainer = document.getElementById(`${prefix}photo-preview-container`);
+            const removePhotoBtn = document.getElementById(`${prefix}remove-photo-btn`);
+
+            // Validación de existencia de elementos (esencial para que los listeners no fallen)
+            if (!cameraInput || !importInput || !removePhotoBtn || !cameraBtn || !importBtn) return;
+
+            // 1. Lógica para manejar el cambio de archivo (desde cualquiera de los dos inputs)
+            const handleFileChange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    // Limpiar el otro input para evitar confusión de estado
+                    const otherInput = e.target === cameraInput ? importInput : cameraInput;
+                    otherInput.value = '';
+                    
+                    try {
+                        currentPhotoBase64 = await fileToBase64(file);
+                        if (photoPreview) photoPreview.src = currentPhotoBase64;
+                        if (photoPreviewContainer) photoPreviewContainer.classList.remove('hidden');
+                        showAppMessage("Imagen cargada con éxito.", 'success');
+                    } catch (error) {
+                        console.error("Error al convertir a Base64:", error);
+                        showAppMessage("Error al cargar la imagen.", 'error');
+                        currentPhotoBase64 = null;
+                        if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
+                    }
+                }
+            };
+            
+            // 2. Adjuntar listeners de click a los botones
+            cameraBtn.onclick = () => cameraInput.click();
+            importBtn.onclick = () => importInput.click();
+
+            // 3. Adjuntar listeners de cambio de archivo a los inputs
+            cameraInput.onchange = handleFileChange;
+            importInput.onchange = handleFileChange;
+
+            // 4. Lógica del botón de eliminar
+            removePhotoBtn.onclick = () => {
+                currentPhotoBase64 = null;
+                cameraInput.value = '';
+                importInput.value = '';
+                if (photoPreview) photoPreview.src = '';
+                if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
+            };
+        }
+
+
+        // --- INICIALIZACIÓN ---
+        function initializeApp() {
+            loadPrendasFromStorage();
+            setupHistoryDisplay();
+            setupPwaInstall();
+            requestNotificationPermission();
+            setupImageHandlers(false); // Configurar para Generación
+            setupImageHandlers(true); // Configurar para Edición
+            showAppMessage("Aplicación lista (datos locales).", 'success');
+            console.log("App inicializada con localStorage.");
+        }
+
+        // --- PWA INSTALACIÓN ---
+        function setupPwaInstall() {
+            const installBtn = document.getElementById('install-btn');
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (installBtn) installBtn.classList.remove('hidden');
+                console.log("Evento beforeinstallprompt disparado.");
+            });
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`Resultado de instalación: ${outcome}`);
+                        deferredPrompt = null;
+                        installBtn.classList.add('hidden');
+                    }
+                });
+            }
+            window.addEventListener('appinstalled', () => {
+                showAppMessage("¡Aplicación instalada con éxito!", 'success');
+                console.log("App instalada como PWA.");
+            });
+        }
+
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => {
+                        console.log("Service Worker registrado:", reg);
+                        initializePush(reg);
+                    })
+                    .catch(err => console.error("Error al registrar Service Worker:", err));
+            });
+        }
+
+        // --- LOCALSTORAGE FUNCTIONS ---
+        function loadPrendasFromStorage() {
+            try {
+                const stored = localStorage.getItem('qrPrendas');
+                if (stored) {
+                    prendas = JSON.parse(stored);
+                    console.log(`Cargadas ${prendas.length} prendas desde localStorage.`);
+                } else {
+                    prendas = [];
+                }
+            } catch (error) {
+                console.error("Error cargando localStorage:", error);
+                showAppMessage("Error al cargar datos locales. Usando memoria temporal.", 'error');
+                prendas = [];
+            }
+        }
+
+        function savePrendasToStorage() {
+            try {
+                localStorage.setItem('qrPrendas', JSON.stringify(prendas));
+                console.log(`Guardadas ${prendas.length} prendas en localStorage.`);
+            } catch (error) {
+                console.error("Error guardando localStorage:", error);
+                showAppMessage("Error al guardar datos. Se perderán al cerrar el navegador.", 'error');
+            }
+        }
+
+        // --- MANEJO DEL DOM Y NAVEGACIÓN ---
+        const mainMenu = document.getElementById('main-menu');
+        const generationSection = document.getElementById('generation-section');
+        const editSection = document.getElementById('edit-section');
+        const scannerSection = document.getElementById('scanner-section');
+        const historySection = document.getElementById('history-section');
+        const metricsSection = document.getElementById('metrics-section');
+        const reQrSection = document.getElementById('re-qr-section'); 
+        const qrForm = document.getElementById('qr-form');
+        const editForm = document.getElementById('edit-form');
+        const qrDisplay = document.getElementById('qr-display');
+        const reQrDisplay = document.getElementById('re-qr-display'); 
+        const scanResult = document.getElementById('scan-result');
+        const notSoldList = document.getElementById('not-sold-list');
+        const soldList = document.getElementById('sold-list');
+        const stockCount = document.getElementById('stock-count');
+        const soldSum = document.getElementById('sold-sum');
+        const speculationSum = document.getElementById('speculation-sum');
+        const searchBar = document.getElementById('search-bar');
+        const generateDescBtn = document.getElementById('generate-desc-btn');
+        const analyzeStockRiskBtn = document.getElementById('analyze-stock-risk-btn'); 
+        const geminiOutputSection = document.getElementById('gemini-output-section');
+        const geminiOutputTitle = document.getElementById('gemini-output-title'); 
+        const geminiOutput = document.getElementById('gemini-output');
+        const copyDescBtn = document.getElementById('copy-desc-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        const tipoRopaContainer = document.getElementById('tipo-ropa-container');
+        const editTipoRopaContainer = document.getElementById('edit-tipo-ropa-container');
+
+        const sections = [generationSection, editSection, scannerSection, historySection, metricsSection, reQrSection]; 
+
+        function showView(viewId) {
+            mainMenu.classList.add('hidden');
+            sections.forEach(section => section.classList.add('hidden'));
+            stopScanner();
+            if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+            if (strategyModal) strategyModal.classList.add('hidden'); 
+            if (viewId === 'main') {
+                mainMenu.classList.remove('hidden');
+            } else {
+                const targetSection = document.getElementById(viewId);
+                if (targetSection) targetSection.classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('show-generation-btn').addEventListener('click', () => {
+            if (qrForm) qrForm.reset();
+            if (qrDisplay) {
+                qrDisplay.innerHTML = '';
+                qrDisplay.classList.add('hidden');
+            }
+            
+            // Resetear la foto y el preview al cambiar a la sección de generación (UPDATED)
+            currentPhotoBase64 = null;
+            const cameraInput = document.getElementById('camera-photo-input'); // New ID
+            const importInput = document.getElementById('import-photo-input'); // New ID
+            const photoPreviewContainer = document.getElementById('photo-preview-container');
+            if (cameraInput) cameraInput.value = ''; // Clear new input
+            if (importInput) importInput.value = ''; // Clear new input
+            if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
+
+            if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+            resetCustomTipos();
+            showView('generation-section');
+        });
+
+        document.getElementById('show-scanner-btn').addEventListener('click', () => {
+            if (scanResult) scanResult.innerHTML = '';
+            showView('scanner-section');
+            startScanner();
+        });
+
+        document.getElementById('show-history-btn').addEventListener('click', () => {
+            setupHistoryDisplay();
+            showView('history-section');
+        });
+
+        document.getElementById('show-metrics-btn').addEventListener('click', () => {
+            setupMetricsChart();
+            setupCalendarMetrics(); 
+            showView('metrics-section');
+        });
+
+        document.querySelectorAll('.back-to-menu').forEach(btn => {
+            btn.addEventListener('click', () => showView('main'));
+        });
+
+        document.querySelectorAll('.back-to-history').forEach(btn => {
+            btn.addEventListener('click', () => {
+                showView('history-section');
+                resetEditCustomTipos();
+            });
+        });
+        
+        // --- LÓGICA DE ANÁLISIS ---
+        async function analyzeTrend(prendaId) {
+            const prenda = prendas.find(p => p.id === prendaId);
+            if (!prenda) {
+                showAppMessage("Prenda no encontrada para análisis de tendencia.", 'error');
+                return;
+            }
+
+            showAppMessage("✨ Buscando tendencias globales para el artículo...", 'info');
+            showModal("Análisis de Tendencia de Mercado", `<p class="text-center"><i class="fas fa-spinner fa-spin mr-2"></i> Buscando en tiempo real...</p>`);
+
+            const itemType = prenda.tipos_de_ropa.join(', ');
+            const queries = [`Tendencia de moda actual en Argentina para ${itemType}. ¿Es popular?`, `fashion trends Argentina ${itemType}`];
+            
+            const systemPrompt = `Eres un experto en tendencias de moda y retail de Buenos Aires, Argentina. Tu tarea es analizar los datos de búsqueda recientes para determinar si el tipo de artículo es tendencia actual. Responde con un análisis conciso y claro (2-3 frases), indicando si el artículo es: 'Tendencia Alta', 'Tendencia Media' o 'Tendencia Baja', y justifica brevemente tu conclusión basada en la información de búsqueda. La respuesta debe ser solo el análisis en español.`;
+
+            try {
+                const apiKey = ""; // Canvas provides this
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: queries[0] }] }],
+                    tools: [{ "google_search": { queries: queries } }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                const generatedText = candidate?.content?.parts?.[0]?.text || "No se pudo generar el análisis de tendencia.";
+
+                let sourcesHtml = '';
+                const groundingMetadata = candidate?.groundingMetadata;
+                if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                    const sources = groundingMetadata.groundingAttributions
+                        .map(attr => `<a href="${attr.web?.uri}" target="_blank" class="text-xs text-indigo-500 hover:underline">${attr.web?.title || 'Fuente sin título'}</a>`)
+                        .join('<br>');
+                    sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 text-left"><h5 class="text-sm font-semibold text-gray-600 mb-1">Fuentes:</h5>${sources}</div>`;
+                }
+
+                const htmlContent = `
+                    <p class="font-bold">Análisis para Tipo de Prenda: ${itemType}</p>
+                    <p>${generatedText}</p>
+                    ${sourcesHtml}
+                `;
+                
+                showModal("Análisis de Tendencia de Mercado", htmlContent);
+                showAppMessage("Análisis de tendencia generado.", 'success');
+
+            } catch (error) {
+                console.error("Error al llamar a Gemini API para análisis de tendencia:", error);
+                showModal("Error de Análisis de Tendencia", `<p>No se pudo completar el análisis de IA. Por favor, revise su conexión o reintente.</p><p class="text-sm text-red-500">${error.message}</p>`);
+            }
+        }
+
+        async function analyzeStrategy(prendaId) {
+            const prenda = prendas.find(p => p.id === prendaId);
+            if (!prenda) {
+                showAppMessage("Prenda no encontrada para análisis.", 'error');
+                return;
+            }
+
+            const díasSinEscanear = Math.floor((new Date() - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
+            
+            showAppMessage("✨ Analizando estrategia con IA...", 'info');
+            showModal("Análisis de Estrategia de Stock", `<p class="text-center"><i class="fas fa-spinner fa-spin mr-2"></i> Generando recomendación...</p>`);
+
+            const prompt = `
+                Actúa como un analista de inventario y estratega de precios para una pequeña boutique de moda en Argentina. 
+                Analiza los siguientes datos de un artículo y proporciona una recomendación clara y accionable.
+                El análisis debe constar de dos secciones, tituladas "### Análisis de Situación" y "### Recomendación de Estrategia", cada una con un párrafo corto y conciso.
+                Utiliza el idioma español de Argentina.
+
+                Datos del Artículo:
+                - Estado: En Stock (No Vendido)
+                - Precio Efectivo: $${prenda.precioEfectivo} ARS
+                - Precio de Lista: $${prenda.precioLista} ARS
+                - Talle: ${prenda.talle}
+                - Tipo: ${prenda.tipos_de_ropa.join(', ')}
+                - Descripción: ${prenda.descripcion || 'Sin descripción detallada'}
+                - Días en Stock (Sin Escanear/Vender): ${díasSinEscanear} días.
+            `;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                };
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
+                }
+                const result = await response.json();
+                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar el análisis. Intente de nuevo.";
+                
+                // Convertir Markdown a HTML básico para el modal
+                const htmlContent = generatedText.split('\n').map(line => {
+                    if (line.startsWith('### ')) return `<h4 class="font-semibold text-gray-900 mt-4">${line.substring(4)}</h4>`;
+                    if (line.trim() === '') return '';
+                    return `<p>${line}</p>`;
+                }).join('');
+                
+                showModal("Análisis de Estrategia de Stock para " + (prenda.tipos_de_ropa.join(' / ') || 'Prenda'), htmlContent);
+                showAppMessage("Estrategia generada.", 'success');
+
+            } catch (error) {
+                console.error("Error al llamar a Gemini API para análisis:", error);
+                showModal("Error de Análisis", `<p>No se pudo completar el análisis de IA. Por favor, revise su conexión o reintente.</p><p class="text-sm text-red-500">${error.message}</p>`);
+            }
+        }
+        
+        // --- LÓGICA DE GENERACIÓN DE DESCRIPCIÓN INTELIGENTE (EXISTENTE) ---
+        if (generateDescBtn) {
+            generateDescBtn.addEventListener('click', async () => {
+                const precioEfectivo = document.getElementById('precio-efectivo')?.value;
+                const precioLista = document.getElementById('precio-lista')?.value;
+                const talle = document.getElementById('talle')?.value;
+                const descripcion = document.getElementById('descripcion')?.value;
+                const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+                if (!precioEfectivo || !precioLista || !talle || tiposDeRopa.length === 0) {
+                    showAppMessage("Completa Precio Efectivo, Precio de Lista, Talle y Tipo de Ropa para generar la descripción.", 'error');
+                    return;
+                }
+                generateDescBtn.disabled = true;
+                generateDescBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Generando...`;
+                const prompt = `
+                    Actúa como un experto en marketing de moda para redes sociales en Argentina.
+                    Crea una descripción atractiva y corta (2-3 frases) para una prenda de ropa y una idea creativa para una publicación en Instagram (sin hashtags).
+                    La respuesta debe estar en español de Argentina y usar formato Markdown con los títulos "### Descripción del Producto" y "### Idea para Red Social".
+                    Detalles de la prenda:
+                    - Tipo: ${tiposDeRopa.join(', ')}
+                    - Talle: ${talle}
+                    - Precio Efectivo: $${precioEfectivo} ARS
+                    - Precio de Lista: $${precioLista} ARS
+                    - Descripción: ${descripcion || 'Ninguna'}
+                `;
+                try {
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                    };
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
+                    }
+                    const result = await response.json();
+                    const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (generatedText) {
+                        if (geminiOutputTitle) geminiOutputTitle.textContent = "Sugerencia de la IA";
+                        geminiOutput.value = generatedText;
+                        geminiOutputSection.classList.remove('hidden');
+                        showAppMessage("Descripción generada con éxito.", 'success');
+                    } else {
+                        throw new Error("La respuesta de la API estaba vacía.");
+                    }
+                } catch (error) {
+                    console.error("Error al llamar a Gemini API:", error);
+                    showAppMessage(`Error al generar descripción: ${error.message}`, 'error');
+                } finally {
+                    generateDescBtn.disabled = false;
+                    generateDescBtn.innerHTML = `✨ Generar Descripción Inteligente`;
+                }
+            });
+        }
+        
+        // --- LÓGICA: ANÁLISIS DE RIESGO DE STOCK (GEMINI API) ---
+        if (analyzeStockRiskBtn) {
+            analyzeStockRiskBtn.addEventListener('click', async () => {
+                const talle = document.getElementById('talle')?.value;
+                const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+
+                if (!talle || tiposDeRopa.length === 0) {
+                    showAppMessage("Completa Talle y Tipo de Ropa para analizar el riesgo.", 'error');
+                    return;
+                }
+
+                analyzeStockRiskBtn.disabled = true;
+                analyzeStockRiskBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Analizando...`;
+                
+                // 1. Calculate Local Statistics
+                let totalOfSameType = 0;
+                let soldOfSameType = 0;
+                
+                // Find items that share at least one primary type AND the same size
+                const targetTypes = tiposDeRopa.map(t => t.toLowerCase().trim());
+                const targetTalle = talle.toLowerCase().trim();
+
+                prendas.forEach(p => {
+                    const pTalle = (p.talle || '').toLowerCase().trim();
+                    const pTypes = (p.tipos_de_ropa || []).map(t => t.toLowerCase().trim());
+                    
+                    // Check if item matches size AND any of the selected types
+                    const typeMatch = pTypes.some(pType => targetTypes.includes(pType));
+                    
+                    if (typeMatch && pTalle === targetTalle) {
+                        totalOfSameType++;
+                        if (p.ultimo_escaneo) {
+                            soldOfSameType++;
+                        }
+                    }
+                });
+
+                const inStockOfSameType = totalOfSameType - soldOfSameType;
+                
+                const localStats = `
+                    Estadísticas locales para artículos de tipo "${tiposDeRopa.join(' / ')}" en talle "${talle}":
+                    - Total de unidades registradas (vendidas + en stock): ${totalOfSameType}
+                    - Unidades vendidas (escaneadas): ${soldOfSameType}
+                    - Unidades actualmente en stock (no vendidas): ${inStockOfSameType}
+                `;
+                
+                const prompt = `
+                    Actúa como un analista de riesgo de inventario experto en moda. 
+                    Basado en la siguiente información, genera un análisis de riesgo de stock para este tipo de artículo. 
+                    El resumen debe ser de 2 a 3 frases y debe concluir con una calificación de riesgo: "Riesgo BAJO", "Riesgo MEDIO" o "Riesgo ALTO". 
+                    Justifica tu calificación de riesgo basándote en la proporción de stock vs. vendido. Si el total es 0, indica que no hay datos para analizar.
+                    
+                    ${localStats}
+                `;
+
+                try {
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                    };
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Error en la API de Gemini: ${response.status} - ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar el análisis de riesgo. Intente de nuevo.";
+                    
+                    // Display result
+                    if (geminiOutputTitle) geminiOutputTitle.textContent = "Resumen de Riesgo de Stock (IA)";
+                    geminiOutput.value = generatedText;
+                    geminiOutputSection.classList.remove('hidden');
+                    showAppMessage("Análisis de riesgo generado.", 'success');
+
+                } catch (error) {
+                    console.error("Error al llamar a Gemini API para análisis de riesgo:", error);
+                    if (geminiOutputTitle) geminiOutputTitle.textContent = "Resumen de Riesgo de Stock (IA)";
+                    geminiOutput.value = `Error: ${error.message}. No se pudo contactar a la IA.`;
+                    geminiOutputSection.classList.remove('hidden');
+                    showAppMessage(`Error al generar análisis de riesgo: ${error.message}`, 'error');
+                } finally {
+                    analyzeStockRiskBtn.disabled = false;
+                    analyzeStockRiskBtn.innerHTML = `✨ Analizar Riesgo de Stock`;
+                }
+            });
+        }
+        
+        if (copyDescBtn) {
+            copyDescBtn.addEventListener('click', () => {
+                geminiOutput.select();
+                document.execCommand('copy');
+                showAppMessage("Texto copiado al portapapeles.", 'success');
+            });
+        }
+        
+        // --- TTS UTILITIES ---
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate) {
+            const numChannels = 1;
+            const bytesPerSample = 2; // Int16Array
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcm16.length * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            /* RIFF identifier */
+            view.setUint32(0, 0x52494646, false); // 'RIFF'
+            /* file length */
+            view.setUint32(4, 36 + dataSize, true);
+            /* RIFF type */
+            view.setUint32(8, 0x57415645, false); // 'WAVE'
+            /* format chunk identifier */
+            view.setUint32(12, 0x666d7420, false); // 'fmt '
+            /* format chunk length */
+            view.setUint32(16, 16, true);
+            /* sample format (raw) */
+            view.setUint16(20, 1, true); // PCM = 1
+            /* channel count */
+            view.setUint16(22, numChannels, true);
+            /* sample rate */
+            view.setUint32(24, sampleRate, true);
+            /* byte rate (sample rate * block align) */
+            view.setUint32(28, byteRate, true);
+            /* block align (channel count * bytes per sample) */
+            view.setUint16(32, blockAlign, true);
+            /* bits per sample */
+            view.setUint16(34, 16, true); // 16 bits = 2 bytes
+            /* data chunk identifier */
+            view.setUint32(36, 0x64617461, false); // 'data'
+            /* data chunk length */
+            view.setUint32(40, dataSize, true);
+
+            // Write PCM data
+            let offset = 44;
+            for (let i = 0; i < pcm16.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+        
+        async function textToSpeech(prendaId) {
+            if (isAudioPlaying) {
+                showAppMessage("Ya se está generando audio. Por favor, espere.", 'info');
+                return;
+            }
+
+            const prenda = prendas.find(p => p.id === prendaId);
+            const ttsButton = document.getElementById(`tts-btn-${prendaId}`);
+            if (!prenda || !ttsButton) return;
+
+            // 1. Preparar el texto
+            const textToSay = `Atención. Prenda registrada: ${prenda.tipos_de_ropa.join(', ')}. Talle: ${prenda.talle}. Precio en efectivo: ${prenda.precioEfectivo} pesos argentinos. Precio de lista: ${prenda.precioLista} pesos. Descripción adicional: ${prenda.descripcion || 'No se proporcionó descripción'}.`;
+
+            isAudioPlaying = true;
+            ttsButton.disabled = true;
+            ttsButton.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Generando Audio...`;
+            showAppMessage("Generando audio de los detalles...", 'info');
+            
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: textToSay }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Kore" } // Voz Kore para tono firme
+                        }
+                    },
+                },
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error en la API de TTS: ${response.status} - ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 16000; 
+                    
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+
+                    audio.onended = () => {
+                        isAudioPlaying = false;
+                        ttsButton.disabled = false;
+                        ttsButton.innerHTML = `<i class="fas fa-volume-up mr-2"></i> Escuchar Detalles`;
+                        URL.revokeObjectURL(audioUrl);
+                        showAppMessage("Reproducción finalizada.", 'success');
+                    };
+                    showAppMessage("Reproduciendo detalles...", 'success');
+                } else {
+                    throw new Error("Respuesta de audio no válida o formato incorrecto.");
+                }
+
+            } catch (error) {
+                console.error("Error al generar TTS:", error);
+                showAppMessage(`Error de audio: ${error.message}`, 'error');
+                isAudioPlaying = false;
+                ttsButton.disabled = false;
+                ttsButton.innerHTML = `<i class="fas fa-volume-up mr-2"></i> Error de Audio`;
+            }
+        }
+        // --- FIN TTS UTILITIES ---
+
+        // --- LÓGICA DE GENERACIÓN DE QR (ACTUALIZADA PARA INCLUIR IMAGEN Y BOTÓN TTS) ---
+        if (qrForm) {
+            qrForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(qrForm);
+                const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
+                if (tiposDeRopa.length === 0) {
+                    showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+                    return;
+                }
+                const prendaId = crypto.randomUUID();
+                const prendaData = {
+                    id: prendaId,
+                    precioEfectivo: formData.get('precioEfectivo'),
+                    precioLista: formData.get('precioLista'),
+                    talle: formData.get('talle'),
+                    tipos_de_ropa: tiposDeRopa,
+                    vendedora: formData.get('vendedora') || '',
+                    descripcion: formData.get('descripcion') || '',
+                    fecha_creacion: new Date().toISOString(),
+                    ultimo_escaneo: null,
+                    dias_transcurridos: 0,
+                    fotoBase64: currentPhotoBase64 
+                };
+                try {
+                    console.log("[Registro] Guardando prenda con ID:", prendaId);
+                    prendas.push(prendaData);
+                    savePrendasToStorage();
+                    console.log("[Registro] Prenda guardada en localStorage.");
+                    showAppMessage("Prenda guardada localmente con éxito.", 'success');
+                    generateQrCode(prendaId, qrDisplay); // Usamos qrDisplay para la sección de Generación
+                    sendPushNotification("Nueva prenda registrada", `Se ha generado un QR con ID: ${prendaId}`);
+                    qrForm.reset();
+                    resetCustomTipos();
+                    
+                    // Limpiar estado de foto después de guardar
+                    currentPhotoBase64 = null;
+                    const cameraInput = document.getElementById('camera-photo-input'); 
+                    const importInput = document.getElementById('import-photo-input'); 
+                    const photoPreviewContainer = document.getElementById('photo-preview-container');
+                    if (cameraInput) cameraInput.value = '';
+                    if (importInput) importInput.value = '';
+                    if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
+
+                    if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
+                } catch (error) {
+                    console.error("[Registro] Error al guardar prenda:", error);
+                    showAppMessage(`Error al guardar la prenda: ${error.message}`, 'error');
+                }
+            });
+        }
+
+        // Función unificada para generar y mostrar el QR (CORRECCIÓN CLAVE AQUÍ)
+        function generateQrCode(prendaId, containerElement) {
+            if (!containerElement) return;
+
+            // Limpiar el contenedor anterior y mostrar
+            containerElement.innerHTML = '';
+            containerElement.classList.remove('hidden');
+
+            const prenda = prendas.find(p => p.id === prendaId);
+            if (!prenda) return;
+
+            console.log(`[QR Detalle] Generando QR para ID: ${prendaId} en contenedor: ${containerElement.id}`);
+
+            // 1. Crear y establecer el HTML (esto inserta todos los elementos con IDs en el DOM)
+            const imageHtml = prenda.fotoBase64 ? 
+                `<div class="mb-4 flex justify-center">
+                    <img src="${prenda.fotoBase64}" alt="Foto de la Prenda" class="w-full max-h-48 object-contain rounded-lg shadow-md border border-gray-300">
+                </div>` : 
+                '';
+
+            containerElement.innerHTML = `
+                ${imageHtml}
+                <h3 class="font-bold text-lg mb-4">Código QR Generado para ID: ${prendaId.substring(0, 8)}...</h3>
+                <div class="flex justify-center items-center gap-6 flex-wrap">
+                    <div id="qrcode-canvas-${prendaId}" class="flex-shrink-0"></div>
+                    <div class="mt-4 text-gray-700 text-left mx-auto max-w-sm flex-grow">
+                        <p><strong>Precio Efectivo:</strong> $${prenda.precioEfectivo}</p>
+                        <p><strong>Precio de Lista:</strong> $${prenda.precioLista}</p>
+                        <p><strong>Talle:</strong> ${prenda.talle}</p>
+                        <p><strong>Tipo de Ropa:</strong> ${prenda.tipos_de_ropa.join(', ')}</p>
+                        <p><strong>Descripción:</strong> ${prenda.descripcion || 'Sin descripción'}</p>
+                    </div>
+                </div>
+                
+                <!-- BOTÓN TTS -->
+                <div class="mt-6 flex justify-center">
+                    <button id="tts-btn-${prendaId}" data-id="${prendaId}" class="qr-action-btn py-2 px-4 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition" ${isAudioPlaying ? 'disabled' : ''}>
+                        <i class="fas fa-volume-up mr-2"></i> Escuchar Detalles
+                    </button>
+                </div>
+
+                <p class="text-sm text-gray-500 mt-4 mb-2 font-semibold">Opciones de acción:</p>
+                <div class="flex flex-col md:flex-row justify-center gap-3 mt-2">
+                    <button id="download-btn-${prendaId}" data-id="${prendaId}" class="qr-action-btn py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
+                    <button id="print-btn-${prendaId}" data-id="${prendaId}" class="qr-action-btn py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-print mr-2"></i>Imprimir</button>
+                    <button id="share-btn-${prendaId}" data-id="${prendaId}" class="qr-action-btn py-2 px-4 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition"><i class="fas fa-share-alt mr-2"></i>Compartir</button>
+                </div>`;
+
+            // 2. Generar el QR CODE
+            const qrCanvasContainer = document.getElementById(`qrcode-canvas-${prendaId}`);
+
+            if (qrCanvasContainer) {
+                try {
+                    new QRCode(qrCanvasContainer, {
+                        text: prendaId,
+                        width: 180,
+                        height: 180
+                    });
+                    console.log("[QR Detalle] QR generado en canvas.");
+                } catch (error) {
+                    console.error("[QR Detalle] Error al generar QR:", error);
+                    qrCanvasContainer.innerHTML = '<p class="text-red-500">Error al generar QR</p>';
+                    showAppMessage("Error al generar el código QR visualmente.", 'error');
+                }
+            } else {
+                 console.error("[QR Detalle] Error: El contenedor del QR no se encontró en el DOM.");
+                 showAppMessage("Error: Elemento de visualización de QR no encontrado.", 'error');
+            }
+
+            // 3. Adjuntar los listeners DE FORMA ASÍNCRONA (Garantiza que el DOM está listo)
+            setTimeout(() => {
+                const ttsBtn = document.getElementById(`tts-btn-${prendaId}`);
+                const downloadBtn = document.getElementById(`download-btn-${prendaId}`);
+                const printBtn = document.getElementById(`print-btn-${prendaId}`);
+                const shareBtn = document.getElementById(`share-btn-${prendaId}`);
+
+                if (ttsBtn) ttsBtn.addEventListener('click', () => textToSpeech(prendaId));
+                if (downloadBtn) downloadBtn.addEventListener('click', () => downloadCode(prendaId));
+                if (printBtn) printBtn.addEventListener('click', () => printCode(prendaId));
+                if (shareBtn) shareBtn.addEventListener('click', () => shareQrImage(prendaId));
+
+                console.log("[QR Detalle] Listeners de acción adjuntados.");
+            }, 0); // La clave es 0ms para diferir hasta el final del ciclo.
+        }
+
+
+        function getQrCanvas(prendaId) {
+            // Busca el canvas dentro del contenedor dinámico por su ID único
+            const canvas = document.querySelector(`#qrcode-canvas-${prendaId} canvas`);
+            if (!canvas) {
+                console.error(`[Acción] No se encontró el canvas para el ID ${prendaId}.`);
+            }
+            return canvas;
+        }
+
+        // *** LÓGICA DE DESCARGA - FOTO EXCLUIDA ***
+        function downloadCode(prendaId) {
+            const prenda = prendas.find(p => p.id === prendaId);
+            const canvas = getQrCanvas(prendaId);
+            if (!canvas || !prenda) {
+                showAppMessage("Error: No se encontró el QR para descargar. Asegúrate de que el QR esté visible.", 'error');
+                return;
+            }
+            // Crear un canvas combinado para incluir SOLO el QR y el texto
+            const combinedCanvas = document.createElement('canvas');
+            const ctx = combinedCanvas.getContext('2d');
+            // Dimensiones fijas para QR + texto
+            combinedCanvas.width = canvas.width + 50; 
+            combinedCanvas.height = canvas.height + 140; 
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
+            
+            // 1. Dibujar QR centrado (empezando arriba)
+            const qrX = (combinedCanvas.width - canvas.width) / 2;
+            let currentY = 10;
+            ctx.drawImage(canvas, qrX, currentY);
+            currentY += canvas.height + 30;
+
+            // 2. Dibujar Texto
+            ctx.fillStyle = '#000000';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            const infoText = `ID: ${prendaId.substring(0, 8)}...\nPrecio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
+            const lines = infoText.split('\n');
+            lines.forEach((line, index) => {
+                ctx.fillText(line, combinedCanvas.width / 2, currentY + index * 20);
+            });
+            
+            const link = document.createElement('a');
+            link.href = combinedCanvas.toDataURL('image/png');
+            link.download = `qr-prenda-${prendaId}.png`;
+            link.click();
+            showAppMessage("QR descargado (sin foto).", 'success');
+        }
+
+        // *** LÓGICA DE IMPRESIÓN - FOTO EXCLUIDA ***
+        function printCode(prendaId) {
+            const prenda = prendas.find(p => p.id === prendaId);
+            const qrCanvas = getQrCanvas(prendaId);
+            if (!qrCanvas || !prenda) {
+                showAppMessage("Error: No se encontró el QR para imprimir. Asegúrate de que el QR esté visible.", 'error');
+                return;
+            }
+            // La imagen HTML se ELIMINA para la impresión
+            const infoText = `Precio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}\nDescripción: ${prenda.descripcion || 'Sin descripción'}`;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html><head><title>Imprimir QR</title></head>
+                <body style="text-align:center; margin-top: 50px;">
+                    <img src="${qrCanvas.toDataURL()}" style="max-width: 100%; width: 180px;">
+                    <p style="font-size: 14px; margin-top: 20px; white-space: pre-line;">${infoText}</p>
+                </body></html>`);
+            printWindow.document.close();
+            printWindow.onload = () => printWindow.print();
+        }
+
+        // *** LÓGICA DE COMPARTIR - FOTO EXCLUIDA (Solo comparte el QR Canvas y el texto) ***
+        async function shareQrImage(prendaId) {
+            const prenda = prendas.find(p => p.id === prendaId);
+            const canvas = getQrCanvas(prendaId);
+            if (!canvas || !prenda) {
+                showAppMessage("Error: No se encontró el QR para compartir. Asegúrate de que el QR esté visible.", 'error');
+                return;
+            }
+            try {
+                // Para compartir se usa solo la imagen QR y el texto informativo
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const infoText = `Detalles de la Prenda:\nPrecio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}\nDescripción: ${prenda.descripcion || 'Sin descripción'}`;
+                const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
+                const shareData = {
+                    files: [file],
+                    title: 'QR de Prenda',
+                    text: infoText,
+                };
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    showAppMessage('¡Compartido con éxito!', 'success');
+                } else {
+                    showAppMessage('No se puede compartir la imagen en este navegador. Intenta descargar y compartir manualmente.', 'info');
+                }
+            } catch (err) {
+                console.error("Error al compartir imagen:", err);
+                showAppMessage('Error al compartir la imagen.', 'error');
+            }
+        }
+
+        // --- LÓGICA DE ESCANEO ---
+        function startScanner() {
+            if (!document.getElementById('reader')) return;
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                .catch(err => {
+                    console.error("Error al iniciar escáner:", err);
+                    showAppMessage("No se pudo iniciar la cámara. Revisa permisos.", 'error');
+                });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.log("Error al detener escáner:", err));
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            stopScanner();
+            const readerDiv = document.getElementById('reader');
+            if (readerDiv) readerDiv.style.display = 'none';
+            showAppMessage("Código escaneado. Buscando datos locales...", "info");
+            const prendaEncontrada = prendas.find(p => p.id === decodedText);
+            if (prendaEncontrada) {
+                if (!prendaEncontrada.ultimo_escaneo) {
+                    const diasTranscurridos = Math.floor((new Date() - new Date(prendaEncontrada.fecha_creacion)) / (1000 * 60 * 60 * 24));
+                    prendaEncontrada.dias_transcurridos = diasTranscurridos;
+                }
+                prendaEncontrada.ultimo_escaneo = new Date().toISOString();
+                savePrendasToStorage();
+                displayScannedData(prendaEncontrada);
+                sendPushNotification("Prenda escaneada", `Se ha escaneado un QR con ID: ${decodedText}`);
+                showAppMessage("Prenda encontrada en tu historial local.", "success");
+            } else {
+                if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Prenda no encontrada en tu historial local.</div>`;
+                showAppMessage("Prenda no encontrada.", "error");
+            }
+            const scanAgainBtn = document.createElement('button');
+            scanAgainBtn.innerHTML = `<i class="fas fa-qrcode mr-2"></i> Escanear de nuevo`;
+            scanAgainBtn.className = 'w-full mt-4 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition';
+            scanAgainBtn.onclick = () => {
+                if (scanResult) scanResult.innerHTML = '';
+                if (readerDiv) readerDiv.style.display = 'block';
+                startScanner();
+            };
+            if (scanResult) scanResult.appendChild(scanAgainBtn);
+        }
+
+        function onScanFailure(error) {
+            // Silencioso
+        }
+
+        function displayScannedData(data) {
+            const fechaCreacion = new Date(data.fecha_creacion).toLocaleString('es-AR');
+            const fechaEscaneo = data.ultimo_escaneo ? new Date(data.ultimo_escaneo).toLocaleString('es-AR') : 'No escaneada aún';
+            const diasTranscurridos = data.dias_transcurridos || (data.ultimo_escaneo ? Math.floor((new Date(data.ultimo_escaneo) - new Date(data.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0);
+            
+            // Muestra imagen si está disponible (SÍ debe aparecer en la vista de escaneo)
+            const imageHtml = data.fotoBase64 ? 
+                `<div class="mb-4 flex justify-center"><img src="${data.fotoBase64}" alt="Foto de la Prenda" class="w-full max-h-48 object-contain rounded-lg shadow-md border border-gray-300"></div>` : 
+                '';
+
+            if (scanResult) {
+                scanResult.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-indigo-500">
+                        ${imageHtml}
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalle de la Prenda</h2>
+                        <div class="space-y-2 text-gray-700">
+                            <p><strong>ID:</strong> ${data.id}</p>
+                            <p><strong>Precio Efectivo:</strong> $${data.precioEfectivo}</p>
+                            <p><strong>Precio de Lista:</strong> $${data.precioLista}</p>
+                            <p><strong>Talle:</strong> ${data.talle}</p>
+                            <p><strong>Tipo de Ropa:</strong> ${data.tipos_de_ropa.join(', ')}</p>
+                            <p><strong>Vendedora:</strong> ${data.vendedora || 'No especificada'}</p>
+                            <p><strong>Descripción:</strong> ${data.descripcion || 'Sin descripción'}</p>
+                            <p><strong>Fecha de Registro:</strong> ${fechaCreacion}</p>
+                            <p><strong>Último Escaneo:</strong> ${fechaEscaneo}</p>
+                            <p><strong>Días transcurridos:</strong> ${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''}</p>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        // --- LÓGICA DE HISTORIAL (ACTUALIZADA PARA MOSTRAR IMAGEN Y QR) ---
+        function setupHistoryDisplay() {
+            if (!notSoldList || !soldList || !stockCount || !soldSum || !speculationSum || !searchBar) return;
+            console.log("Actualizando historial desde localStorage. Prendas:", prendas.length);
+            if (prendas.length === 0) {
+                notSoldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas no vendidas.</p>';
+                soldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas vendidas.</p>';
+                stockCount.textContent = 'Stock actual: 0';
+                soldSum.textContent = 'Vendidos: $0';
+                speculationSum.textContent = 'Especulación: $0';
+                return;
+            }
+            const searchTerm = searchBar.value.toLowerCase();
+            const filteredPrendas = prendas.filter(p =>
+                p.id.toLowerCase().includes(searchTerm) ||
+                (p.talle || '').toLowerCase().includes(searchTerm) ||
+                (p.tipos_de_ropa || []).join(' ').toLowerCase().includes(searchTerm) ||
+                (p.vendedora || '').toLowerCase().includes(searchTerm) ||
+                (p.descripcion || '').toLowerCase().includes(searchTerm)
+            );
+            const notSold = filteredPrendas.filter(p => !p.ultimo_escaneo);
+            const sold = filteredPrendas.filter(p => p.ultimo_escaneo);
+            const stock = notSold.length;
+            stockCount.textContent = `Stock actual: ${stock}`;
+            const totalNotSold = notSold.reduce((sum, p) => sum + parseFloat(p.precioEfectivo || 0), 0);
+            const totalSold = sold.reduce((sum, p) => sum + parseFloat(p.precioEfectivo || 0), 0);
+            const speculation = totalNotSold - totalSold;
+            soldSum.textContent = `Vendidos: $${totalSold.toFixed(2)}`;
+            speculationSum.textContent = `Especulación: $${speculation.toFixed(2)}`;
+            notSoldList.innerHTML = '';
+            notSold.forEach((prenda) => {
+                const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
+                const diasTranscurridos = Math.floor((new Date() - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
+                
+                // Preparar HTML para la miniatura de la foto
+                const photoThumbHtml = prenda.fotoBase64 ? 
+                    `<img src="${prenda.fotoBase64}" alt="Prenda" class="w-12 h-12 object-cover rounded-lg">` : 
+                    `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"><i class="fas fa-camera text-lg text-gray-500"></i></div>`;
+
+                const item = document.createElement('div');
+                item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-start'; // Usar flex para alinear visual y texto
+                item.innerHTML = `
+                    <!-- VISUAL BLOCK: Photo and QR -->
+                    <div class="flex flex-col items-center mr-4 flex-shrink-0 space-y-1">
+                        ${photoThumbHtml}
+                        <!-- QR Placeholder (45x45px para ser compacto) -->
+                        <div id="qr-thumb-${prenda.id}" class="w-[45px] h-[45px] border border-gray-300 rounded-sm p-[1px]"></div>
+                    </div>
+                    
+                    <!-- DETAILS AND ACTIONS BLOCK -->
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-center flex-wrap">
+                            <div class="flex-grow min-w-[200px] mb-2 md:mb-0">
+                                <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                                <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} sin escanear)</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="view-qr-btn bg-indigo-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-600" title="Ver QR, Foto y Opciones de Impresión"><i class="fas fa-qrcode"></i> QR</button>
+                                <button class="trend-analyze-btn bg-pink-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-pink-600">✨ Tendencia</button>
+                                <button class="strategy-analyze-btn bg-purple-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-purple-600">✨ Estrategia</button>
+                                <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
+                                <button class="delete-btn bg-red-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-600">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 1. Agregar el elemento a la lista
+                notSoldList.appendChild(item); 
+                
+                // 2. Generar el QR CODE justo después de agregarlo al DOM
+                try {
+                    new QRCode(document.getElementById(`qr-thumb-${prenda.id}`), {
+                        text: prenda.id,
+                        width: 45, // Tamaño pequeño para el historial
+                        height: 45
+                    });
+                } catch (e) {
+                    console.error("Error generating QR thumbnail:", e);
+                }
+
+                item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
+                item.querySelector('.delete-btn').addEventListener('click', () => {
+                    // Usar prompt para la contraseña
+                    const password = prompt("Ingrese la contraseña para eliminar:");
+                    if (password === DELETE_PASSWORD) { // Contraseña actualizada
+                        deletePrenda(prenda.id);
+                    } else {
+                        showAppMessage("Contraseña incorrecta.", 'error');
+                    }
+                });
+                // Listener para la función de Análisis de Estrategia
+                item.querySelector('.strategy-analyze-btn').addEventListener('click', () => analyzeStrategy(prenda.id));
+                // Listener para la nueva función de Análisis de Tendencia
+                item.querySelector('.trend-analyze-btn').addEventListener('click', () => analyzeTrend(prenda.id));
+                // Botón para ver QR
+                item.querySelector('.view-qr-btn').addEventListener('click', () => viewQr(prenda.id)); 
+            });
+            
+            soldList.innerHTML = '';
+            sold.forEach((prenda) => {
+                const fecha = new Date(prenda.fecha_creacion).toLocaleString('es-AR');
+                const diasTranscurridos = prenda.dias_transcurridos || Math.floor((new Date(prenda.ultimo_escaneo) - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
+                
+                // Preparar HTML para la miniatura de la foto
+                const photoThumbHtml = prenda.fotoBase64 ? 
+                    `<img src="${prenda.fotoBase64}" alt="Prenda" class="w-12 h-12 object-cover rounded-lg">` : 
+                    `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"><i class="fas fa-camera text-lg text-gray-500"></i></div>`;
+                
+                const item = document.createElement('div');
+                item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-start'; // Usar flex para alinear foto y texto
+                item.innerHTML = `
+                    <!-- VISUAL BLOCK: Photo and QR -->
+                    <div class="flex flex-col items-center mr-4 flex-shrink-0 space-y-1">
+                        ${photoThumbHtml}
+                        <!-- QR Placeholder (45x45px para ser compacto) -->
+                        <div id="qr-thumb-${prenda.id}" class="w-[45px] h-[45px] border border-gray-300 rounded-sm p-[1px]"></div>
+                    </div>
+
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-center flex-wrap">
+                            <div class="flex-grow min-w-[200px] mb-2 md:mb-0">
+                                <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                                <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} hasta escanear)</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="view-qr-btn bg-indigo-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-600" title="Ver QR, Foto y Opciones de Impresión"><i class="fas fa-qrcode"></i> QR</button>
+                                <button class="edit-btn bg-yellow-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-yellow-600">Editar</button>
+                                <button class="delete-btn bg-red-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-600">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 1. Agregar el elemento a la lista
+                soldList.appendChild(item);
+
+                // 2. Generar el QR CODE justo después de agregarlo al DOM
+                try {
+                    new QRCode(document.getElementById(`qr-thumb-${prenda.id}`), {
+                        text: prenda.id,
+                        width: 45, // Tamaño pequeño para el historial
+                        height: 45
+                    });
+                } catch (e) {
+                    console.error("Error generating QR thumbnail:", e);
+                }
+
+
+                item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
+                item.querySelector('.delete-btn').addEventListener('click', () => {
+                    const password = prompt("Ingrese la contraseña para eliminar:");
+                    if (password === DELETE_PASSWORD) { // Contraseña actualizada
+                        deletePrenda(prenda.id);
+                    } else {
+                        showAppMessage("Contraseña incorrecta.", 'error');
+                    }
+                });
+                // Botón para ver QR (sin análisis para artículos vendidos)
+                item.querySelector('.view-qr-btn').addEventListener('click', () => viewQr(prenda.id));
+            });
+            searchBar.removeEventListener('input', setupHistoryDisplay); // Evitar duplicación de listeners
+            searchBar.addEventListener('input', setupHistoryDisplay);
+        }
+
+        // --- VER QR DESDE EL HISTORIAL (MODIFICADO) ---
+        function viewQr(id) {
+            console.log(`[DEBUG] Llamando viewQr para ID: ${id}`); // Log para depuración
+            const prenda = prendas.find(p => p.id === id);
+            if (!prenda) {
+                showAppMessage("Prenda no encontrada.", "error");
+                return;
+            }
+            showView('re-qr-section');
+            generateQrCode(id, reQrDisplay); // Usamos reQrDisplay para el historial
+            showAppMessage("Visualizando QR y opciones de impresión/descarga.", "info"); // Mensaje de feedback
+        }
+
+        // --- EDICIÓN DE PRENDA (ACTUALIZADA PARA FOTO) ---
+        function editPrenda(id) {
+            const prenda = prendas.find(p => p.id === id);
+            if (!prenda) return;
+            editingId = id;
+
+            // Cargar datos del formulario
+            document.getElementById('edit-id').value = prenda.id;
+            document.getElementById('edit-precio-efectivo').value = prenda.precioEfectivo;
+            document.getElementById('edit-precio-lista').value = prenda.precioLista;
+            document.getElementById('edit-talle').value = prenda.talle;
+            document.getElementById('edit-vendedora').value = prenda.vendedora;
+            document.getElementById('edit-descripcion').value = prenda.descripcion;
+
+            // Manejo de la imagen de edición
+            const editPhotoPreview = document.getElementById('edit-photo-preview');
+            const editPhotoPreviewContainer = document.getElementById('edit-photo-preview-container');
+            
+            // Get the new hidden inputs and reset them
+            const editCameraInput = document.getElementById('edit-camera-photo-input');
+            const editImportInput = document.getElementById('edit-import-photo-input');
+            if (editCameraInput) editCameraInput.value = '';
+            if (editImportInput) editImportInput.value = '';
+            
+            currentPhotoBase64 = prenda.fotoBase64 || null; // Cargar la foto existente en la variable temporal
+            
+            if (currentPhotoBase64) {
+                editPhotoPreview.src = currentPhotoBase64;
+                editPhotoPreviewContainer.classList.remove('hidden');
+            } else {
+                editPhotoPreview.src = '';
+                editPhotoPreviewContainer.classList.add('hidden');
+            }
+
+            // Manejo de tipos de ropa
+            resetEditCustomTipos();
+            document.querySelectorAll('#edit-tipo-ropa-container input[type="checkbox"]').forEach(cb => {
+                cb.checked = false; // Desmarcar todos los predefinidos
+            });
+            prenda.tipos_de_ropa.forEach(tipo => {
+                const checkbox = document.querySelector(`#edit-tipo-ropa-container input[type="checkbox"][value="${tipo}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                } else {
+                    addEditCustomTipo(tipo, true); // Crear y marcar si es custom
+                }
+            });
+            showView('edit-section');
+        }
+
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(editForm);
+                const tiposDeRopa = Array.from(document.querySelectorAll('#edit-tipo-ropa-container input[name="tipo_ropa"]:checked')).map(cb => {
+                    // Si el checkbox no tiene un valor establecido (es decir, es un custom), obtenemos el valor del input de texto adyacente
+                    return cb.value || cb.nextElementSibling?.value || '';
+                }).filter(val => val); // Filtramos vacíos
+                
+                if (tiposDeRopa.length === 0) {
+                    showAppMessage("Debes seleccionar al menos un tipo de ropa.", "error");
+                    return;
+                }
+                
+                const existingPrenda = prendas.find(p => p.id === editingId);
+
+                const updatedPrenda = {
+                    id: editingId,
+                    precioEfectivo: formData.get('precioEfectivo'),
+                    precioLista: formData.get('precioLista'),
+                    talle: formData.get('talle'),
+                    tipos_de_ropa: tiposDeRopa,
+                    vendedora: formData.get('vendedora') || '',
+                    descripcion: formData.get('descripcion') || '',
+                    fecha_creacion: existingPrenda.fecha_creacion,
+                    ultimo_escaneo: existingPrenda.ultimo_escaneo,
+                    dias_transcurridos: existingPrenda.dias_transcurridos || 0,
+                    // Usar currentPhotoBase64 (contiene la foto original, o la nueva si fue cambiada, o null si fue eliminada)
+                    fotoBase64: currentPhotoBase64
+                };
+                try {
+                    const index = prendas.findIndex(p => p.id === editingId);
+                    if (index !== -1) {
+                        prendas[index] = updatedPrenda;
+                        savePrendasToStorage();
+                        // Limpiar variable temporal
+                        currentPhotoBase64 = null;
+                        showAppMessage("Prenda actualizada con éxito.", 'success');
+                        setupHistoryDisplay();
+                        showView('history-section');
+                    }
+                } catch (error) {
+                    console.error("Error al actualizar prenda:", error);
+                    showAppMessage("Error al actualizar la prenda.", 'error');
+                }
+            });
+        }
+
+        // --- ELIMINAR PRENDA ---
+        function deletePrenda(id) {
+            prendas = prendas.filter(p => p.id !== id);
+            savePrendasToStorage();
+            setupHistoryDisplay();
+            showAppMessage("Prenda eliminada con éxito.", 'success');
+            sendPushNotification("Prenda eliminada", `Se ha eliminado un QR con ID: ${id}`);
+        }
+
+        // --- EXPORTAR ---
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', () => exportToExcel());
+        }
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', () => exportToCsv());
+        }
+
+        function exportToExcel() {
+            // Nota: fotoBase64 se excluye automáticamente ya que no se mapea en json_to_sheet
+            const worksheet = XLSX.utils.json_to_sheet(prendas.map(p => ({
+                ID: p.id,
+                'Precio Efectivo': p.precioEfectivo,
+                'Precio de Lista': p.precioLista,
+                Talle: p.talle,
+                'Tipos de Ropa': p.tipos_de_ropa.join(', '),
+                Vendedora: p.vendedora,
+                Descripción: p.descripcion,
+                'Fecha de Registro': new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                'Último Escaneo': p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
+                'Días Transcurridos': p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
+            })));
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Prendas');
+            XLSX.writeFile(workbook, 'historial_prendas.xlsx');
+            showAppMessage("Exportado a Excel con éxito.", 'success');
+        }
+
+        function exportToCsv() {
+            // Nota: fotoBase64 se excluye automáticamente de la cadena CSV
+            const csvData = [
+                ['ID', 'Precio Efectivo', 'Precio de Lista', 'Talle', 'Tipos de Ropa', 'Vendedora', 'Descripción', 'Fecha de Registro', 'Último Escaneo', 'Días Transcurridos'],
+                ...prendas.map(p => [
+                    p.id,
+                    p.precioEfectivo,
+                    p.precioLista,
+                    p.talle,
+                    p.tipos_de_ropa.join(', '),
+                    p.vendedora,
+                    p.descripcion,
+                    new Date(p.fecha_creacion).toLocaleString('es-AR'),
+                    p.ultimo_escaneo ? new Date(p.ultimo_escaneo).toLocaleString('es-AR') : 'N/A',
+                    p.dias_transcurridos || (p.ultimo_escaneo ? Math.floor((new Date(p.ultimo_escaneo) - new Date(p.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0)
+                ])
+            ].map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n'); // Asegurarse de escapar comillas y usar comas como separador
+            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'historial_prendas.csv';
+            link.click();
+            showAppMessage("Exportado a CSV con éxito. Puedes importarlo a Google Sheets.", 'success');
+        }
+
+        // --- MÉTRICAS GRÁFICO ---
+        function setupMetricsChart() {
+            const ctx = document.getElementById('stock-chart').getContext('2d');
+            if (window.stockChart) {
+                window.stockChart.destroy();
+            }
+            const events = [];
+            prendas.forEach(p => {
+                events.push({ date: new Date(p.fecha_creacion), type: 'create' });
+                if (p.ultimo_escaneo) {
+                    events.push({ date: new Date(p.ultimo_escaneo), type: 'scan' });
+                }
+            });
+            events.sort((a, b) => a.date - b.date);
+            const labels = [];
+            const data = [];
+            let stock = 0;
+            events.forEach(event => {
+                if (event.type === 'create') stock++;
+                else if (event.type === 'scan') stock--;
+                labels.push(event.date.toLocaleString('es-AR'));
+                data.push(stock);
+            });
+            window.stockChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Stock a lo largo del tiempo',
+                        data: data,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo' } },
+                        y: { title: { display: true, text: 'Stock' } }
+                    }
+                }
+            });
+        }
+
+        // --- MÉTRICAS ALMANAQUE ---
+        function setupCalendarMetrics() {
+            const calendarDays = document.getElementById('calendar-days');
+            if (!calendarDays) {
+                console.error("Elemento calendar-days no encontrado en el DOM.");
+                return;
+            }
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDay = firstDay.getDay();
+            const generatedCount = {};
+            const scannedCount = {};
+            prendas.forEach(p => {
+                const date = new Date(p.fecha_creacion);
+                if (date.getMonth() === month && date.getFullYear() === year) {
+                    const day = date.getDate();
+                    generatedCount[day] = (generatedCount[day] || 0) + 1;
+                }
+                if (p.ultimo_escaneo) {
+                    const scanDate = new Date(p.ultimo_escaneo);
+                    if (scanDate.getMonth() === month && scanDate.getFullYear() === year) {
+                        const day = scanDate.getDate();
+                        scannedCount[day] = (scannedCount[day] || 0) + 1;
+                    }
+                }
+            });
+            calendarDays.innerHTML = '';
+            for (let i = 0; i < startDay; i++) {
+                calendarDays.innerHTML += '<div></div>';
+            }
+            for (let day = 1; day <= daysInMonth; day++) {
+                const genCount = generatedCount[day] || 0;
+                const scanCount = scannedCount[day] || 0;
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'p-1 rounded-full text-xs'; // Reduje el texto para que quepa mejor
+                dayDiv.innerHTML = `${day}<br><span class="text-green-500">${genCount} G</span><br><span class="text-blue-500">${scanCount} S</span>`;
+                if (genCount > 0 || scanCount > 0) {
+                    dayDiv.classList.add('bg-gray-100');
+                }
+                calendarDays.appendChild(dayDiv);
+            }
+        }
+        
+        // --- FUNCIONES PARA TIPOS DE ROPA PERSONALIZADOS ---
+        function addCustomTipo() {
+            const container = document.getElementById('tipo-ropa-container');
+            const tipoDiv = document.createElement('div');
+            tipoDiv.className = 'flex items-center';
+            tipoDiv.innerHTML = `
+                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                <input type="text" placeholder="Tipo personalizado" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(tipoDiv);
+            customTipoCount++;
+            tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
+                tipoDiv.remove();
+                customTipoCount--;
+            });
+            const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
+            const input = tipoDiv.querySelector('input[type="text"]');
+            input.addEventListener('input', () => {
+                if (input.value.trim()) {
+                    checkbox.value = input.value.trim();
+                } else {
+                    checkbox.value = '';
+                }
+            });
+        }
+
+        function resetCustomTipos() {
+            if (tipoRopaContainer) {
+                const customTipos = tipoRopaContainer.querySelectorAll('.remove-tipo-btn');
+                customTipos.forEach(btn => btn.parentElement.remove());
+                customTipoCount = 0;
+            }
+        }
+
+        function addEditCustomTipo(value = '', checked = false) { 
+            const container = document.getElementById('edit-tipo-ropa-container');
+            const tipoDiv = document.createElement('div');
+            tipoDiv.className = 'flex items-center';
+            const inputValue = value || '';
+            const checkboxValue = value || ''; 
+
+            tipoDiv.innerHTML = `
+                <input type="checkbox" name="tipo_ropa" ${checked ? 'checked' : ''} value="${checkboxValue}" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                <input type="text" placeholder="Tipo personalizado" value="${inputValue}" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(tipoDiv);
+            customTipoCount++;
+            tipoDiv.querySelector('.remove-tipo-btn').addEventListener('click', () => {
+                tipoDiv.remove();
+                customTipoCount--;
+            });
+            const checkbox = tipoDiv.querySelector('input[type="checkbox"]');
+            const input = tipoDiv.querySelector('input[type="text"]');
+            input.addEventListener('input', () => {
+                if (input.value.trim()) {
+                    checkbox.value = input.value.trim();
+                } else {
+                    checkbox.value = '';
+                }
+            });
+        }
+
+        function resetEditCustomTipos() {
+            if (editTipoRopaContainer) {
+                // Selecciona solo los elementos que contienen el botón de eliminar (que son los personalizados)
+                const customTipos = editTipoRopaContainer.querySelectorAll('.remove-tipo-btn');
+                customTipos.forEach(btn => btn.parentElement.remove());
+                customTipoCount = 0;
+            }
+        }
+
+        // --- EVENTOS PARA TIPOS PERSONALIZADOS ---
+        if (document.getElementById('add-custom-tipo')) {
+            document.getElementById('add-custom-tipo').addEventListener('click', addCustomTipo);
+        }
+        if (document.getElementById('add-edit-custom-tipo')) {
+            document.getElementById('add-edit-custom-tipo').addEventListener('click', () => addEditCustomTipo()); // Sin valor inicial ni checked
+        }
+
+        // --- MENSAJES ---
+        function showAppMessage(message, type = 'info') {
+            const messageDiv = document.getElementById('app-message');
+            if (!messageDiv) return;
+            messageDiv.innerHTML = `
+                <div class="bg-${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}-100 text-${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}-700 px-4 py-3 rounded-lg shadow-md flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'} mr-2"></i>
+                    ${message}
+                </div>`;
+            setTimeout(() => messageDiv.innerHTML = '', 5000);
+        }
+
+        // --- NOTIFICACIONES PUSH ---
+        function requestNotificationPermission() {
+            if ('Notification' in window && 'serviceWorker' in navigator) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        isPushEnabled = true;
+                        console.log("Notificaciones habilitadas.");
+                    }
+                });
+            }
+        }
+
+        function initializePush(reg) {
+            if ('PushManager' in window && isPushEnabled) {
+                reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array('YOUR_PUBLIC_VAPID_KEY')
+                }).then(subscription => {
+                    console.log('Suscripción Push exitosa:', subscription);
+                }).catch(err => console.error('Error en suscripción Push:', err));
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function sendPushNotification(title, body) {
+            if (!isPushEnabled || !('serviceWorker' in navigator)) return;
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, {
+                    body: body,
+                    icon: 'icono.png',
+                    vibrate: [200, 100, 200]
+                });
+            }).catch(err => console.error('Error al enviar notificación:', err));
+        }
+
+        // --- INICIALIZACIÓN FINAL ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
+
