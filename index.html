@@ -23,8 +23,8 @@
             <img src="logo.png" alt="Logo de la aplicación" class="w-8 h-8 mr-3 rounded-md" 
                 onerror="this.onerror=null; this.src='https://placehold.co/32x32/4f46e5/ffffff?text=G&font=sans'">
             <h1 class="text-4xl font-bold text-indigo-600 mr-2">Gestor de QR</h1>
-            <!-- VERSION: Updated to v.2.7 (Add Venta Manual) -->
-            <span class="text-xs font-normal text-gray-600">v.2.7 (Add Venta Manual)</span>
+            <!-- VERSION: Updated to v.2.8 (Restored Venta Manual + Photo Fix) -->
+            <span class="text-xs font-normal text-gray-600">v.2.8 (Restored Venta Manual + Photo Fix)</span>
         </header>
         <!-- Menú Principal -->
         <main id="main-menu" class="space-y-4">
@@ -47,18 +47,29 @@
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
                 <form id="qr-form" class="space-y-4">
-                    <!-- CAMPO DE FOTO/CÁMARA -->
+                    <!-- CAMPO DE FOTO/CÁMARA/IMPORTAR (MODIFICADO) -->
                     <div>
-                        <label for="item-photo" class="block text-sm font-medium text-gray-700">Foto de la Prenda (Opcional)</label>
-                        <!-- capture="environment" permite abrir la cámara trasera en móvil -->
-                        <input type="file" id="item-photo" name="itemPhoto" accept="image/*" capture="environment" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <div id="photo-preview-container" class="mt-2 hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Prenda (Opcional)</label>
+                        <div class="flex space-x-3">
+                            <!-- Input para la CÁMARA (Fuerza la apertura de la cámara si es compatible) -->
+                            <input type="file" id="camera-photo-input" name="cameraPhoto" accept="image/*" capture="environment" class="hidden">
+                            <button type="button" id="open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-camera mr-2"></i> Usar Cámara
+                            </button>
+
+                            <!-- Input para IMPORTAR ARCHIVO (Abre el selector de archivos) -->
+                            <input type="file" id="import-photo-input" name="importPhoto" accept="image/*" class="hidden">
+                            <button type="button" id="import-file-btn" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-file-upload mr-2"></i> Importar Foto
+                            </button>
+                        </div>
+                        <div id="photo-preview-container" class="mt-4 hidden">
                             <p class="text-xs text-gray-500 mb-1">Previsualización:</p>
                             <img id="photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 w-full">
                             <button type="button" id="remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
                         </div>
                     </div>
-                    <!-- FIN CAMPO FOTO -->
+                    <!-- FIN CAMPO FOTO (MODIFICADO) -->
                     <div>
                         <label for="precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
                         <input type="number" id="precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
@@ -123,17 +134,29 @@
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Editar Prenda</h2>
                 <form id="edit-form" class="space-y-4">
                     <input type="hidden" id="edit-id" name="id">
-                    <!-- CAMPO DE FOTO/CÁMARA EDICIÓN -->
+                    <!-- CAMPO DE FOTO/CÁMARA/IMPORTAR EDICIÓN (MODIFICADO) -->
                     <div>
-                        <label for="edit-item-photo" class="block text-sm font-medium text-gray-700">Foto de la Prenda (Opcional)</label>
-                        <input type="file" id="edit-item-photo" name="itemPhoto" accept="image/*" capture="environment" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <div id="edit-photo-preview-container" class="mt-2 hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Prenda (Opcional)</label>
+                        <div class="flex space-x-3">
+                            <!-- Input para la CÁMARA (Fuerza la apertura de la cámara si es compatible) -->
+                            <input type="file" id="edit-camera-photo-input" name="editCameraPhoto" accept="image/*" capture="environment" class="hidden">
+                            <button type="button" id="edit-open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-camera mr-2"></i> Usar Cámara
+                            </button>
+
+                            <!-- Input para IMPORTAR ARCHIVO (Abre el selector de archivos) -->
+                            <input type="file" id="edit-import-photo-input" name="editImportPhoto" accept="image/*" class="hidden">
+                            <button type="button" id="edit-import-file-btn" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-file-upload mr-2"></i> Importar Foto
+                            </button>
+                        </div>
+                        <div id="edit-photo-preview-container" class="mt-4 hidden">
                             <p class="text-xs text-gray-500 mb-1">Previsualización Actual:</p>
                             <img id="edit-photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 w-full">
                             <button type="button" id="edit-remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
                         </div>
                     </div>
-                    <!-- FIN CAMPO FOTO EDICIÓN -->
+                    <!-- FIN CAMPO FOTO EDICIÓN (MODIFICADO) -->
                     <div>
                         <label for="edit-precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
                         <input type="number" id="edit-precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
@@ -240,7 +263,7 @@
         <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
     </div>
 
-    <!-- Modal de Análisis de Estrategia (EXISTENTE) -->
+    <!-- Modal de Análisis de Estrategia -->
     <div id="strategy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
             <h3 id="modal-title" class="text-2xl font-bold text-indigo-600 mb-4"></h3>
@@ -249,7 +272,7 @@
         </div>
     </div>
     
-    <!-- Modal de Venta Manual (NUEVO) -->
+    <!-- Modal de Venta Manual (REINTEGRADO) -->
     <div id="manual-sale-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
             <button id="close-manual-sale-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none">
@@ -292,7 +315,6 @@
             </form>
         </div>
     </div>
-
     <script>
         // --- CONSTANTE DE CONTRASEÑA ACTUALIZADA ---
         const DELETE_PASSWORD = "1440"; // Contraseña actualizada de 505 a 1440
@@ -307,8 +329,8 @@
         let currentPhotoBase64 = null;
         let isAudioPlaying = false; // Estado para el botón TTS
         let selectedManualSaleId = null; // ID de la prenda para venta manual
-        
-        // --- REFERENCIAS AL MODAL DE ESTRATEGIA (EXISTENTE) ---
+
+        // --- REFERENCIAS AL MODAL DE ESTRATEGIA ---
         const strategyModal = document.getElementById('strategy-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalContent = document.getElementById('modal-content');
@@ -318,15 +340,23 @@
                 if (strategyModal) strategyModal.classList.add('hidden');
             });
         }
-        
-        // --- REFERENCIAS AL MODAL DE VENTA MANUAL (NUEVO) ---
+
+        // --- REFERENCIAS AL MODAL DE VENTA MANUAL ---
         const manualSaleModal = document.getElementById('manual-sale-modal');
         const closeManualSaleModalBtn = document.getElementById('close-manual-sale-modal');
         const manualSaleForm = document.getElementById('manual-sale-form');
         const reasonOtherContainer = document.getElementById('reason-other-container');
         const reasonOtherInput = document.getElementById('reason-other-input');
 
-        // Funciones para el Modal de Venta Manual
+
+        // --- FUNCIONES DE MODAL ---
+        function showModal(title, content) {
+            if (modalTitle) modalTitle.textContent = title;
+            if (modalContent) modalContent.innerHTML = content;
+            if (strategyModal) strategyModal.classList.remove('hidden');
+        }
+
+        // --- FUNCIONES DE VENTA MANUAL (REINTEGRADAS) ---
         function showManualSaleModal(prendaId) {
             selectedManualSaleId = prendaId;
             manualSaleModal.classList.remove('hidden');
@@ -338,6 +368,32 @@
         function hideManualSaleModal() {
             manualSaleModal.classList.add('hidden');
             selectedManualSaleId = null;
+        }
+
+        function processManualSale(reason) {
+            if (!selectedManualSaleId) {
+                showAppMessage("Error: No se ha seleccionado una prenda para la venta manual.", 'error');
+                return;
+            }
+
+            const prenda = prendas.find(p => p.id === selectedManualSaleId);
+            if (!prenda) {
+                showAppMessage("Error: Prenda no encontrada en el historial.", 'error');
+                return;
+            }
+
+            // Marcar como vendido y guardar el motivo
+            prenda.ultimo_escaneo = new Date().toISOString();
+            prenda.manual_sale_reason = reason;
+
+            // Calcular días transcurridos hasta la venta
+            const diasTranscurridos = Math.floor((new Date(prenda.ultimo_escaneo) - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
+            prenda.dias_transcurridos = diasTranscurridos;
+
+            savePrendasToStorage();
+            setupHistoryDisplay(); // Refrescar el historial
+            hideManualSaleModal();
+            showAppMessage(`Venta manual de la prenda ${selectedManualSaleId.substring(0, 8)}... registrada por: ${reason}.`, 'success');
         }
 
         // Listener para cerrar el modal de venta manual
@@ -381,39 +437,6 @@
             });
         }
         
-        function processManualSale(reason) {
-            if (!selectedManualSaleId) {
-                showAppMessage("Error: No se ha seleccionado una prenda para la venta manual.", 'error');
-                return;
-            }
-
-            const prenda = prendas.find(p => p.id === selectedManualSaleId);
-            if (!prenda) {
-                showAppMessage("Error: Prenda no encontrada en el historial.", 'error');
-                return;
-            }
-
-            // Marcar como vendido y guardar el motivo
-            prenda.ultimo_escaneo = new Date().toISOString();
-            prenda.manual_sale_reason = reason;
-
-            // Calcular días transcurridos hasta la venta
-            const diasTranscurridos = Math.floor((new Date(prenda.ultimo_escaneo) - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
-            prenda.dias_transcurridos = diasTranscurridos;
-
-            savePrendasToStorage();
-            setupHistoryDisplay(); // Refrescar el historial
-            hideManualSaleModal();
-            showAppMessage(`Venta manual de la prenda ${selectedManualSaleId.substring(0, 8)}... registrada por: ${reason}.`, 'success');
-        }
-        
-        // --- FUNCIONES DE MODAL ---
-        function showModal(title, content) {
-            if (modalTitle) modalTitle.textContent = title;
-            if (modalContent) modalContent.innerHTML = content;
-            if (strategyModal) strategyModal.classList.remove('hidden');
-        }
-
         // --- FUNCIÓN UTILITARIA PARA CONVERTIR ARCHIVO A BASE64 ---
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
@@ -424,23 +447,37 @@
             });
         }
         
-        // --- MANEJO DE IMAGENES ---
+        // --- MANEJO DE IMAGENES (REFACTORIZADO) ---
         function setupImageHandlers(isEdit = false) {
             const prefix = isEdit ? 'edit-' : '';
-            const itemPhotoInput = document.getElementById(`${prefix}item-photo`);
+            
+            // Referencias a los nuevos inputs y botones
+            const cameraInput = document.getElementById(`${prefix}camera-photo-input`);
+            const importInput = document.getElementById(`${prefix}import-photo-input`);
+            const cameraBtn = document.getElementById(`${prefix}open-camera-btn`);
+            const importBtn = document.getElementById(`${prefix}import-file-btn`);
+            
+            // Referencias a la previsualización y eliminación
             const photoPreview = document.getElementById(`${prefix}photo-preview`);
             const photoPreviewContainer = document.getElementById(`${prefix}photo-preview-container`);
             const removePhotoBtn = document.getElementById(`${prefix}remove-photo-btn`);
 
-            if (!itemPhotoInput || !removePhotoBtn) return;
+            // Validación de existencia de elementos (esencial para que los listeners no fallen)
+            if (!cameraInput || !importInput || !removePhotoBtn || !cameraBtn || !importBtn) return;
 
-            itemPhotoInput.onchange = async (e) => {
+            // 1. Lógica para manejar el cambio de archivo (desde cualquiera de los dos inputs)
+            const handleFileChange = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
+                    // Limpiar el otro input para evitar confusión de estado
+                    const otherInput = e.target === cameraInput ? importInput : cameraInput;
+                    otherInput.value = '';
+                    
                     try {
                         currentPhotoBase64 = await fileToBase64(file);
                         if (photoPreview) photoPreview.src = currentPhotoBase64;
                         if (photoPreviewContainer) photoPreviewContainer.classList.remove('hidden');
+                        showAppMessage("Imagen cargada con éxito.", 'success');
                     } catch (error) {
                         console.error("Error al convertir a Base64:", error);
                         showAppMessage("Error al cargar la imagen.", 'error');
@@ -449,10 +486,20 @@
                     }
                 }
             };
+            
+            // 2. Adjuntar listeners de click a los botones
+            cameraBtn.onclick = () => cameraInput.click();
+            importBtn.onclick = () => importInput.click();
 
+            // 3. Adjuntar listeners de cambio de archivo a los inputs
+            cameraInput.onchange = handleFileChange;
+            importInput.onchange = handleFileChange;
+
+            // 4. Lógica del botón de eliminar
             removePhotoBtn.onclick = () => {
                 currentPhotoBase64 = null;
-                if (itemPhotoInput) itemPhotoInput.value = '';
+                cameraInput.value = '';
+                importInput.value = '';
                 if (photoPreview) photoPreview.src = '';
                 if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
             };
@@ -590,11 +637,13 @@
                 qrDisplay.classList.add('hidden');
             }
             
-            // Resetear la foto y el preview al cambiar a la sección de generación
+            // Resetear la foto y el preview al cambiar a la sección de generación (UPDATED)
             currentPhotoBase64 = null;
-            const itemPhotoInput = document.getElementById('item-photo');
+            const cameraInput = document.getElementById('camera-photo-input');
+            const importInput = document.getElementById('import-photo-input');
             const photoPreviewContainer = document.getElementById('photo-preview-container');
-            if (itemPhotoInput) itemPhotoInput.value = '';
+            if (cameraInput) cameraInput.value = '';
+            if (importInput) importInput.value = '';
             if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
 
             if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
@@ -1080,7 +1129,7 @@
                     ultimo_escaneo: null,
                     dias_transcurridos: 0,
                     fotoBase64: currentPhotoBase64,
-                    manual_sale_reason: null // Nuevo campo para la razón de venta manual
+                    manual_sale_reason: null // Inicializa la razón de venta manual
                 };
                 try {
                     console.log("[Registro] Guardando prenda con ID:", prendaId);
@@ -1095,7 +1144,11 @@
                     
                     // Limpiar estado de foto después de guardar
                     currentPhotoBase64 = null;
+                    const cameraInput = document.getElementById('camera-photo-input'); 
+                    const importInput = document.getElementById('import-photo-input'); 
                     const photoPreviewContainer = document.getElementById('photo-preview-container');
+                    if (cameraInput) cameraInput.value = '';
+                    if (importInput) importInput.value = '';
                     if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
 
                     if (geminiOutputSection) geminiOutputSection.classList.add('hidden');
@@ -1439,7 +1492,7 @@
                                 <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} sin escanear)</p>
                             </div>
                             <div class="flex gap-2 flex-wrap">
-                                <button class="manual-sale-btn-${prenda.id} bg-red-600 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-700" title="Registrar venta sin escaneo"><i class="fas fa-hand-pointer"></i> Venta Manual</button>
+                                <button data-id="${prenda.id}" class="manual-sale-btn bg-red-600 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-700" title="Registrar venta sin escaneo"><i class="fas fa-hand-pointer"></i> Venta Manual</button>
                                 <button class="view-qr-btn bg-indigo-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-600" title="Ver QR, Foto y Opciones de Impresión"><i class="fas fa-qrcode"></i> QR</button>
                                 <button class="trend-analyze-btn bg-pink-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-pink-600">✨ Tendencia</button>
                                 <button class="strategy-analyze-btn bg-purple-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-purple-600">✨ Estrategia</button>
@@ -1464,7 +1517,6 @@
                     console.error("Error generating QR thumbnail:", e);
                 }
 
-                // 3. Attach listeners
                 item.querySelector('.edit-btn').addEventListener('click', () => editPrenda(prenda.id));
                 item.querySelector('.delete-btn').addEventListener('click', () => {
                     const password = prompt("Ingrese la contraseña para eliminar:");
@@ -1478,7 +1530,7 @@
                 item.querySelector('.trend-analyze-btn').addEventListener('click', () => analyzeTrend(prenda.id));
                 item.querySelector('.view-qr-btn').addEventListener('click', () => viewQr(prenda.id));
                 // NEW: Venta Manual Listener
-                item.querySelector(`.manual-sale-btn-${prenda.id}`).addEventListener('click', () => showManualSaleModal(prenda.id)); 
+                item.querySelector('.manual-sale-btn').addEventListener('click', (e) => showManualSaleModal(e.target.dataset.id)); 
             });
             
             // --- VENDIDOS ---
@@ -1490,7 +1542,7 @@
                 const reasonDisplay = prenda.manual_sale_reason 
                     ? `<span class="text-red-600 font-bold ml-2">(Manual: ${prenda.manual_sale_reason})</span>`
                     : '';
-                
+
                 // Preparar HTML para la miniatura de la foto
                 const photoThumbHtml = prenda.fotoBase64 ? 
                     `<img src="${prenda.fotoBase64}" alt="Prenda" class="w-12 h-12 object-cover rounded-lg">` : 
@@ -1582,10 +1634,13 @@
             // Manejo de la imagen de edición
             const editPhotoPreview = document.getElementById('edit-photo-preview');
             const editPhotoPreviewContainer = document.getElementById('edit-photo-preview-container');
-            const editItemPhotoInput = document.getElementById('edit-item-photo');
             
-            // Resetear input de archivo y variable global
-            editItemPhotoInput.value = '';
+            // Get the new hidden inputs and reset them
+            const editCameraInput = document.getElementById('edit-camera-photo-input');
+            const editImportInput = document.getElementById('edit-import-photo-input');
+            if (editCameraInput) editCameraInput.value = '';
+            if (editImportInput) editImportInput.value = '';
+            
             currentPhotoBase64 = prenda.fotoBase64 || null; // Cargar la foto existente en la variable temporal
             
             if (currentPhotoBase64) {
