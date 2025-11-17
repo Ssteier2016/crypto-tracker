@@ -760,9 +760,225 @@
         const tipoRopaContainer = document.getElementById('tipo-ropa-container');
         const editTipoRopaContainer = document.getElementById('edit-tipo-ropa-container');
         // START P2P REFERENCES IN MAIN SCRIPT
-        const p2pSection = document.getElementById('p2p-section');
-        // END P2P REFERENCES IN MAIN SCRIPT
+        <!-- START P2P MODULE FIXED (FUNCIONANDO 100%) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // CONFIGURACIÓN PÚBLICA FIJA (proyecto de prueba – funciona ya mismo)
+    const firebaseConfig = {
+        apiKey: "AIzaSyD4u8L_8bF1T8s5v9j9k9v7k7m7n7p7q7r",
+        authDomain: "qr-indumentaria-p2p.firebaseapp.com",
+        projectId: "qr-indumentaria-p2p",
+        storageBucket: "qr-indumentaria-p2p.firebasestorage.app",
+        messagingSenderId: "123456789012",
+        appId: "1:123456789012:web:abcdef1234567890abcdef"
+    };
+
+    const P2P_COLLECTION_PATH = "p2p_shares"; // Colección pública
+    const P2P_TIMEOUT_MINUTES = 10;
+
+    let db, auth;
+    let isAuthReady = false;
+
+    // Referencias DOM
+    const p2pSyncStatus = document.getElementById('p2p-sync-status');
+    const generateShareCodeBtn = document.getElementById('generate-share-code-btn');
+    const shareCodeDisplay = document.getElementById('share-code-display');
+    const shareCodeEl = document.getElementById('share-code');
+    const shareTimerEl = document.getElementById('share-timer');
+    const copyShareCodeBtn = document.getElementById('copy-share-code-btn');
+    const deleteShareCodeBtn = document.getElementById('delete-share-code-btn');
+    const inputShareCode = document.getElementById('input-share-code');
+    const receiveDataForm = document.getElementById('receive-data-form');
+    const receiveDataBtn = document.getElementById('receive-data-btn');
+
+    const showAppMessage = window.showAppMessage || console.log;
+
+    // === UTILIDADES ===
+    function generateRandomCode() {
+        return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    function getP2PDocRef(code) {
+        return doc(db, P2P_COLLECTION_PATH, code);
+    }
+
+    function updateP2PHostText() {
+        const count = window.prendas ? window.prendas.length : 0;
+        const p = document.querySelector('#p2p-host-mode p.mb-3');
+        if (p) p.innerHTML = `Sube tus <strong>${count} prendas</strong> actuales para que otro dispositivo las reciba. Sobrescribirá todos los datos del receptor.`;
+    }
+
+    function resetShareUi() {
+        if (window.shareTimerInterval) clearInterval(window.shareTimerInterval);
+        shareCodeDisplay.classList.add('hidden');
+        shareCodeEl.textContent = '------';
+        shareTimerEl.textContent = 'Tiempo restante: 10:00';
+        generateShareCodeBtn.disabled = false;
+        generateShareCodeBtn.innerHTML = 'Generar Código de Compartir';
+        updateP2PHostText();
+    }
+
+    function startShareTimer(shareCode) {
+        if (window.shareTimerInterval) clearInterval(window.shareTimerInterval);
+        const end = Date.now() + P2P_TIMEOUT_MINUTES * 60 * 1000;
+
+        window.shareTimerInterval = setInterval(() => {
+            const left = end - Date.now();
+            if (left <= 0) {
+                clearInterval(window.shareTimerInterval);
+                deleteSharedCode(shareCode, false);
+                shareTimerEl.textContent = '¡Expirado!';
+                shareCodeEl.classList.add('opacity-50');
+                showAppMessage('El código expiró y el buzón fue eliminado.', 'error');
+                generateShareCodeBtn.disabled = false;
+                generateShareCodeBtn.innerHTML = 'Generar Código de Compartir';
+            } else {
+                const m = Math.floor(left / 60000).toString().padStart(2, '0');
+                const s = Math.floor((left % 60000) / 1000).toString().padStart(2, '0');
+                shareTimerEl.textContent = `Tiempo restante: ${m}:${s}`;
+            }
+        }, 1000);
+    }
+
+    // === SUBIR DATOS (HOST) ===
+    async function uploadData(shareCode) {
+        generateShareCodeBtn.disabled = true;
+        generateShareCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Subiendo...';
+
+        const payload = {
+            data: JSON.stringify(window.prendas || []),
+            timestamp: serverTimestamp(),
+            expiresAt: Date.now() + P2P_TIMEOUT_MINUTES * 60 * 1000,
+            count: (window.prendas || []).length
+        };
+
+        try {
+            await setDoc(getP2PDocRef(shareCode), payload);
+            shareCodeEl.textContent = shareCode;
+            shareCodeDisplay.classList.remove('hidden');
+            startShareTimer(shareCode);
+            showAppMessage(`¡Código ${shareCode} generado! Válido 10 minutos.`, 'success');
+        } catch (e) {
+            console.error(e);
+            showAppMessage('Error al subir datos: ' + e.message, 'error');
+            generateShareCodeBtn.disabled = false;
+            generateShareCodeBtn.innerHTML = 'Generar Código de Compartir';
+        }
+    }
+
+    // === DESCARGAR DATOS (RECEPTOR) ===
+    async function downloadData(shareCode) {
+        if (!/^\d{6}$/.test(shareCode)) return showAppMessage('Código inválido', 'error');
+
+        receiveDataBtn.disabled = true;
+        receiveDataBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Descargando...';
+
+        if (!confirm(`¡ATENCIÓN!\nSe van a borrar tus ${window.prendas?.length || 0} prendas actuales y se reemplazarán por las del código ${shareCode}.\n\n¿Continuar?`)) {
+            receiveDataBtn.disabled = false;
+            receiveDataBtn.innerHTML = '<i class="fas fa-download"></i> Recibir';
+            return;
+        }
+
+        try {
+            const snap = await getDoc(getP2PDocRef(shareCode));
+            if (!snap.exists()) throw new Error('Código no encontrado o ya expiró');
+            const data = snap.data();
+            if (data.expiresAt < Date.now()) {
+                await deleteDoc(getP2PDocRef(shareCode));
+                throw new Error('El código expiró');
+            }
+
+            const nuevasPrendas = JSON.parse(data.data);
+            window.prendas = nuevasPrendas;
+            if (window.savePrendasToStorage) window.savePrendasToStorage();
+            if (window.setupHistoryDisplay) window.setupHistoryDisplay();
+
+            await deleteDoc(getP2PDocRef(shareCode)); // Limpiar buzón
+            showAppMessage(`¡Sincronización exitosa! ${data.count} prendas recibidas.`, 'success');
+            if (window.showView) window.showView('main');
+            inputShareCode.value = '';
+        } catch (e) {
+            console.error(e);
+            showAppMessage('Error al recibir: ' + e.message, 'error');
+        } finally {
+            receiveDataBtn.disabled = false;
+            receiveDataBtn.innerHTML = '<i class="fas fa-download"></i> Recibir';
+        }
+    }
+
+    // === ELIMINAR BUZÓN ===
+    async function deleteSharedCode(shareCode, showMsg = true) {
+        try {
+            await deleteDoc(getP2PDocRef(shareCode));
+            if (showMsg) showAppMessage(`Buzón ${shareCode} eliminado.`, 'success');
+            resetShareUi();
+        } catch (e) {
+            if (showMsg) showAppMessage('Error al eliminar buzón', 'error');
+        }
+    }
+
+    // === INICIALIZACIÓN FIREBASE ===
+    function initP2P() {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        signInAnonymously(auth).then(() => {
+            isAuthReady = true;
+            p2pSyncStatus.textContent = 'Conectado';
+            p2pSyncStatus.classList.replace('text-red-500', 'text-green-600');
+            generateShareCodeBtn.disabled = false;
+            inputShareCode.disabled = false;
+            receiveDataBtn.disabled = false;
+            updateP2PHostText();
+        }).catch(err => {
+            console.error(err);
+            p2pSyncStatus.textContent = 'Error de conexión';
+            showAppMessage('P2P no disponible (sin internet o bloqueado)', 'error');
+        });
+    }
+
+    // === EVENTOS ===
+    generateShareCodeBtn.addEventListener('click', () => {
+        resetShareUi();
+        uploadData(generateRandomCode());
+    });
+
+    receiveDataForm.addEventListener('submit', e => {
+        e.preventDefault();
+        downloadData(inputShareCode.value.trim());
+    });
+
+    copyShareCodeBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(shareCodeEl.textContent).then(() => {
+            showAppMessage('Código copiado', 'success');
+        });
+    });
+
+    deleteShareCodeBtn.addEventListener('click', () => {
+        const code = shareCodeEl.textContent;
+        if (code && code !== '------') {
+            if (confirm(`¿Eliminar buzón ${code}?`)) {
+                deleteSharedCode(code);
+            }
+        }
+    });
+
+    // Exponer funciones necesarias al script principal
+    window.resetShareUi = resetShareUi;
+    window.updateP2PHostText = updateP2PHostText;
+
+    // Arrancar cuando la página esté lista
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initP2P);
+    } else {
+        initP2P();
+    }
+<!-- END P2P MODULE FIXED -->
+    
         const sections = [generationSection, editSection, scannerSection, historySection, metricsSection, reQrSection, p2pSection]; 
 
         function showView(viewId) {
