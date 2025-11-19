@@ -448,8 +448,18 @@
         // ====================================================================
         // CONSTANTES GLOBALES INYECTADAS (MANDATORIAS para Canvas)
         // ====================================================================
+        // Usamos el appId del entorno para el path de Firestore
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        // HARDCODEAMOS la configuración de Firebase proporcionada por el usuario para evitar errores de parseo
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIGUo2-YFCHKF6Nc8I-lB_NmGZiQ5pHJI",
+            authDomain: "cryptotracker-8a6fd.firebaseapp.com",
+            projectId: "cryptotracker-8a6fd",
+            storageBucket: "cryptotracker-8a6fd.firebasestorage.app",
+            messagingSenderId: "720112375781",
+            appId: "1:720112375781:web:7995dcbd6fe7470aea810c",
+            measurementId: "G-2VW050K6PC"
+        };
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         const DELETE_PASSWORD = "1440";
@@ -539,6 +549,7 @@
             if (firebaseConfig) {
                 setLogLevel('debug');
                 try {
+                    console.log("Intentando inicializar Firebase con Project ID:", firebaseConfig.projectId);
                     app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
@@ -2135,7 +2146,7 @@
 
                 let sourcesHtml = '';
                 const groundingMetadata = candidate?.groundingMetadata;
-                if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                if (groundingMetadata && groundingAttributions) {
                     const sources = groundingMetadata.groundingAttributions
                         .map(attr => `<a href="${attr.web?.uri}" target="_blank" class="text-xs text-indigo-500 hover:underline">${attr.web?.title || 'Fuente sin título'}</a>`)
                         .join('<br>');
