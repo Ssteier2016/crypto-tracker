@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#4f46e5">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="icono.png">
-    <!-- PWA Manifest (Añadido) -->
+    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -30,7 +30,6 @@
         }
     </script>
     <style>
-        /* Estilos CSS Base */
         .auth-card {
             max-width: 400px;
             margin: 0 auto;
@@ -63,13 +62,14 @@
         }
     </style>
 </head>
+<!-- Aplicamos la clase 'dark' si está en localStorage -->
 <body class="bg-gray-100 font-sans transition-colors duration-300">
     
     <!-- PANTALLA DE CARGA INICIAL -->
-    <div id="loading-screen" class="loading-screen dark:bg-gray-900">
+    <div id="loading-screen" class="loading-screen">
         <div class="text-center">
             <i class="fas fa-spinner fa-spin text-6xl text-primary"></i>
-            <p class="mt-4 text-xl font-semibold text-primary dark:text-primary-dark">Cargando aplicación y autenticación...</p>
+            <p class="mt-4 text-xl font-semibold text-primary">Cargando aplicación y autenticación...</p>
         </div>
     </div>
 
@@ -83,7 +83,7 @@
             <p id="user-id-display" class="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-2">Sincronizando...</p>
         </header>
 
-        <!-- PANTALLA DE AUTENTICACIÓN (Visible por defecto si no hay sesión activa) -->
+        <!-- PANTALLA DE AUTENTICACIÓN -->
         <section id="auth-screen">
             <div class="auth-card card p-6 rounded-xl shadow-lg mt-10">
                 <h2 class="text-3xl font-bold text-center text-primary dark:text-primary-dark mb-6">Iniciar Sesión</h2>
@@ -149,7 +149,7 @@
         <main id="main-menu" class="space-y-4 hidden">
             <!-- BOTÓN DE CERRAR SESIÓN Y MODO OSCURO -->
             <div class="flex flex-col md:flex-row justify-between gap-3">
-                   <button id="sign-out-btn" class="flex-1 bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-600 transition duration-300 flex items-center justify-center text-base">
+                 <button id="sign-out-btn" class="flex-1 bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-600 transition duration-300 flex items-center justify-center text-base">
                     <i class="fas fa-sign-out-alt mr-3"></i> Cerrar Sesión
                 </button>
                 <button id="theme-toggle-btn" class="md:w-auto bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-900 font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-800 dark:hover:bg-gray-400 transition duration-300 flex items-center justify-center text-base">
@@ -484,8 +484,16 @@
         // ====================================================================
         // Usamos el appId del entorno para el path de Firestore
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        // USAMOS LA VARIABLE GLOBAL DE CONFIGURACIÓN DE FIREBASE
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        // HARDCODEAMOS la configuración de Firebase proporcionada por el usuario para evitar errores de parseo
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIGUo2-YFCHKF6Nc8I-lB_NmGZiQ5pHJI",
+            authDomain: "cryptotracker-8a6fd.firebaseapp.com",
+            projectId: "cryptotracker-8a6fd",
+            storageBucket: "cryptotracker-8a6fd.firebasestorage.app",
+            messagingSenderId: "720112375781",
+            appId: "1:720112375781:web:7995dcbd6fe7470aea810c",
+            measurementId: "G-2VW050K6PC"
+        };
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         const DELETE_PASSWORD = "1440";
@@ -539,6 +547,7 @@
         const scanResult = getElement('scan-result');
         const notSoldList = getElement('not-sold-list');
         const soldList = getElement('sold-list');
+        const manualSaleForm = getElement('manual-sale-form'); // FIX: Añadida referencia global
         const stockCount = getElement('stock-count');
         const soldSum = getElement('sold-sum');
         const speculationSum = getElement('speculation-sum');
@@ -560,6 +569,7 @@
         function showAppMessage(message, type = 'info') {
             const messageDiv = getElement('app-message');
             if (!messageDiv) return;
+            const isDarkMode = document.body.classList.contains('dark');
             const bgClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
             
             messageDiv.innerHTML = `
@@ -625,9 +635,11 @@
                                 showAppMessage(`Bienvenido, ${userDisplay}. Sincronizando datos...`, 'success');
                             }
                         } else {
-                            // Si no hay usuario (cierra sesión o primera vez sin token)
+                            // Si no hay usuario, el SDK automáticamente maneja la reconexión de sesiones anteriores
+                            // Si llega aquí sin usuario (ej. cierra sesión), mostramos la pantalla de Auth
                             userId = 'guest-' + crypto.randomUUID(); 
                             isAuthReady = false;
+                            showView('auth-screen');
                             
                             // Si no hay token inicial, intentamos iniciar anónimamente para permitir interacción inicial
                             if (!initialAuthToken && auth.currentUser === null) {
@@ -636,9 +648,6 @@
                             } else {
                                 getElement('user-id-display').textContent = `Desconectado`;
                             }
-                            
-                            // Muestra la pantalla de autenticación inmediatamente.
-                            showView('auth-screen');
                         }
                     });
                     
@@ -651,8 +660,7 @@
                             await signInAnonymously(auth);
                         }
                     } else if (!auth.currentUser) {
-                        // Forzar el chequeo de onAuthStateChanged para anónimos/persistentes si no hay token.
-                        // El onAuthStateChanged de arriba ya se encarga de esto.
+                        // En un entorno normal sin token, la persistencia se encarga de esto.
                     }
                     
                 } catch (e) {
@@ -1785,7 +1793,8 @@
                     bgColor = 'bg-gray-50 dark:bg-gray-700';
                 }
                 
-                dayDiv.classList.add(bgColor, textColor);
+                // FIX: Usar concatenación de className para evitar InvalidCharacterError
+                dayDiv.className += ` ${bgColor} ${textColor}`; 
                 dayDiv.innerHTML = `
                     <div class="font-bold text-sm">${day}</div>
                     <div class="text-xs w-full">
