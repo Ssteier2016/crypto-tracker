@@ -15,7 +15,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Estilos específicos para la pantalla de Auth -->
+    <!-- Estilos específicos y Configuración de Tailwind para Modo Oscuro -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Habilitar el modo oscuro basado en la clase 'dark' en el body
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': 'rgb(79, 70, 229)', // Indigo-600
+                        'primary-dark': 'rgb(129, 140, 248)', // Indigo-400
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         .auth-card {
             max-width: 400px;
@@ -34,15 +47,29 @@
             flex-direction: column;
             z-index: 100;
         }
+        /* Estilos base para Dark Mode */
+        body.dark {
+            background-color: #111827; /* gray-900 */
+            color: #f3f4f6; /* gray-100 */
+        }
+        .card {
+            background-color: white;
+            color: #1f2937; /* gray-800 */
+        }
+        body.dark .card {
+            background-color: #1f2937; /* gray-800 */
+            color: #d1d5db; /* gray-300 */
+        }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<!-- Aplicamos la clase 'dark' si está en localStorage -->
+<body class="bg-gray-100 font-sans transition-colors duration-300">
     
     <!-- PANTALLA DE CARGA INICIAL -->
     <div id="loading-screen" class="loading-screen">
         <div class="text-center">
-            <i class="fas fa-spinner fa-spin text-6xl text-indigo-600"></i>
-            <p class="mt-4 text-xl font-semibold text-indigo-600">Cargando aplicación y autenticación...</p>
+            <i class="fas fa-spinner fa-spin text-6xl text-primary"></i>
+            <p class="mt-4 text-xl font-semibold text-primary">Cargando aplicación y autenticación...</p>
         </div>
     </div>
 
@@ -51,27 +78,27 @@
             <div class="flex items-center justify-center">
                 <img src="logo.png" alt="Logo de la aplicación" class="w-8 h-8 mr-3 rounded-md" 
                     onerror="this.onerror=null; this.src='https://placehold.co/32x32/4f46e5/ffffff?text=G&font=sans'">
-                <h1 class="text-4xl font-bold text-indigo-600 mr-2">Gestor de QR</h1>
+                <h1 class="text-4xl font-bold text-primary dark:text-primary-dark mr-2">Gestor de QR</h1>
             </div>
-            <p id="user-id-display" class="text-sm font-semibold text-gray-500 mt-2">Sincronizando...</p>
+            <p id="user-id-display" class="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-2">Sincronizando...</p>
         </header>
 
-        <!-- PANTALLA DE AUTENTICACIÓN (NUEVA) -->
+        <!-- PANTALLA DE AUTENTICACIÓN -->
         <section id="auth-screen">
-            <div class="auth-card bg-white p-6 rounded-xl shadow-lg mt-10">
-                <h2 class="text-3xl font-bold text-center text-indigo-600 mb-6">Iniciar Sesión</h2>
+            <div class="auth-card card p-6 rounded-xl shadow-lg mt-10">
+                <h2 class="text-3xl font-bold text-center text-primary dark:text-primary-dark mb-6">Iniciar Sesión</h2>
 
                 <!-- Formulario de LOGIN -->
                 <form id="login-form" class="space-y-4">
                     <div>
-                        <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                        <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white dark:border-gray-600">
                     </div>
                     <div>
-                        <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                        <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
+                        <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white dark:border-gray-600">
                     </div>
-                    <button type="submit" id="login-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                    <button type="submit" id="login-btn" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
                         Iniciar Sesión
                     </button>
                 </form>
@@ -82,35 +109,35 @@
                     </button>
                 </div>
                 
-                <div class="mt-6 pt-4 border-t border-gray-200 text-center">
-                    <p class="text-sm text-gray-600 mb-2">¿No tienes cuenta?</p>
-                    <button id="show-register-btn" class="text-indigo-600 font-semibold hover:text-indigo-800 transition">
+                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">¿No tienes cuenta?</p>
+                    <button id="show-register-btn" class="text-primary dark:text-primary-dark font-semibold hover:text-indigo-800 transition">
                         Registrarse
                     </button>
                 </div>
             </div>
 
             <!-- Formulario de REGISTRO (Inicialmente oculto) -->
-            <div id="register-card" class="auth-card bg-white p-6 rounded-xl shadow-lg mt-6 hidden">
-                <h2 class="text-3xl font-bold text-center text-teal-600 mb-6">Registrarse</h2>
+            <div id="register-card" class="auth-card card p-6 rounded-xl shadow-lg mt-6 hidden">
+                <h2 class="text-3xl font-bold text-center text-teal-600 dark:text-teal-400 mb-6">Registrarse</h2>
 
                 <form id="register-form" class="space-y-4">
                     <div>
-                        <label for="register-email" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                        <input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                     </div>
                     <div>
-                        <label for="register-password" class="block text-sm font-medium text-gray-700">Contraseña (mín. 6 caracteres)</label>
-                        <input type="password" id="register-password" required minlength="6" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña (mín. 6 caracteres)</label>
+                        <input type="password" id="register-password" required minlength="6" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                     </div>
                     <button type="submit" id="register-btn" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-teal-700 transition duration-300">
                         Crear Cuenta
                     </button>
                 </form>
 
-                <div class="mt-6 pt-4 border-t border-gray-200 text-center">
-                    <p class="text-sm text-gray-600 mb-2">¿Ya tienes cuenta?</p>
-                    <button id="show-login-btn" class="text-indigo-600 font-semibold hover:text-indigo-800 transition">
+                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">¿Ya tienes cuenta?</p>
+                    <button id="show-login-btn" class="text-primary dark:text-primary-dark font-semibold hover:text-indigo-800 transition">
                         Iniciar Sesión
                     </button>
                 </div>
@@ -120,15 +147,22 @@
 
         <!-- Menú Principal (Ahora oculto por defecto) -->
         <main id="main-menu" class="space-y-4 hidden">
-            <!-- NUEVO BOTÓN DE CERRAR SESIÓN -->
-            <button id="sign-out-btn" class="w-full bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-600 transition duration-300 flex items-center justify-center text-base">
-                <i class="fas fa-sign-out-alt mr-3"></i> Cerrar Sesión
-            </button>
+            <!-- BOTÓN DE CERRAR SESIÓN Y MODO OSCURO -->
+            <div class="flex flex-col md:flex-row justify-between gap-3">
+                 <button id="sign-out-btn" class="flex-1 bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-600 transition duration-300 flex items-center justify-center text-base">
+                    <i class="fas fa-sign-out-alt mr-3"></i> Cerrar Sesión
+                </button>
+                <button id="theme-toggle-btn" class="md:w-auto bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-900 font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-800 dark:hover:bg-gray-400 transition duration-300 flex items-center justify-center text-base">
+                    <i class="fas fa-sun mr-2 hidden dark:inline"></i>
+                    <i class="fas fa-moon mr-2 dark:hidden"></i>
+                    Modo
+                </button>
+            </div>
             
             <button id="install-app-modal-btn" class="w-full bg-blue-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-blue-600 transition duration-300 flex items-center justify-center text-lg hidden">
                 <i class="fas fa-mobile-alt mr-3"></i> Descargar Aplicación
             </button>
-            <button id="show-generation-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
+            <button id="show-generation-btn" class="w-full bg-primary text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
                 <i class="fas fa-plus-circle mr-3"></i> Generar QR
             </button>
             <button id="show-scanner-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center text-lg">
@@ -142,15 +176,15 @@
             </button>
         </main>
         
-        <!-- SECCIONES RESTANTES (Mantenidas, pero ocultas) -->
+        <!-- SECCIONES RESTANTES -->
         <section id="generation-section" class="hidden">
-            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Prenda</h2>
+            <button class="back-to-menu text-primary dark:text-primary-dark mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="card p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Registrar Prenda</h2>
                 <form id="qr-form" class="space-y-4">
                     <!-- CAMPO DE FOTO/CÁMARA/IMPORTAR -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Prenda (Opcional)</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto de la Prenda (Opcional)</label>
                         <div class="flex space-x-3">
                             <input type="file" id="camera-photo-input" name="cameraPhoto" accept="image/*" capture="environment" class="hidden">
                             <button type="button" id="open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
@@ -162,51 +196,51 @@
                             </button>
                         </div>
                         <div id="photo-preview-container" class="mt-4 hidden">
-                            <p class="text-xs text-gray-500 mb-1">Previsualización:</p>
-                            <img id="photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 w-full">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Previsualización:</p>
+                            <img id="photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 dark:border-gray-600 w-full">
                             <button type="button" id="remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
                         </div>
                     </div>
                     <!-- FIN CAMPO FOTO -->
                     <div>
-                        <label for="precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
-                        <input type="number" id="precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="precio-efectivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label for="precio-lista" class="block text-sm font-medium text-gray-700">Precio de Lista (ARS) *</label>
-                        <input type="number" id="precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="precio-lista" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio de Lista (ARS) *</label>
+                        <input type="number" id="precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label for="talle" class="block text-sm font-medium text-gray-700">Talle *</label>
-                        <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="talle" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Talle *</label>
+                        <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Ropa *</label>
                         <div id="tipo-ropa-container" class="mt-2 space-y-2">
                             <div class="flex items-center">
-                                <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <label for="tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                                <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                                <label for="tipo_importada" class="ml-3 block text-sm text-gray-900 dark:text-gray-300">Importada</label>
                             </div>
                             <div class="flex items-center">
-                                <input id="tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <label for="tipo_nacional" class="ml-3 block text-sm text-gray-900">Nacional</label>
+                                <input id="tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                                <label for="tipo_nacional" class="ml-3 block text-sm text-gray-900 dark:text-gray-300">Nacional</label>
                             </div>
                             <div class="flex items-center">
-                                <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                                <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                                <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900 dark:text-gray-300">Nuevo</label>
                             </div>
                         </div>
                         <button type="button" id="add-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
                     </div>
                     <div>
-                        <label for="vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
-                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="vendedora" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Vendedora (Opcional)</label>
+                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
-                        <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <label for="descripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (Opcional)</label>
+                        <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
-                    <div class="pt-2 border-t border-gray-200 space-y-3">
+                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
                         <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
                             ✨ Generar Descripción Inteligente
                         </button>
@@ -214,25 +248,25 @@
                             ✨ Analizar Riesgo de Stock
                         </button>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
+                    <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
                 </form>
             </div>
-            <div id="gemini-output-section" class="hidden mt-6 bg-purple-50 p-6 rounded-xl shadow-inner">
-                <h3 class="text-xl font-bold text-purple-800 mb-3" id="gemini-output-title">Sugerencia de la IA</h3>
-                <textarea id="gemini-output" readonly class="w-full h-40 p-2 border border-purple-200 rounded-md bg-white resize-none"></textarea>
+            <div id="gemini-output-section" class="hidden mt-6 bg-purple-50 dark:bg-gray-700 p-6 rounded-xl shadow-inner">
+                <h3 class="text-xl font-bold text-purple-800 dark:text-purple-300 mb-3" id="gemini-output-title">Sugerencia de la IA</h3>
+                <textarea id="gemini-output" readonly class="w-full h-40 p-2 border border-purple-200 dark:border-purple-800 rounded-md card resize-none dark:bg-gray-900"></textarea>
                 <button id="copy-desc-btn" class="mt-2 py-2 px-4 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 transition"><i class="fas fa-copy mr-2"></i>Copiar Texto</button>
             </div>
-            <div id="qr-display" class="hidden mt-6 bg-white p-6 rounded-xl shadow-lg text-center"></div>
+            <div id="qr-display" class="hidden mt-6 card p-6 rounded-xl shadow-lg text-center"></div>
         </section>
         <section id="edit-section" class="hidden">
-            <button class="back-to-history text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Editar Prenda</h2>
+            <button class="back-to-history text-primary dark:text-primary-dark mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <div class="card p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Editar Prenda</h2>
                 <form id="edit-form" class="space-y-4">
                     <input type="hidden" id="edit-id" name="id">
                     <!-- CAMPO DE FOTO/CÁMARA/IMPORTAR EDICIÓN -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto de la Prenda (Opcional)</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto de la Prenda (Opcional)</label>
                         <div class="flex space-x-3">
                             <input type="file" id="edit-camera-photo-input" name="editCameraPhoto" accept="image/*" capture="environment" class="hidden">
                             <button type="button" id="edit-open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
@@ -244,101 +278,101 @@
                             </button>
                         </div>
                         <div id="edit-photo-preview-container" class="mt-4 hidden">
-                            <p class="text-xs text-gray-500 mb-1">Previsualización Actual:</p>
-                            <img id="edit-photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 w-full">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Previsualización Actual:</p>
+                            <img id="edit-photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 dark:border-gray-600 w-full">
                             <button type="button" id="edit-remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
                         </div>
                     </div>
                     <!-- FIN CAMPO FOTO EDICIÓN -->
                     <div>
-                        <label for="edit-precio-efectivo" class="block text-sm font-medium text-gray-700">Precio Efectivo (ARS) *</label>
-                        <input type="number" id="edit-precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="edit-precio-efectivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="edit-precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label for="edit-precio-lista" class="block text-sm font-medium text-gray-700">Precio de Lista (ARS) *</label>
-                        <input type="number" id="edit-precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="edit-precio-lista" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio de Lista (ARS) *</label>
+                        <input type="number" id="edit-precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label for="edit-talle" class="block text-sm font-medium text-gray-700">Talle *</label>
-                        <input type="text" id="edit-talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="edit-talle" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Talle *</label>
+                        <input type="text" id="edit-talle" name="talle" required class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Tipo de Ropa *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Ropa *</label>
                         <div id="edit-tipo-ropa-container" class="mt-2 space-y-2">
                             <div class="flex items-center">
-                                <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900">Importada</label>
+                                <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                                <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900 dark:text-gray-300">Importada</label>
                             </div>
                             <div class="flex items-center">
-                                <input id="edit-tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <label for="edit-tipo_nacional" class="ml-3 block text-sm text-gray-900">Nacional</label>
+                                <input id="edit-tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                                <label for="edit-tipo_nacional" class="ml-3 block text-sm text-gray-900 dark:text-gray-300">Nacional</label>
                             </div>
                             <div class="flex items-center">
-                                <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900">Nuevo</label>
+                                <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                                <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900 dark:text-gray-300">Nuevo</label>
                             </div>
                         </div>
                         <button type="button" id="add-edit-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
                     </div>
                     <div>
-                        <label for="edit-vendedora" class="block text-sm font-medium text-gray-700">Vendedora (Opcional)</label>
-                        <input type="text" id="edit-vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <label for="edit-vendedora" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Vendedora (Opcional)</label>
+                        <input type="text" id="edit-vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
-                        <label for="edit-descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
-                        <textarea id="edit-descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <label for="edit-descripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (Opcional)</label>
+                        <textarea id="edit-descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Guardar Cambios</button>
+                    <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Guardar Cambios</button>
                 </form>
             </div>
         </section>
         <section id="scanner-section" class="hidden">
-            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-            <div class="bg-white p-4 rounded-xl shadow-lg">
+            <button class="back-to-menu text-primary dark:text-primary-dark mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="card p-4 rounded-xl shadow-lg">
                 <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
             </div>
             <div id="scan-result" class="mt-6"></div>
         </section>
         <section id="history-section" class="hidden">
-            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de QR</h2>
+            <button class="back-to-menu text-primary dark:text-primary-dark mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="card p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Historial de QR</h2>
                 <div class="mb-4">
-                    <input type="text" id="search-bar" placeholder="Buscar por ID, Talle, Tipo, Cliente o Vendedora..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" id="search-bar" placeholder="Buscar por ID, Talle, Tipo, Cliente o Vendedora..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                 </div>
-                <div class="flex justify-between mb-4 flex-wrap gap-2">
-                    <p id="stock-count" class="text-lg font-semibold text-gray-800">Stock actual: 0</p>
-                    <p id="sold-sum" class="text-lg font-semibold text-red-700">Vendidos: $0</p>
-                    <p id="speculation-sum" class="text-lg font-semibold text-green-700">Especulación: $0</p>
+                <div class="flex justify-between mb-4 flex-wrap gap-2 text-gray-800 dark:text-gray-200">
+                    <p id="stock-count" class="text-lg font-semibold">Stock actual: 0</p>
+                    <p id="sold-sum" class="text-lg font-semibold text-red-600 dark:text-red-400">Vendidos: $0</p>
+                    <p id="speculation-sum" class="text-lg font-semibold text-green-700 dark:text-green-400">Especulación: $0</p>
                 </div>
                 <div class="flex justify-between mb-4">
                     <button id="export-excel-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-file-excel mr-2"></i>Exportar a Excel</button>
                     <button id="export-csv-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-file-csv mr-2"></i>Exportar a CSV</button>
                 </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">No Vendidos</h3>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">No Vendidos</h3>
                 <div id="not-sold-list" class="space-y-4 mb-6"></div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">Vendidos</h3>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Vendidos</h3>
                 <div id="sold-list" class="space-y-4"></div>
             </div>
         </section>
         <section id="re-qr-section" class="hidden">
-            <button class="back-to-history text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalle y Gestión de QR</h2>
-            <div id="re-qr-display" class="mt-6 bg-white p-6 rounded-xl shadow-lg text-center">
+            <button class="back-to-history text-primary dark:text-primary-dark mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Detalle y Gestión de QR</h2>
+            <div id="re-qr-display" class="mt-6 card p-6 rounded-xl shadow-lg text-center">
                 <!-- El QR, la foto y las opciones se renderizarán aquí -->
             </div>
         </section>
         <section id="metrics-section" class="hidden">
-            <button class="back-to-menu text-indigo-600 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Métricas de Stock y Venta</h2>
-                <div id="metrics-summary" class="mb-6 space-y-2">
-                    <p id="avg-sale-time" class="text-lg font-bold text-purple-700">Días promedio de venta: Calculando...</p>
+            <button class="back-to-menu text-primary dark:text-primary-dark mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="card p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Métricas de Stock y Venta</h2>
+                <div id="metrics-summary" class="mb-6 space-y-2 text-gray-700 dark:text-gray-300">
+                    <p id="avg-sale-time" class="text-lg font-bold text-purple-700 dark:text-purple-400">Días promedio de venta: Calculando...</p>
                 </div>
-                <canvas id="stock-chart" width="400" height="200"></canvas>
+                <div class="h-64 mb-6"><canvas id="stock-chart" width="400" height="200"></canvas></div>
                 <div id="calendar-metrics" class="mt-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Almanaque de Actividades</h3>
-                    <div class="grid grid-cols-7 gap-2 text-center text-sm">
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Almanaque de Actividades</h3>
+                    <div class="grid grid-cols-7 gap-2 text-center text-sm text-gray-700 dark:text-gray-300">
                         <div class="font-bold">Dom</div>
                         <div class="font-bold">Lun</div>
                         <div class="font-bold">Mar</div>
@@ -358,48 +392,48 @@
     <!-- Modals (Estrategia, Venta Manual, Instalación) -->
     <!-- Modal de Análisis de Estrategia -->
     <div id="strategy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
-            <h3 id="modal-title" class="text-2xl font-bold text-indigo-600 mb-4"></h3>
-            <div id="modal-content" class="space-y-3 text-gray-700 text-left"></div>
-            <button id="close-modal-btn" class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition">Cerrar</button>
+        <div class="card rounded-xl shadow-2xl max-w-lg w-full p-6">
+            <h3 id="modal-title" class="text-2xl font-bold text-primary dark:text-primary-dark mb-4"></h3>
+            <div id="modal-content" class="space-y-3 text-gray-700 dark:text-gray-300 text-left"></div>
+            <button id="close-modal-btn" class="mt-6 w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition">Cerrar</button>
         </div>
     </div>
     
     <!-- Modal de Venta Manual -->
     <div id="manual-sale-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
+        <div class="card rounded-xl shadow-2xl max-w-md w-full p-6 relative">
             <button id="close-manual-sale-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none">
                 <i class="fas fa-times text-xl"></i>
             </button>
-            <h3 class="text-2xl font-bold text-red-600 mb-4">Venta Manual de Prenda</h3>
-            <p class="text-gray-700 mb-4">Selecciona el motivo del problema de escaneo:</p>
+            <h3 class="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Venta Manual de Prenda</h3>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">Selecciona el motivo del problema de escaneo:</p>
 
             <form id="manual-sale-form" class="space-y-3">
                 <div class="space-y-2">
-                    <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
-                        <input type="radio" name="scan-reason" value="Cámara rota" class="form-radio text-red-600 h-5 w-5">
-                        <span class="ml-3 text-gray-700 font-medium">Cámara rota</span>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Cámara rota" class="form-radio text-red-600 h-5 w-5 dark:bg-gray-700 dark:border-gray-500">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Cámara rota</span>
                     </label>
-                    <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
-                        <input type="radio" name="scan-reason" value="QR dañado" class="form-radio text-red-600 h-5 w-5">
-                        <span class="ml-3 text-gray-700 font-medium">QR dañado</span>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="QR dañado" class="form-radio text-red-600 h-5 w-5 dark:bg-gray-700 dark:border-gray-500">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">QR dañado</span>
                     </label>
-                    <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
-                        <input type="radio" name="scan-reason" value="Falta de tiempo" class="form-radio text-red-600 h-5 w-5">
-                        <span class="ml-3 text-gray-700 font-medium">Falta de tiempo</span>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Falta de tiempo" class="form-radio text-red-600 h-5 w-5 dark:bg-gray-700 dark:border-gray-500">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Falta de tiempo</span>
                     </label>
-                    <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
-                        <input type="radio" name="scan-reason" value="Problemas de red" class="form-radio text-red-600 h-5 w-5">
-                        <span class="ml-3 text-gray-700 font-medium">Problemas de red</span>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Problemas de red" class="form-radio text-red-600 h-5 w-5 dark:bg-gray-700 dark:border-gray-500">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Problemas de red</span>
                     </label>
-                    <label id="otro-radio-label" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
-                        <input type="radio" name="scan-reason" value="Otro" class="form-radio text-red-600 h-5 w-5">
-                        <span class="ml-3 text-gray-700 font-medium">Otro (aclarar el motivo)</span>
+                    <label id="otro-radio-label" class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Otro" class="form-radio text-red-600 h-5 w-5 dark:bg-gray-700 dark:border-gray-500">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Otro (aclarar el motivo)</span>
                     </label>
                 </div>
 
-                <div id="reason-other-container" class="hidden mt-3 pt-2 border-t border-gray-200">
-                    <input type="text" id="reason-other-input" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500" placeholder="Escribe el motivo aquí">
+                <div id="reason-other-container" class="hidden mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <input type="text" id="reason-other-input" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Escribe el motivo aquí">
                 </div>
                 
                 <button type="submit" class="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300">
@@ -411,27 +445,27 @@
 
     <!-- Modal de Instalación PWA -->
     <div id="install-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 relative">
+        <div class="card rounded-xl shadow-2xl max-w-sm w-full p-6 relative">
             <button id="close-install-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none">
                 <i class="fas fa-times text-xl"></i>
             </button>
-            <h3 class="text-2xl font-bold text-blue-600 mb-4 text-center">Instalar Aplicación</h3>
-            <div class="space-y-4 text-gray-700">
+            <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">Instalar Aplicación</h3>
+            <div class="space-y-4 text-gray-700 dark:text-gray-300">
                 <p>¡Lleva el **Gestor de QR** a tu pantalla de inicio para un acceso rápido y sin interrupciones! Funciona como una aplicación nativa.</p>
                 
-                <h4 class="font-semibold text-gray-800 flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i> Beneficios:</h4>
+                <h4 class="font-semibold text-gray-800 dark:text-gray-200 flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i> Beneficios:</h4>
                 <ul class="list-disc list-inside ml-4 text-sm space-y-1">
                     <li>Acceso directo sin navegador.</li>
                     <li>Funcionamiento sin conexión.</li>
                     <li>Experiencia de pantalla completa.</li>
                 </ul>
 
-                <p class="text-sm text-center pt-2 border-t border-gray-100">Presiona el botón de abajo para instalarla en tu dispositivo.</p>
+                <p class="text-sm text-center pt-2 border-t border-gray-200 dark:border-gray-700">Presiona el botón de abajo para instalarla en tu dispositivo.</p>
             </div>
             <button id="install-btn-in-modal" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
                 <i class="fas fa-download mr-2"></i> Agregar a Pantalla Principal
             </button>
-            <p id="install-tip" class="mt-4 text-xs text-center text-gray-500 hidden">
+            <p id="install-tip" class="mt-4 text-xs text-center text-gray-500 dark:text-gray-400 hidden">
                 <i class="fas fa-info-circle mr-1"></i> Si el botón no funciona, usa el menú del navegador ("Agregar a pantalla de inicio").
             </p>
         </div>
@@ -496,6 +530,7 @@
         const showRegisterBtn = getElement('show-register-btn');
         const showLoginBtn = getElement('show-login-btn');
         const signOutBtn = getElement('sign-out-btn');
+        const themeToggleBtn = getElement('theme-toggle-btn'); // NUEVO
 
         const mainMenu = getElement('main-menu');
         const generationSection = getElement('generation-section');
@@ -533,13 +568,39 @@
         function showAppMessage(message, type = 'info') {
             const messageDiv = getElement('app-message');
             if (!messageDiv) return;
+            const isDarkMode = document.body.classList.contains('dark');
+            const bgClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
+            
             messageDiv.innerHTML = `
-                <div class="bg-${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}-100 text-${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}-700 px-4 py-3 rounded-lg shadow-md flex items-center">
+                <div class="text-white px-4 py-3 rounded-lg shadow-xl flex items-center ${bgClass}">
                     <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'} mr-2"></i>
                     ${message}
                 </div>`;
             setTimeout(() => messageDiv.innerHTML = '', 5000);
         }
+        
+        // ====================================================================
+        // GESTIÓN DE TEMA (CLARO / OSCURO)
+        // ====================================================================
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.body.classList.add('dark');
+            } else {
+                document.body.classList.remove('dark');
+            }
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            const isDarkMode = document.body.classList.contains('dark');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            // Necesario forzar la redibujado de Chart.js si está visible
+            if (!metricsSection.classList.contains('hidden')) {
+                setupMetricsChart();
+            }
+        }
+
 
         // ====================================================================
         // FIREBASE AUTHENTICATION LOGIC
@@ -549,7 +610,6 @@
             if (firebaseConfig) {
                 setLogLevel('debug');
                 try {
-                    console.log("Intentando inicializar Firebase con Project ID:", firebaseConfig.projectId);
                     app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
@@ -562,25 +622,28 @@
                         if (user && user.uid) {
                             userId = user.uid;
                             isAuthReady = true;
-                            console.log(`Auth Ready. User ID: ${userId}`);
                             showView('main');
                             setupFirestoreListener(); 
                             
                             const userDisplay = user.email || user.displayName || 'Usuario anónimo';
                             getElement('user-id-display').textContent = `Sesión: ${userDisplay} (${userId.substring(0, 8)}...)`;
                             getElement('user-id-display').title = userId;
-                            showAppMessage(`Bienvenido, ${userDisplay}. Sincronizando datos...`, 'success');
+                            if (auth.currentUser.isAnonymous) {
+                                showAppMessage("Estás en modo anónimo. Inicia sesión para persistir datos.", 'info');
+                            } else {
+                                showAppMessage(`Bienvenido, ${userDisplay}. Sincronizando datos...`, 'success');
+                            }
                         } else {
-                            // Si no hay usuario, usamos un ID temporal para el modo anónimo
+                            // Si no hay usuario, el SDK automáticamente maneja la reconexión de sesiones anteriores
+                            // Si llega aquí sin usuario (ej. cierra sesión), mostramos la pantalla de Auth
                             userId = 'guest-' + crypto.randomUUID(); 
                             isAuthReady = false;
                             showView('auth-screen');
                             
-                            // Si no es la autenticación inicial con token, permitimos el inicio anónimo (solo para modo de prueba si falla Auth)
+                            // Si no hay token inicial, intentamos iniciar anónimamente para permitir interacción inicial
                             if (!initialAuthToken && auth.currentUser === null) {
                                 await signInAnonymously(auth);
                                 getElement('user-id-display').textContent = `Inicia Sesión (Modo Anónimo)`;
-                                showAppMessage("Por favor, inicia sesión o regístrate para sincronizar tus datos.", 'info');
                             } else {
                                 getElement('user-id-display').textContent = `Desconectado`;
                             }
@@ -596,8 +659,7 @@
                             await signInAnonymously(auth);
                         }
                     } else if (!auth.currentUser) {
-                        // En un entorno normal sin token, iniciamos anónimamente
-                        await signInAnonymously(auth);
+                        // En un entorno normal sin token, la persistencia se encarga de esto.
                     }
                     
                 } catch (e) {
@@ -621,7 +683,7 @@
             }
             signOut(auth).then(() => {
                 showAppMessage("Sesión cerrada correctamente.", 'info');
-                // Al cerrar sesión, el onAuthStateChanged se dispara y redirige a 'auth-screen'
+                // onAuthStateChanged se dispara y redirige a 'auth-screen'
             }).catch((error) => {
                 showAppMessage(`Error al cerrar sesión: ${error.message}`, 'error');
             });
@@ -965,7 +1027,7 @@
                 displayScannedData(prendaEncontrada);
                 showAppMessage("Prenda ya estaba marcada como vendida.", "info");
             } else {
-                if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">Prenda no encontrada en el historial de la nube.</div>`;
+                if (scanResult) scanResult.innerHTML = `<div class="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 p-4 rounded-lg shadow-md">Prenda no encontrada en el historial de la nube.</div>`;
                 showAppMessage("Prenda no encontrada.", "error");
             }
 
@@ -1170,16 +1232,16 @@
 
             const imageHtml = prenda.fotoBase64 ? 
                 `<div class="mb-4 flex justify-center">
-                    <img src="${prenda.fotoBase64}" alt="Foto de la Prenda" class="w-full max-h-48 object-contain rounded-lg shadow-md border border-gray-300">
+                    <img src="${prenda.fotoBase64}" alt="Foto de la Prenda" class="w-full max-h-48 object-contain rounded-lg shadow-md border border-gray-300 dark:border-gray-600">
                 </div>` : 
                 '';
 
             containerElement.innerHTML = `
                 ${imageHtml}
-                <h3 class="font-bold text-lg mb-4">Código QR Generado para ID: ${prendaId.substring(0, 8)}...</h3>
+                <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200">Código QR Generado para ID: ${prendaId.substring(0, 8)}...</h3>
                 <div class="flex justify-center items-center gap-6 flex-wrap">
-                    <div id="qrcode-canvas-${prendaId}" class="flex-shrink-0"></div>
-                    <div class="mt-4 text-gray-700 text-left mx-auto max-w-sm flex-grow">
+                    <div id="qrcode-canvas-${prendaId}" class="flex-shrink-0 p-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"></div>
+                    <div class="mt-4 text-gray-700 dark:text-gray-300 text-left mx-auto max-w-sm flex-grow">
                         <p><strong>Precio Efectivo:</strong> $${prenda.precioEfectivo}</p>
                         <p><strong>Precio de Lista:</strong> $${prenda.precioLista}</p>
                         <p><strong>Talle:</strong> ${prenda.talle}</p>
@@ -1195,7 +1257,7 @@
                     </button>
                 </div>
 
-                <p class="text-sm text-gray-500 mt-4 mb-2 font-semibold">Opciones de acción:</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-4 mb-2 font-semibold">Opciones de acción:</p>
                 <div class="flex flex-col md:flex-row justify-center gap-3 mt-2">
                     <button id="download-btn-${prendaId}" data-id="${prendaId}" class="qr-action-btn py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-download mr-2"></i>Descargar</button>
                     <button id="print-btn-${prendaId}" data-id="${prendaId}" class="qr-action-btn py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-print mr-2"></i>Imprimir</button>
@@ -1248,7 +1310,7 @@
             combinedCanvas.width = canvas.width + 50;  
             combinedCanvas.height = canvas.height + 140; 
             
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = document.body.classList.contains('dark') ? '#1f2937' : '#ffffff';
             ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
             
             const qrX = (combinedCanvas.width - canvas.width) / 2;
@@ -1256,7 +1318,7 @@
             ctx.drawImage(canvas, qrX, currentY);
             currentY += canvas.height + 30;
 
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = document.body.classList.contains('dark') ? '#d1d5db' : '#000000';
             ctx.font = '14px Arial';
             ctx.textAlign = 'center';
             const infoText = `ID: ${prendaId.substring(0, 8)}...\nPrecio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}`;
@@ -1283,8 +1345,8 @@
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <html><head><title>Imprimir QR</title></head>
-                <body style="text-align:center; margin-top: 50px;">
-                    <img src="${qrCanvas.toDataURL()}" style="max-width: 100%; width: 180px;">
+                <body style="text-align:center; margin-top: 50px; color: black; background: white;">
+                    <img src="${qrCanvas.toDataURL('image/png', 1.0)}" style="max-width: 100%; width: 180px;">
                     <p style="font-size: 14px; margin-top: 20px; white-space: pre-line;">${infoText}</p>
                 </body></html>`);
             printWindow.document.close();
@@ -1300,7 +1362,16 @@
                 return;
             }
             try {
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                // Crear un canvas temporal para asegurar el fondo blanco en la imagen compartida
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                ctx.drawImage(canvas, 0, 0);
+
+                const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
                 const infoText = `Detalles de la Prenda:\nPrecio Efectivo: $${prenda.precioEfectivo}\nPrecio de Lista: $${prenda.precioLista}\nTalle: ${prenda.talle}\nTipo: ${prenda.tipos_de_ropa.join(', ')}\nDescripción: ${prenda.descripcion || 'Sin descripción'}`;
                 const file = new File([blob], `qr-prenda-${prendaId}.png`, { type: 'image/png' });
                 const shareData = {
@@ -1349,15 +1420,15 @@
             const diasTranscurridos = data.dias_transcurridos || (data.ultimo_escaneo ? Math.floor((new Date(data.ultimo_escaneo) - new Date(data.fecha_creacion)) / (1000 * 60 * 60 * 24)) : 0);
             
             const imageHtml = data.fotoBase64 ? 
-                `<div class="mb-4 flex justify-center"><img src="${data.fotoBase64}" alt="Foto de la Prenda" class="w-full max-h-48 object-contain rounded-lg shadow-md border border-gray-300"></div>` : 
+                `<div class="mb-4 flex justify-center"><img src="${data.fotoBase64}" alt="Foto de la Prenda" class="w-full max-h-48 object-contain rounded-lg shadow-md border border-gray-300 dark:border-gray-600"></div>` : 
                 '';
 
             if (scanResult) {
                 scanResult.innerHTML = `
-                    <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-indigo-500">
+                    <div class="card p-6 rounded-xl shadow-lg border-t-4 border-primary">
                         ${imageHtml}
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalle de la Prenda</h2>
-                        <div class="space-y-2 text-gray-700">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Detalle de la Prenda</h2>
+                        <div class="space-y-2 text-gray-700 dark:text-gray-300">
                             <p><strong>ID:</strong> ${data.id}</p>
                             <p><strong>Precio Efectivo:</strong> $${data.precioEfectivo}</p>
                             <p><strong>Precio de Lista:</strong> $${data.precioLista}</p>
@@ -1433,8 +1504,8 @@
             if (!notSoldList || !soldList || !stockCount || !soldSum || !speculationSum || !searchBar || !avgSaleTime) return;
 
             if (prendas.length === 0) {
-                notSoldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas no vendidas.</p>';
-                soldList.innerHTML = '<p class="text-gray-500 text-center">No hay prendas vendidas.</p>';
+                notSoldList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center">No hay prendas no vendidas.</p>';
+                soldList.innerHTML = '<p class="gray-500 dark:text-gray-400 text-center">No hay prendas vendidas.</p>';
                 stockCount.textContent = 'Stock actual: 0';
                 soldSum.textContent = 'Vendidos: $0';
                 speculationSum.textContent = 'Especulación: $0';
@@ -1477,21 +1548,21 @@
                 
                 const photoThumbHtml = prenda.fotoBase64 ? 
                     `<img src="${prenda.fotoBase64}" alt="Prenda" class="w-12 h-12 object-cover rounded-lg">` : 
-                    `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"><i class="fas fa-camera text-lg text-gray-500"></i></div>`;
+                    `<div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"><i class="fas fa-camera text-lg text-gray-500 dark:text-gray-400"></i></div>`;
 
                 const item = document.createElement('div');
-                item.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-start';
+                item.className = 'p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 flex items-start';
                 item.innerHTML = `
                     <div class="flex flex-col items-center mr-4 flex-shrink-0 space-y-1">
                         ${photoThumbHtml}
-                        <div id="qr-thumb-${prenda.id}" class="w-[45px] h-[45px] border border-gray-300 rounded-sm p-[1px]"></div>
+                        <div id="qr-thumb-${prenda.id}" class="w-[45px] h-[45px] border border-gray-300 dark:border-gray-600 rounded-sm p-[1px] bg-white dark:bg-gray-700"></div>
                     </div>
                     
                     <div class="flex-grow">
                         <div class="flex justify-between items-center flex-wrap">
-                            <div class="flex-grow min-w-[200px] mb-2 md:mb-0">
-                                <p class="font-bold text-indigo-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
-                                <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} sin escanear)</p>
+                            <div class="flex-grow min-w-[200px] mb-2 md:mb-0 text-gray-700 dark:text-gray-300">
+                                <p class="font-bold text-primary dark:text-primary-dark">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle}</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} sin escanear)</p>
                             </div>
                             <div class="flex gap-2 flex-wrap">
                                 <button data-id="${prenda.id}" class="manual-sale-btn bg-red-600 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-red-700" title="Registrar venta sin escaneo"><i class="fas fa-hand-pointer"></i> Venta Manual</button>
@@ -1532,26 +1603,26 @@
                 const diasTranscurridos = prenda.dias_transcurridos || Math.floor((new Date(prenda.ultimo_escaneo) - new Date(prenda.fecha_creacion)) / (1000 * 60 * 60 * 24));
                 
                 const reasonDisplay = prenda.manual_sale_reason 
-                    ? `<span class="text-red-600 font-bold ml-2">(Manual: ${prenda.manual_sale_reason})</span>`
+                    ? `<span class="text-red-600 dark:text-red-400 font-bold ml-2">(Manual: ${prenda.manual_sale_reason})</span>`
                     : '';
 
                 const photoThumbHtml = prenda.fotoBase64 ? 
                     `<img src="${prenda.fotoBase64}" alt="Prenda" class="w-12 h-12 object-cover rounded-lg">` : 
-                    `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"><i class="fas fa-camera text-lg text-gray-500"></i></div>`;
+                    `<div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center"><i class="fas fa-camera text-lg text-gray-500 dark:text-gray-400"></i></div>`;
                 
                 const item = document.createElement('div');
-                item.className = 'p-4 bg-green-50 rounded-lg border border-green-300 flex items-start';
+                item.className = 'p-4 bg-green-50 dark:bg-green-900/50 rounded-lg border border-green-300 dark:border-green-700 flex items-start';
                 item.innerHTML = `
                     <div class="flex flex-col items-center mr-4 flex-shrink-0 space-y-1">
                         ${photoThumbHtml}
-                        <div id="qr-thumb-sold-${prenda.id}" class="w-[45px] h-[45px] border border-gray-300 rounded-sm p-[1px]"></div>
+                        <div id="qr-thumb-sold-${prenda.id}" class="w-[45px] h-[45px] border border-gray-300 dark:border-gray-600 rounded-sm p-[1px] bg-white dark:bg-gray-700"></div>
                     </div>
 
                     <div class="flex-grow">
                         <div class="flex justify-between items-center flex-wrap">
-                            <div class="flex-grow min-w-[200px] mb-2 md:mb-0">
-                                <p class="font-bold text-green-700">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle} ${reasonDisplay}</p>
-                                <p class="text-sm text-gray-600">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} hasta venta)</p>
+                            <div class="flex-grow min-w-[200px] mb-2 md:mb-0 text-gray-700 dark:text-gray-300">
+                                <p class="font-bold text-green-700 dark:text-green-400">${prenda.tipos_de_ropa.join(' / ')} - Talle: ${prenda.talle} ${reasonDisplay}</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Efectivo: $${prenda.precioEfectivo} / Lista: $${prenda.precioLista} - Registrado el ${fecha} (${diasTranscurridos} día${diasTranscurridos !== 1 ? 's' : ''} hasta venta)</p>
                             </div>
                             <div class="flex gap-2">
                                 <button class="view-qr-btn bg-indigo-500 text-white text-sm font-semibold py-1 px-3 rounded-full hover:bg-indigo-600" title="Ver QR, Foto y Opciones de Impresión"><i class="fas fa-qrcode"></i> QR</button>
@@ -1583,7 +1654,7 @@
             searchBar.addEventListener('input', setupHistoryDisplay);
         }
 
-        // --- LÓGICA DE MÉTRICAS ---
+        // --- LÓGICA DE MÉTRICAS (FIXED) ---
         function setupMetricsChart() {
             const ctx = getElement('stock-chart')?.getContext('2d');
             if (!ctx) return;
@@ -1591,48 +1662,72 @@
             if (window.stockChart) {
                 window.stockChart.destroy();
             }
+            
+            if (prendas.length === 0) return;
+
             const events = [];
             prendas.forEach(p => {
-                events.push({ date: new Date(p.fecha_creacion), type: 'create' });
+                // Evento de creación (stock entra)
+                events.push({ timestamp: new Date(p.fecha_creacion).getTime(), type: 1 });
+                // Evento de venta (stock sale)
                 if (p.ultimo_escaneo) {
-                    events.push({ date: new Date(p.ultimo_escaneo), type: 'scan' });
+                    events.push({ timestamp: new Date(p.ultimo_escaneo).getTime(), type: -1 });
                 }
             });
-            events.sort((a, b) => a.date - b.date);
-            const labels = [];
-            const data = [];
-            let stock = 0;
+            events.sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Cálculo acumulativo de stock por día
+            const stockByDay = {};
+            let currentStock = 0;
+            
             events.forEach(event => {
-                if (event.type === 'create') stock++;
-                else if (event.type === 'scan') stock--;
-                const dateString = event.date.toLocaleDateString('es-AR');
-                if (labels[labels.length - 1] !== dateString) {
-                    labels.push(dateString);
-                    data.push(stock);
-                } else {
-                    data[data.length - 1] = stock;
-                }
+                const date = new Date(event.timestamp);
+                // Usamos la fecha como clave de día (sin la hora)
+                const dateKey = date.toISOString().split('T')[0];
+                
+                currentStock += event.type;
+                stockByDay[dateKey] = currentStock; // Almacena el stock al final del día
             });
+            
+            // Generar labels y data para el chart
+            const labels = Object.keys(stockByDay).sort();
+            const data = labels.map(key => stockByDay[key]);
+
+            const isDarkMode = document.body.classList.contains('dark');
+            const textColor = isDarkMode ? '#d1d5db' : '#1f2937';
+            const gridColor = isDarkMode ? 'rgba(80, 80, 80, 0.2)' : 'rgba(0, 0, 0, 0.1)';
 
             window.stockChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: labels.map(dateStr => new Date(dateStr).toLocaleDateString('es-AR')),
                     datasets: [{
-                        label: 'Stock a lo largo del tiempo',
+                        label: 'Stock Acumulado',
                         data: data,
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1,
+                        borderColor: isDarkMode ? '#818cf8' : 'rgb(79, 70, 229)', // primary color
+                        tension: 0.2,
                         fill: true,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)'
+                        backgroundColor: isDarkMode ? 'rgba(129, 140, 248, 0.1)' : 'rgba(79, 70, 229, 0.2)',
+                        pointBackgroundColor: isDarkMode ? '#818cf8' : 'rgb(79, 70, 229)',
+                        pointRadius: 3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor } } },
                     scales: {
-                        x: { title: { display: true, text: 'Fecha' } },
-                        y: { beginAtZero: true, title: { display: true, text: 'Stock' } }
+                        x: { 
+                            title: { display: true, text: 'Fecha', color: textColor },
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        y: { 
+                            beginAtZero: true, 
+                            title: { display: true, text: 'Unidades en Stock', color: textColor },
+                            ticks: { color: textColor, precision: 0 },
+                            grid: { color: gridColor }
+                        }
                     }
                 }
             });
@@ -1651,10 +1746,12 @@
             const startDay = firstDay.getDay(); 
             const generatedCount = {};
             const scannedCount = {};
+            
+            // Recorre todas las prendas para contar eventos por día
             prendas.forEach(p => {
-                const date = new Date(p.fecha_creacion);
-                if (date.getMonth() === month && date.getFullYear() === year) {
-                    const day = date.getDate();
+                const dateCreacion = new Date(p.fecha_creacion);
+                if (dateCreacion.getMonth() === month && dateCreacion.getFullYear() === year) {
+                    const day = dateCreacion.getDate();
                     generatedCount[day] = (generatedCount[day] || 0) + 1;
                 }
                 if (p.ultimo_escaneo) {
@@ -1668,30 +1765,40 @@
 
             calendarDays.innerHTML = '';
             for (let i = 0; i < startDay; i++) {
-                calendarDays.innerHTML += '<div></div>';
+                calendarDays.innerHTML += '<div></div>'; // Espacios vacíos para alinear el primer día
             }
+
+            const isDarkMode = document.body.classList.contains('dark');
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const genCount = generatedCount[day] || 0;
                 const scanCount = scannedCount[day] || 0;
                 const dayDiv = document.createElement('div');
-                dayDiv.className = 'p-1 rounded-lg text-xs font-semibold';
+                dayDiv.className = 'p-1 rounded-lg text-xs font-semibold h-16 flex flex-col justify-between items-center';
                 
                 let bgColor = '';
+                let textColor = isDarkMode ? 'text-gray-100' : 'text-gray-800';
+
                 if (day === now.getDate() && month === now.getMonth() && year === now.getFullYear()) {
-                    bgColor = 'bg-indigo-100 border border-indigo-500';
+                    bgColor = 'bg-primary dark:bg-primary-dark';
+                    textColor = 'text-white dark:text-gray-900';
                 } else if (genCount > 0 && scanCount > 0) {
-                    bgColor = 'bg-yellow-100';
+                    bgColor = 'bg-yellow-100 dark:bg-yellow-900/50';
                 } else if (genCount > 0) {
-                    bgColor = 'bg-gray-200';
+                    bgColor = 'bg-gray-200 dark:bg-gray-600';
                 } else if (scanCount > 0) {
-                    bgColor = 'bg-green-100';
+                    bgColor = 'bg-green-100 dark:bg-green-900/50';
                 } else {
-                    bgColor = 'text-gray-500';
+                    bgColor = 'bg-gray-50 dark:bg-gray-700';
                 }
                 
-                dayDiv.classList.add(bgColor);
-                dayDiv.innerHTML = `${day}<br><span class="text-green-600">${genCount} G</span><br><span class="text-red-600">${scanCount} S</span>`;
+                dayDiv.classList.add(bgColor, textColor);
+                dayDiv.innerHTML = `
+                    <div class="font-bold text-sm">${day}</div>
+                    <div class="text-xs w-full">
+                        <span class="text-green-600 dark:text-green-400 block leading-tight">${genCount} G</span>
+                        <span class="text-red-600 dark:text-red-400 block leading-tight">${scanCount} V</span>
+                    </div>`;
                 calendarDays.appendChild(dayDiv);
             }
         }
@@ -1750,8 +1857,8 @@
             const tipoDiv = document.createElement('div');
             tipoDiv.className = 'flex items-center';
             tipoDiv.innerHTML = `
-                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                <input type="text" placeholder="Tipo personalizado" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <input type="checkbox" name="tipo_ropa" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                <input type="text" placeholder="Tipo personalizado" class="ml-3 flex-grow px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                 <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
             `;
             container.appendChild(tipoDiv);
@@ -1780,8 +1887,8 @@
             const checkboxValue = value || ''; 
 
             tipoDiv.innerHTML = `
-                <input type="checkbox" name="tipo_ropa" ${checked ? 'checked' : ''} value="${checkboxValue}" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                <input type="text" placeholder="Tipo personalizado" value="${inputValue}" class="ml-3 flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <input type="checkbox" name="tipo_ropa" ${checked ? 'checked' : ''} value="${checkboxValue}" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary dark:bg-gray-700 dark:border-gray-500">
+                <input type="text" placeholder="Tipo personalizado" value="${inputValue}" class="ml-3 flex-grow px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
                 <button type="button" class="remove-tipo-btn ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
             `;
             container.appendChild(tipoDiv);
@@ -2089,7 +2196,7 @@
                 const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar el análisis. Intente de nuevo.";
                 
                 const htmlContent = generatedText.split('\n').map(line => {
-                    if (line.startsWith('### ')) return `<h4 class="font-semibold text-gray-900 mt-4">${line.substring(4)}</h4>`;
+                    if (line.startsWith('### ')) return `<h4 class="font-semibold text-gray-900 dark:text-gray-200 mt-4">${line.substring(4)}</h4>`;
                     if (line.trim() === '') return '';
                     return `<p>${line}</p>`;
                 }).join('');
@@ -2099,7 +2206,7 @@
 
             } catch (error) {
                 console.error("Error al llamar a Gemini API para análisis:", error);
-                showModal("Error de Análisis", `<p>No se pudo completar el análisis de IA. Por favor, revise su conexión o reintente.</p><p class="text-sm text-red-500">${error.message}</p>`);
+                showModal("Error de Análisis", `<p>No se pudo completar el análisis de IA. Por favor, revise su conexión o reintente.</p><p class="text-sm text-red-500 dark:text-red-400">${error.message}</p>`);
             }
         }
         
@@ -2146,11 +2253,11 @@
 
                 let sourcesHtml = '';
                 const groundingMetadata = candidate?.groundingMetadata;
-                if (groundingMetadata && groundingAttributions) {
+                if (groundingMetadata && groundingMetadata.groundingAttributions) {
                     const sources = groundingMetadata.groundingAttributions
-                        .map(attr => `<a href="${attr.web?.uri}" target="_blank" class="text-xs text-indigo-500 hover:underline">${attr.web?.title || 'Fuente sin título'}</a>`)
+                        .map(attr => `<a href="${attr.web?.uri}" target="_blank" class="text-xs text-indigo-500 dark:text-indigo-400 hover:underline">${attr.web?.title || 'Fuente sin título'}</a>`)
                         .join('<br>');
-                    sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 text-left"><h5 class="text-sm font-semibold text-gray-600 mb-1">Fuentes:</h5>${sources}</div>`;
+                    sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-left"><h5 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Fuentes:</h5>${sources}</div>`;
                 }
 
                 const htmlContent = `
@@ -2164,7 +2271,7 @@
 
             } catch (error) {
                 console.error("Error al llamar a Gemini API para análisis de tendencia:", error);
-                showModal("Error de Análisis de Tendencia", `<p>No se pudo completar el análisis de IA. Por favor, revise su conexión o reintente.</p><p class="text-sm text-red-500">${error.message}</p>`);
+                showModal("Error de Análisis de Tendencia", `<p>No se pudo completar el análisis de IA. Por favor, revise su conexión o reintente.</p><p class="text-sm text-red-500 dark:text-red-400">${error.message}</p>`);
             }
         }
 
@@ -2173,6 +2280,9 @@
         // ====================================================================
 
         function initializeEventListeners() {
+            // --- THEME TOGGLE ---
+            if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+
             // --- AUTH LISTENERS ---
             if (showRegisterBtn) showRegisterBtn.addEventListener('click', () => { registerCard.classList.remove('hidden'); loginForm.parentElement.classList.add('hidden'); });
             if (showLoginBtn) showLoginBtn.addEventListener('click', () => { registerCard.classList.add('hidden'); loginForm.parentElement.classList.remove('hidden'); });
@@ -2295,6 +2405,7 @@
         // ====================================================================
         
         document.addEventListener('DOMContentLoaded', () => {
+            initializeTheme(); // Inicia el tema primero
             initializeFirebase();
             initializeEventListeners();
             setupPwaInstall();
