@@ -1,6 +1,6 @@
 {
     "name": "Gestor de QR para Indumentaria",
-    "short_name": "Gestor QR",
+    "short_name": "Etiqueta QR",
     "description": "Crea, escanea y gestiona códigos QR para prendas de ropa",
     "start_url": "/index.html",
     "display": "standalone",
