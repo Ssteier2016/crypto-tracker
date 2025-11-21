@@ -4,8 +4,8 @@
     "description": "Crea, escanea y gestiona códigos QR para prendas de ropa",
     "start_url": "/index.html",
     "display": "standalone",
-    "background_color": "#4f46e5",
-    "theme_color": "#4f46e5",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
     "icons": [
         {
             "src": "icono.png",
@@ -19,3 +19,4 @@
         }
     ]
 }
+
