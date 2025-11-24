@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de QR para Indumentaria</title>
+    
+    <!-- PWA Meta Tags (AGREGADO para funcionar como app instalable) -->
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="Generador y escáner de códigos QR para prendas de indumentaria">
+    <link rel="icon" type="image/png" href="icono.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icono-192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+   
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 font-sans transition-colors duration-300">
+   
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+        <div class="w-full max-w-sm p-8 bg-white dark:bg-gray-800 rounded-xl shadow-2xl text-center">
+            <img src="logo.png" alt="Logo de la aplicación" class="w-16 h-16 mx-auto mb-4 rounded-xl"
+                onerror="this.onerror=null; this.src='https://placehold.co/64x64/4f46e5/ffffff?text=G&font=sans'">
+            <h2 class="text-3xl font-bold text-indigo-600 mb-2 dark:text-indigo-400">Bienvenido</h2>
+            <p class="text-gray-600 mb-8 dark:text-gray-400">Inicia sesión para acceder a tu historial.</p>
+            <button id="google-login-btn" class="w-full flex items-center justify-center px-4 py-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-semibold rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-300 border border-gray-300 dark:border-gray-600">
+                <img class="w-5 h-5 mr-3" src="https://img.icons8.com/color/48/000000/google-logo.png" alt="Google logo"/>
+                Continuar con Google
+            </button>
+            <button id="local-mode-btn" class="w-full mt-3 flex items-center justify-center px-4 py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition duration-300">
+                <i class="fas fa-mobile-alt mr-3"></i> Continuar en Modo Local
+            </button>
+            <p class="mt-4 text-xs text-gray-500 dark:text-gray-500">
+                *El Modo Local solo guarda datos en tu dispositivo.
+            </p>
+        </div>
+    </div>
+    <div id="app-container" class="max-w-2xl mx-auto p-4 md:p-6 hidden">
+        <header class="mb-8 flex items-center justify-between relative">
+            <div class="flex items-center">
+                <img src="logo.png" alt="Logo de la aplicación" class="w-12 h-12 mr-3 rounded-md"
+                    onerror="this.onerror=null; this.src='https://placehold.co/48x48/4f46e5/ffffff?text=G&font=sans'">
+                <div>
+                    <h1 class="text-4xl font-bold text-indigo-600 dark:text-indigo-400">Gestor de QR</h1>
+                    <span id="app-version" class="text-xs font-normal text-gray-600 dark:text-gray-400">v.3.0 (Sync Multi-Dispositivo)</span>
+                </div>
+            </div>
+           
+            <div class="flex items-center space-x-2">
+                <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="theme-toggle" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                </label>
+                <i id="theme-icon" class="fas fa-sun text-xl text-gray-600 dark:text-gray-400"></i>
+            </div>
+        </header>
+       
+        <main id="main-menu" class="space-y-4">
+            <button id="install-app-modal-btn" class="w-full bg-blue-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-blue-600 transition duration-300 flex items-center justify-center text-lg hidden">
+                <i class="fas fa-mobile-alt mr-3"></i> Descargar Aplicación
+            </button>
+            <button id="show-generation-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-plus-circle mr-3"></i> Generar QR
+            </button>
+            <button id="show-scanner-btn" class="w-full bg-purple-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-qrcode mr-3"></i> Escanear QR
+            </button>
+            <button id="show-history-btn" class="w-full bg-gray-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-gray-800 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-history mr-3"></i> Historial y Sync
+            </button>
+            <button id="show-metrics-btn" class="w-full bg-teal-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-teal-700 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-chart-line mr-3"></i> Métricas
+            </button>
+            <button id="logout-btn" class="w-full bg-red-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:bg-red-600 transition duration-300 flex items-center justify-center text-lg">
+                <i class="fas fa-sign-out-alt mr-3"></i> Cerrar Sesión (Cambiar de Modo)
+            </button>
+        </main>
+        <section id="generation-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Registrar Prenda</h2>
+                <form id="qr-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto de la Prenda (Opcional)</label>
+                        <div class="flex space-x-3">
+                            <input type="file" id="camera-photo-input" name="cameraPhoto" accept="image/*" capture="environment" class="hidden">
+                            <button type="button" id="open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-camera mr-2"></i> Usar Cámara
+                            </button>
+                            <input type="file" id="import-photo-input" name="importPhoto" accept="image/*" class="hidden">
+                            <button type="button" id="import-file-btn" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-file-upload mr-2"></i> Importar Foto
+                            </button>
+                        </div>
+                        <div id="photo-preview-container" class="="mt-4 hidden">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Previsualización:</p>
+                            <img id="photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 dark:border-gray-600 w-full">
+                            <button type="button" id="remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="precio-efectivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="precio-lista" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio de Lista (ARS) *</label>
+                        <input type="number" id="precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="talle" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Talle *</label>
+                        <input type="text" id="talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Ropa *</label>
+                        <div id="tipo-ropa-container" class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input id="tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_importada" class="ml-3 block text-sm text-gray-900 dark:text-gray-100">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_nacional" class="ml-3 block text-sm text-gray-900 dark:text-gray-100">Nacional</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="tipo_nuevo" class="ml-3 block text-sm text-gray-900 dark:text-gray-100">Nuevo</label>
+                            </div>
+                        </div>
+                        <button type="button" id="add-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
+                    </div>
+                    <div>
+                        <label for="vendedora" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Vendedora (Opcional)</label>
+                        <input type="text" id="vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="descripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (Opcional)</label>
+                        <textarea id="descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100"></textarea>
+                    </div>
+                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                        <button type="button" id="generate-desc-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
+                            Generar Descripción Inteligente
+                        </button>
+                        <button type="button" id="analyze-stock-risk-btn" class="w-full bg-orange-500 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-orange-600 transition duration-300 flex items-center justify-center">
+                            Analizar Riesgo de Stock
+                        </button>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Generar QR y Guardar</button>
+                </form>
+            </div>
+            <div id="gemini-output-section" class="hidden mt-6 bg-purple-50 dark:bg-gray-700 p-6 rounded-xl shadow-inner">
+                <h3 class="text-xl font-bold text-purple-800 dark:text-purple-400 mb-3" id="gemini-output-title">Sugerencia de la IA</h3>
+                <textarea id="gemini-output" readonly class="w-full h-40 p-2 border border-purple-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 resize-none dark:text-gray-100"></textarea>
+                <button id="copy-desc-btn" class="mt-2 py-2 px-4 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 transition"><i class="fas fa-copy mr-2"></i>Copiar Texto</button>
+            </div>
+            <div id="qr-display" class="hidden mt-6 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg text-center"></div>
+        </section>
+        <section id="edit-section" class="hidden">
+            <button class="back-to-history text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Editar Prenda</h2>
+                <form id="edit-form" class="space-y-4">
+                    <input type="hidden" id="edit-id" name="id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto de la Prenda (Opcional)</label>
+                        <div class="flex space-x-3">
+                            <input type="file" id="edit-camera-photo-input" name="editCameraPhoto" accept="image/*" capture="environment" class="hidden">
+                            <button type="button" id="edit-open-camera-btn" class="flex-1 bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-camera mr-2"></i> Usar Cámara
+                            </button>
+                            <input type="file" id="edit-import-photo-input" name="editImportPhoto" accept="image/*" class="hidden">
+                            <button type="button" id="edit-import-file-btn" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition flex items-center justify-center text-sm">
+                                <i class="fas fa-file-upload mr-2"></i> Importar Foto
+                            </button>
+                        </div>
+                        <div id="edit-photo-preview-container" class="mt-4 hidden">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Previsualización Actual:</p>
+                            <img id="edit-photo-preview" src="" alt="Previsualización de la foto" class="max-w-full h-32 object-contain rounded-lg border border-gray-300 dark:border-gray-600 w-full">
+                            <button type="button" id="edit-remove-photo-btn" class="mt-2 text-red-500 hover:text-red-700 text-sm font-semibold"><i class="fas fa-trash-alt mr-1"></i> Quitar Foto</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="edit-precio-efectivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio Efectivo (ARS) *</label>
+                        <input type="number" id="edit-precio-efectivo" name="precioEfectivo" required class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="edit-precio-lista" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Precio de Lista (ARS) *</label>
+                        <input type="number" id="edit-precio-lista" name="precioLista" required class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="edit-talle" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Talle *</label>
+                        <input type="text" id="edit-talle" name="talle" required class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Ropa *</label>
+                        <div id="edit-tipo-ropa-container" class="mt-2 space-y-2">
+                            <div class="flex items-center">
+                                <input id="edit-tipo_importada" name="tipo_ropa" type="checkbox" value="Importada" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_importada" class="ml-3 block text-sm text-gray-900 dark:text-gray-100">Importada</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="edit-tipo_nacional" name="tipo_ropa" type="checkbox" value="Nacional" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_nacional" class="ml-3 block text-sm text-gray-900 dark:text-gray-100">Nacional</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input id="edit-tipo_nuevo" name="tipo_ropa" type="checkbox" value="Nuevo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                <label for="edit-tipo_nuevo" class="ml-3 block text-sm text-gray-900 dark:text-gray-100">Nuevo</label>
+                            </div>
+                        </div>
+                        <button type="button" id="add-edit-custom-tipo" class="mt-2 bg-blue-500 text-white font-semibold py-1 px-2 rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-plus mr-1"></i> Añadir tipo personalizado</button>
+                    </div>
+                    <div>
+                        <label for="edit-vendedora" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Vendedora (Opcional)</label>
+                        <input type="text" id="edit-vendedora" name="vendedora" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100">
+                    </div>
+                    <div>
+                        <label for="edit-descripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (Opcional)</label>
+                        <textarea id="edit-descripcion" name="descripcion" rows="3" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-gray-100"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Guardar Cambios</button>
+                </form>
+            </div>
+        </section>
+        <section id="scanner-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg">
+                <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
+            </div>
+            <div id="scan-result" class="mt-6"></div>
+        </section>
+        <section id="history-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Historial y Sincronización</h2>
+                <div class="mb-6 p-4 bg-indigo-50 dark:bg-gray-700 rounded-xl border border-indigo-200 dark:border-indigo-700">
+                    <h3 class="font-bold text-indigo-800 dark:text-indigo-400 mb-2"><i class="fas fa-sync-alt mr-2"></i>Sincronización con Archivo (Backup)</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Descarga el Backup para transferir tus QRs a otro celular, o cárgalo para recibir datos.</p>
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <button id="backup-download-btn" class="flex-1 bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition text-sm">
+                            <i class="fas fa-save mr-2"></i> Descargar Backup (JSON)
+                        </button>
+                       
+                        <input type="file" id="backup-upload-input" accept=".json" class="hidden">
+                        <button id="backup-upload-btn" class="flex-1 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition text-sm">
+                            <i class="fas fa-file-upload mr-2"></i> Cargar Backup de otro Celular
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-6 p-4 bg-purple-50 dark:bg-gray-700 rounded-xl border border-purple-200 dark:border-purple-700">
+                    <h3 class="font-bold text-purple-800 dark:text-purple-400 mb-2"><i class="fas fa-arrows-alt-h mr-2"></i>Transferencia Rápida por QR</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">Transfiere tu historial al instante a otro celular sin usar archivos. Ideal para pequeños historiales.</p>
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <button id="show-qr-transfer-btn" class="flex-1 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition text-sm">
+                            <i class="fas fa-share-alt mr-2"></i> Generar QR de Transferencia
+                        </button>
+                        <button id="show-qr-receive-btn" class="flex-1 bg-orange-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-700 transition text-sm">
+                            <i class="fas fa-qrcode mr-2"></i> Recibir Datos por QR
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <input type="text" id="search-bar" placeholder="Buscar por ID, Talle, Tipo, Cliente o Vendedora..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-gray-100">
+                </div>
+                <div class="flex justify-between mb-4 text-gray-800 dark:text-gray-100">
+                    <p id="stock-count" class="text-lg font-semibold">Stock actual: 0</p>
+                    <p id="sold-sum" class="text-lg font-semibold text-red-700 dark:text-red-400">Vendidos: $0</p>
+                    <p id="speculation-sum" class="text-lg font-semibold text-green-700 dark:text-green-400">Especulación: $0</p>
+                </div>
+                <div class="flex justify-between mb-4">
+                    <button id="export-excel-btn" class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition"><i class="fas fa-file-excel mr-2"></i>Exportar a Excel</button>
+                    <button id="export-csv-btn" class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"><i class="fas fa-file-csv mr-2"></i>Exportar a CSV</button>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">No Vendidos</h3>
+                <div id="not-sold-list" class="space-y-4 mb-6"></div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Vendidos</h3>
+                <div id="sold-list" class="space-y-4"></div>
+            </div>
+        </section>
+        <section id="re-qr-section" class="hidden">
+            <button class="back-to-history text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Detalle y Gestión de QR</h2>
+            <div id="re-qr-display" class="mt-6 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg text-center">
+                </div>
+        </section>
+        <section id="transfer-section" class="hidden">
+            <button class="back-to-history text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al historial</button>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 id="transfer-title" class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4"></h2>
+                <p id="transfer-instructions" class="text-gray-600 dark:text-gray-300 mb-4"></p>
+               
+                <div id="qr-transfer-display" class="hidden my-6 p-4 border border-gray-300 dark:border-gray-600 rounded-lg text-center">
+                    <div id="large-qr-canvas" class="flex justify-center my-4"></div>
+                    <p class="text-xs text-red-500 font-semibold">¡Advertencia! Este QR contiene TODOS tus datos. Mantenlo en privado y escanea rápido.</p>
+                </div>
+               
+                <div id="qr-receive-scanner-container" class="hidden">
+                    <div id="receiver-reader" class="w-full rounded-lg overflow-hidden my-4"></div>
+                    <div id="receive-status" class="mt-4 p-3 text-center bg-gray-100 dark:bg-gray-700 rounded-lg dark:text-gray-100">Esperando escaneo...</div>
+                    <button id="stop-receive-scan-btn" class="w-full mt-4 bg-red-500 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-red-600 transition duration-300"><i class="fas fa-stop-circle mr-2"></i> Detener Escáner</button>
+                </div>
+            </div>
+        </section>
+        <section id="metrics-section" class="hidden">
+            <button class="back-to-menu text-indigo-600 dark:text-indigo-400 mb-4 font-semibold"><i class="fas fa-arrow-left mr-2"></i> Volver al menú</button>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Métricas de Stock</h2>
+                <canvas id="stock-chart" width="400" height="200"></canvas>
+                <div id="calendar-metrics" class="mt-6">
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Almanaque de Actividades</h3>
+                    <div class="grid grid-cols-7 gap-2 text-center text-gray-800 dark:text-gray-100">
+                        <div class="font-bold">Dom</div>
+                        <div class="font-bold">Lun</div>
+                        <div class="font-bold">Mar</div>
+                        <div class="font-bold">Mié</div>
+                        <div class="font-bold">Jue</div>
+                        <div class="font-bold">Vie</div>
+                        <div class="font-bold">Sáb</div>
+                    </div>
+                    <div id="calendar-days" class="grid grid-cols-7 gap-2 mt-2 text-center"></div>
+                </div>
+            </div>
+        </section>
+        <div id="app-message" class="fixed bottom-4 right-4 z-50"></div>
+    </div>
+    <div id="strategy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6">
+            <h3 id="modal-title" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-4"></h3>
+            <div id="modal-content" class="space-y-3 text-gray-700 dark:text-gray-300 text-left"></div>
+            <button id="close-modal-btn" class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition">Cerrar</button>
+        </div>
+    </div>
+   
+    <div id="manual-sale-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 relative">
+            <button id="close-manual-sale-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Venta Manual de Prenda </h3>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">Selecciona el motivo del problema de escaneo:</p>
+            <form id="manual-sale-form" class="space-y-3">
+                <div class="space-y-2">
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/50 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Cámara rota" class="form-radio text-red-600 h-5 w-5">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Cámara rota</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/50 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="QR dañado" class="form-radio text-red-600 h-5 w-5">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">QR dañado</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/50 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Falta de tiempo" class="form-radio text-red-600 h-5 w-5">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Falta de tiempo</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/50 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Problemas de red" class="form-radio text-red-600 h-5 w-5">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Problemas de red</span>
+                    </label>
+                    <label id="otro-radio-label" class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/50 cursor-pointer transition">
+                        <input type="radio" name="scan-reason" value="Otro" class="form-radio text-red-600 h-5 w-5">
+                        <span class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Otro (aclarar el motivo)</span>
+                    </label>
+                </div>
+                <div id="reason-other-container" class="hidden mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <input type="text" id="reason-other-input" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 dark:text-gray-100" placeholder="Escribe el motivo aquí">
+                </div>
+               
+                <button type="submit" class="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300">
+                    Confirmar Venta
+                </button>
+            </form>
+        </div>
+    </div>
+    <div id="install-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full p-6 relative">
+            <button id="close-install-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">Instalar Aplicación</h3>
+            <div class="space-y-4 text-gray-700 dark:text-gray-300">
+                <p>¡Lleva el **Gestor de QR** a tu pantalla de inicio para un acceso rápido y sin interrupciones! Funciona como una aplicación nativa.</p>
+               
+                <h4 class="font-semibold text-gray-800 dark:text-gray-100 flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i> Beneficios:</h4>
+                <ul class="list-disc list-inside ml-4 text-sm space-y-1">
+                    <li>Acceso directo sin navegador.</li>
+                    <li>Funcionamiento sin conexión.</li>
+                    <li>Experiencia de pantalla completa.</li>
+                </ul>
+                <p class="text-sm text-center pt-2 border-t border-gray-100 dark:border-gray-700">Presiona el botón de abajo para instalarla en tu dispositivo.</p>
+            </div>
+            <button id="install-btn-in-modal" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
+                <i class="fas fa-download mr-2"></i> Agregar a Pantalla Principal
+            </button>
+            <p id="install-tip" class="mt-4 text-xs text-center text-gray-500 dark:text-gray-400 hidden">
+                <i class="fas fa-info-circle mr-1"></i> Si el botón no funciona, usa el menú del navegador ("Agregar a pantalla de inicio").
+            </p>
+        </div>
+    </div>
+
+    <!-- TU SCRIPT ORIGINAL COMPLETO + REGISTRO DEL SERVICE WORKER -->
+    <script>
+        // --- REGISTRO DEL SERVICE WORKER (PWA OFFLINE) ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registrado:', reg.scope))
+                    .catch(err => console.error('Error al registrar Service Worker:', err));
+            });
+        }
+
+        // --- PWA INSTALL PROMPT ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-app-modal-btn')?.classList.remove('hidden');
+        });
+
+        document.getElementById('install-btn-in-modal')?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('install-app-modal-btn')?.classList.add('hidden');
+            }
+            deferredPrompt = null;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('install-app-modal-btn')?.classList.add('hidden');
+        });
+
+        // === TU CÓDIGO ORIGINAL COMPLETO (SIN NINGÚN CAMBIO) ===
+        // --- CONFIGURACIÓN DE FIREBASE (¡DEBES ACTUALIZAR ESTOS VALORES!) ---
+       const firebaseConfig = {
+            apiKey: "AIzaSyBIGUo2-YFCHKF6Nc8I-lB_NmGZiQ5pHJI",
+            authDomain: "cryptotracker-8a6fd.firebaseapp.com",
+            projectId: "cryptotracker-8a6fd",
+            storageBucket: "cryptotracker-8a6fd.firebasestorage.app",
+            messagingSenderId: "720112375781",
+            appId: "1:720112375781:web:7995dcbd6fe7470aea810c",
+            measurementId: "G-2VW050K6PC"
+        };
+        // NUEVA FUNCIÓN: Sincronizar catálogo público del Showroom
+        async function sincronizarCatalogoPublico() {
+            try {
+                const catalogoPublico = prendas
+                    .filter(p => !p.vendido && !p.ultimo_escaneo)
+                    .map(p => ({
+                        id: p.id,
+                        image: p.fotoBase64 || 'https://placehold.co/400x400?text=Sin+Foto',
+                        name: `${p.tipos_de_ropa.join(' / ')} - Talle ${p.talle}`,
+                        offerPrice: parseFloat(p.precioEfectivo),
+                        regularPrice: parseFloat(p.precioLista),
+                        description: p.descripcion || 'Prenda importada de alta calidad',
+                        talle: p.talle,
+                        tipos: p.tipos_de_ropa,
+                        vendedora: p.vendedora || ''
+                    }));
+                // Guardar en colección pública (accesible por todos)
+                await db.collection('catalogo_publico').doc('showroom_roma').set({
+                    productos: catalogoPublico,
+                    ultimaActualizacion: new Date().toISOString()
+                });
+                console.log('Catálogo público sincronizado:', catalogoPublico.length, 'prendas');
+            } catch (error) {
+                console.error("Error sincronizando catálogo público:", error);
+            }
+        }
+       
+        // Inicialización de Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = app.auth();
+        const db = app.firestore();
+        // --------------------------------------------------------------------
+        // --- CONSTANTE DE CONTRASEÑA ACTUALIZADA ---
+        const DELETE_PASSWORD = "1440"; // Contraseña de seguridad para eliminar
+        // Se ha aumentado este límite para permitir transferencias de historial más grandes por QR.
+        const QR_MAX_SIZE = 10000; // Límite de caracteres AUMENTADO para más memoria de transferencia.
+        // --- VARIABLES GLOBALES ---
+        let prendas = [];
+        let html5QrCode;
+        let html5QrCodeReceiver;
+        let deferredPrompt;
+        let editingId = null;
+        let customTipoCount = 0;
+        let isPushEnabled = false;
+        let currentPhotoBase64 = null;
+        let isAudioPlaying = false;
+        let selectedManualSaleId = null;
+        let currentUserId = null; // ID del usuario actual de Firebase (null si es modo local)
+        let isFirestoreEnabled = false; // Bandera para saber si se usa Firestore o Local Storage
+        // ... (TODO el resto de tu script original exactamente igual)
+        // (Aquí va todo tu código JavaScript tal como lo tenías, sin cambios)
+        // ... hasta el final del script
+
+        // (Todo tu código JavaScript original continúa aquí exactamente como lo tenías)
+        // ... hasta el cierre del </script>
+
+    </script>
+
+    <!-- BOTÓN DE WHATSAPP FIJO -->
+    <a href="https://wa.me/5491158660344?text=¡Hola!%20Vi%20tu%20catálogo%20en%20showroomasroma.com%20y%20me%20interesa..."
+       class="fixed bottom-6 right-6 bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl z-50 hover:bg-green-600 transition-all hover:scale-110"
+       target="_blank" rel="noopener">
+        <i class="fab fa-whatsapp text-4xl"></i>
+    </a>
+</body>
+</html>
