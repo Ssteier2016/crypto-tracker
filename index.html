@@ -2367,7 +2367,34 @@ const firebaseConfig = {
             showView('history-section');
             resetEditCustomTipos();
         }
+// === SINCRONIZACIÓN AUTOMÁTICA CON EL CATÁLOGO DE showroomasroma.shop ===
+async function sincronizarConShowroom() {
+    if (!isFirestoreEnabled || !currentUserId) return; // Solo si estás logueado con Google
 
+    const catalogoPublico = prendas
+        .filter(p => !p.ultimo_escaneo) // Solo las que NO están vendidas
+        .map(p => ({
+            id: p.id,
+            image: p.fotoBase64 || 'https://placehold.co/400x400?text=Sin+Foto',
+            name: `${p.tipos_de_ropa.join(' / ')} - Talle ${p.talle}`,
+            offerPrice: parseFloat(p.precioEfectivo),
+            regularPrice: parseFloat(p.precioLista),
+            description: p.descripcion || 'Prenda importada de alta calidad',
+            talle: p.talle,
+            tipos: p.tipos_de_ropa,
+            vendedora: p.vendedora || ''
+        }));
+
+    try {
+        await db.collection('catalogo_publico').doc('showroom_roma').set({
+            productos: catalogoPublico,
+            ultimaActualizacion: new Date().toISOString()
+        });
+        console.log("Catálogo sincronizado con showroomasroma.shop");
+    } catch (e) {
+        console.error("Error sincronizando catálogo:", e);
+    }
+}
         // --- FUNCIONES PARA TIPOS DE ROPA DINÁMICOS ---
         function setupCustomTipoListeners(container, buttonId) {
             const addButton = document.getElementById(buttonId);
