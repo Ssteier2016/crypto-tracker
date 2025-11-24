@@ -1730,11 +1730,12 @@ const firebaseConfig = {
                 };
                 try {
                     console.log("[Registro] Guardando prenda con ID:", prendaId);
-                    prendas.push(prendaData);
-                    savePrendasToStorage(); // Usa la función de guardado con lógica Firestore/Local
-                    console.log("[Registro] Prenda guardada.");
-                    showAppMessage("Prenda guardada con éxito.", 'success');
-                    generateQrCode(prendaId, qrDisplay); 
+                   prendas.push(prendaData);
+await savePrendasToStorage(); // ← ahora es await porque puede ser async
+await sincronizarConShowroom(); // ← AQUÍ VA LA MAGIA
+console.log("[Registro] Prenda guardada y catálogo sincronizado con showroomasroma.shop");
+showAppMessage("Prenda guardada y publicada en la tienda!", 'success');
+generateQrCode(prendaId, qrDisplay); 
                     qrForm.reset();
                     resetCustomTipos();
                     
