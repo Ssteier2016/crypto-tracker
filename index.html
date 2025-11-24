@@ -569,6 +569,12 @@
             setupCustomTipoListeners(tipoRopaContainer, 'add-custom-tipo');
             setupCustomTipoListeners(editTipoRopaContainer, 'add-edit-custom-tipo');
 
+            // Sincronizar catálogo al iniciar
+    savePrendasToStorage().then(() => {
+        console.log("App iniciada y catálogo sincronizado");
+    });
+}
+
             // --- LISTENERS DE BUSQUEDA/EXPORTACIÓN ---
             if (searchBar) searchBar.addEventListener('input', setupHistoryDisplay);
             if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportToExcel);
