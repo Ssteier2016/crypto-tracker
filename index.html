@@ -1704,7 +1704,7 @@ const firebaseConfig = {
 
         // --- LÓGICA DE GENERACIÓN DE QR ---
         if (qrForm) {
-            qrForm.addEventListener('submit', (e) => {
+            qrForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const formData = new FormData(qrForm);
                 const tiposDeRopa = Array.from(document.querySelectorAll('input[name="tipo_ropa"]:checked')).map(cb => cb.value || cb.nextElementSibling?.value || '');
