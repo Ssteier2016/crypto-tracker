@@ -705,35 +705,50 @@
         }
 
         // 2. GUARDADO DE DATOS EN FIRESTORE (O LOCAL)
-        async function savePrendasToStorage() {
-            if (isFirestoreEnabled && currentUserId) {
-                // Guarda en Firestore
-                try {
-                    // Se usa set con { merge: true } para evitar sobrescribir otros campos del documento (aunque aquí solo guardamos 'items')
-                    await db.collection('prendas').doc(currentUserId).set({
-                        items: prendas,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                    console.log(`Guardadas ${prendas.length} prendas en Firestore.`);
-                    showAppMessage("Datos sincronizados con Google.", 'info', 1500);
-                } catch (error) {
-                    console.error("Error al guardar en Firestore:", error);
-                    // Si Firestore falla el guardado, se guarda localmente como fallback
-                    isFirestoreEnabled = false;
-                    localStorage.setItem('qrPrendas', JSON.stringify(prendas));
-                    showAppMessage("ERROR de sincronización. Guardando localmente.", 'error');
-                }
-            } else {
-                // Guarda en Local Storage (Modo Local/Invitado o Fallback)
-                try {
-                    localStorage.setItem('qrPrendas', JSON.stringify(prendas));
-                    console.log(`Guardadas ${prendas.length} prendas en localStorage.`);
-                    syncToSharedStorage();
-                } catch (error) {
-                    console.error("Error guardando localStorage:", error);
-                    showAppMessage("Error al guardar datos. Se perderán al cerrar el navegador.", 'error');
-                }
-            }
+        // REEMPLAZÁ TODA esta función por esta versión nueva:
+async function savePrendasToStorage() {
+    if (isFirestoreEnabled && currentUserId) {
+        try {
+            await db.collection('prendas').doc(currentUserId).set({
+                items: prendas,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            console.log('Guardado en Firestore');
+        } catch (error) {
+            console.error("Error Firestore:", error);
+            isFirestoreEnabled = false;
+            localStorage.setItem('qrPrendas', JSON.stringify(prendas));
+        }
+    } else {
+        localStorage.setItem('qrPrendas', JSON.stringify(prendas));
+    }
+
+    // AQUÍ ESTÁ LA MAGIA: sincroniza el catálogo público
+    try {
+        const catalogoPublico = prendas
+            .filter(p => !p.vendido && !p.ultimo_escaneo)
+            .map(p => ({
+                id: p.id,
+                image: p.fotoBase64 || 'https://placehold.co/400x400?text=Sin+Foto',
+                name: `${p.tipos_de_ropa.join(' / ')} - Talle ${p.talle}`,
+                offerPrice: parseFloat(p.precioEfectivo),
+                regularPrice: parseFloat(p.precioLista),
+                description: p.descripcion || 'Prenda importada de alta calidad',
+                talle: p.talle,
+                tipos: p.tipos_de_ropa,
+                vendedora: p.vendedora || ''
+            }));
+
+        await db.collection('catalogo_publico').doc('showroom_roma').set({
+            productos: catalogoPublico,
+            ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('Catálogo público actualizado:', catalogoPublico.length + ' productos');
+    } catch (error) {
+        console.error("Error sincronizando catálogo público:", error);
+    }
+}
         }
 
         // 3. CARGA DE DATOS DESDE LOCAL STORAGE
