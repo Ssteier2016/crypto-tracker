@@ -451,19 +451,7 @@
                 console.error("Error sincronizando catálogo público:", error);
             }
         }
-        // Modificamos savePrendasToStorage para que también sincronice el catálogo público
-        const originalSave = savePrendasToStorage;
-        window.savePrendasToStorage = async function() {
-            await originalSave(); // Guarda en tu historial privado
-            await sincronizarCatalogoPublico(); // Sincroniza catálogo público
-        };
-
-        // Al iniciar también sincronizamos
-        const originalInit = initializeApp;
-        window.initializeApp = function() {
-            originalInit();
-            sincronizarCatalogoPublico();
-        };
+        
         // Inicialización de Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const auth = app.auth();
