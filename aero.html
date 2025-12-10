@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-localize="title">Aerocoin (AERO) - The Deflationary Scarcity on BSC</title>
+    <!-- Carga de librerías esenciales -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Definición de colores de tema */
+        :root {
+            /* Colores Base (Dark Mode Defaults) */
+            --bg-dark: #0f172a; /* Slate 900 */
+            --bg-light: #f1f5f9; /* Slate 100 */
+            --text-dark: #f1f5f9; /* Slate 100 */
+            --text-light: #1e293b; /* Slate 800 */
+            --primary-blue: #3b82f6; /* Blue 500 */
+            --secondary-blue: #93c5fd; /* Blue 300 */
+            --accent-red: #ef4444; /* Red 500 */
+            --border-color: #334155; /* Slate 700 */
+            --card-bg: #1e293b; /* Slate 800 */
+            --input-bg: #334155; /* Slate 700 */
+            --box-shadow: rgba(0, 0, 0, 0.5);
+            
+            /* Colores por defecto (Modo Oscuro) */
+            --bg-color: var(--bg-dark);
+            --main-text-color: var(--text-dark);
+            --secondary-bg: var(--card-bg);
+            --nav-bg: var(--bg-dark);
+        }
+
+        /* Modo Claro: Alto Contraste */
+        body.light-mode {
+            --bg-color: var(--bg-light);
+            --main-text-color: var(--text-light);
+            --secondary-bg: #ffffff; /* Blanco puro */
+            --border-color: #cbd5e1; /* Slate 300 */
+            --nav-bg: var(--bg-light);
+            --card-bg: #f8fafc; /* Slate 50 */
+            --input-bg: #e2e8f0; /* Slate 200 */
+            --box-shadow: rgba(0, 0, 0, 0.1);
+
+            /* Inversión específica de colores para alto contraste en Modo Claro */
+            .text-aero-light { color: var(--text-light); }
+            .text-gray-300 { color: #475569; } /* Slate 600 */
+            .text-gray-500 { color: #64748b; } /* Slate 600 */
+            .text-gray-400 { color: #64748b; } /* Slate 600 */
+            .bg-gray-700\/50 { background-color: rgba(226, 232, 240, 0.5); } /* Slate 200/50 */
+            .bg-gray-700 { background-color: var(--input-bg); }
+        }
+
+        /* Estilos generales */
+        body {
+            background-color: var(--bg-color);
+            color: var(--main-text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .section-bg-dark {
+            background-color: var(--secondary-bg);
+        }
+
+        .section-bg-light {
+            background-color: var(--bg-color);
+        }
+
+        .card-bg {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            box-shadow: 0 10px 15px -3px var(--box-shadow);
+            transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .card-border-primary {
+            border-top-color: var(--primary-blue);
+        }
+        
+        .card-border-accent {
+            border-top-color: var(--accent-red);
+        }
+
+        .input-style {
+            background-color: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--main-text-color);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        .text-aero-blue { color: var(--primary-blue); }
+        .text-aero-light { color: var(--main-text-color); }
+        .bg-aero-blue { background-color: var(--primary-blue); }
+        .text-red-400 { color: var(--accent-red); }
+        .bg-red-600 { background-color: var(--accent-red); }
+
+        /* Estilos para el chat: Asegurar legibilidad en ambos modos */
+        #chatMessages .bg-gray-700 {
+            background-color: var(--input-bg);
+            color: var(--main-text-color);
+        }
+        body.light-mode #chatMessages .bg-gray-700 {
+            background-color: var(--input-bg);
+            color: var(--text-light);
+        }
+        
+        #chatMessages .bg-red-900\/50 {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+        body.light-mode #chatMessages .bg-red-900\/50 {
+            background-color: rgba(239, 68, 68, 0.1); 
+            color: var(--accent-red);
+        }
+
+        /* Estilos de botones para contraste */
+        .btn-primary {
+            background-color: var(--primary-blue);
+            color: var(--bg-dark);
+        }
+        .btn-secondary {
+            background-color: var(--input-bg);
+            color: var(--main-text-color);
+        }
+    </style>
+    <script type="module">
+        // Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, where, getDocs, setDoc, doc, Timestamp, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Deshabilitar logs de Firebase si no se está depurando
+        // setLogLevel('Debug'); // uncomment to enable debug logs
+
+        // --- Constantes de Tokenomics ---
+        const INITIAL_HOLDER_COUNT = 18; // Base de holders
+        const HOLDER_GOAL = 10000;      // Objetivo de holders
+        const TOTAL_SUPPLY_BASE = 800000; // Suministro total base para porcentaje
+        const MONTHLY_BURN = 100;       // Quema mensual (simulada)
+        const START_DATE = new Date('2024-01-01T00:00:00Z'); // Fecha de inicio de simulación de quema
+
+        // --- Configuración de AI (Gemini) ---
+        const GEMINI_API_KEY = "AIzaSyCwPJYCrdIbhUvObM0SP6R58TYjTGT3HVg"; // Clave proporcionada por el usuario
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        
+        // --- Configuración e Inicialización de Firebase (MANDATORIO) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        const FIREBASE_COLLECTION_PATH = `/artifacts/${appId}/public/data/aerocoin_claims`;
+        const VOTES_COLLECTION_PATH = `/artifacts/${appId}/public/data/aerocoin_burn_votes`;
+        const CHAT_COLLECTION_PATH = `/artifacts/${appId}/public/data/aerocoin_chat`; // Nuevo chat
+        
+        // Almacenar referencias para uso global en el script
+        window.db = db;
+        window.auth = auth;
+        window.userId = userId;
+        window.isAuthReady = isAuthReady;
+        window.FIREBASE_COLLECTION_PATH = FIREBASE_COLLECTION_PATH;
+        window.VOTES_COLLECTION_PATH = VOTES_COLLECTION_PATH;
+        window.CHAT_COLLECTION_PATH = CHAT_COLLECTION_PATH;
+        window.INITIAL_HOLDER_COUNT = INITIAL_HOLDER_COUNT;
+        window.HOLDER_GOAL = HOLDER_GOAL;
+        window.MONTHLY_BURN = MONTHLY_BURN;
+        window.TOTAL_SUPPLY_BASE = TOTAL_SUPPLY_BASE;
+        window.START_DATE = START_DATE;
+        
+        // Variables globales para almacenar los datos calculados de la cuenta regresiva (usados por setLanguage)
+        window.remainingTokens = TOTAL_SUPPLY_BASE.toLocaleString();
+        window.burnedTokens = '0';
+        window.progressPercent = '0.0000';
+
+
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        console.log("Firebase Auth Ready. User ID:", userId);
+                        // Una vez autenticado, iniciar la carga de datos
+                        window.db = db;
+                        window.userId = userId;
+                        window.isAuthReady = isAuthReady;
+                        loadClaims();
+                        loadBurnVotes();
+                        setupDatePicker();
+                        loadChatMessages();
+                        calculateBurnProgress(); // Cargar la barra de progreso basada en votos reales
+                    } else {
+                        isAuthReady = true;
+                        console.log("Firebase signed out or anonymous.");
+                        window.isAuthReady = isAuthReady;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+            }
+        }
+        
+        // --- Lógica de Cuenta Regresiva de Suministro Total (Basada en Votos) ---
+        function calculateBurnProgress() {
+            if (!window.db || !window.isAuthReady) return;
+
+            const votesRef = collection(window.db, window.VOTES_COLLECTION_PATH);
+            const votesQuery = query(votesRef);
+
+            onSnapshot(votesQuery, (snapshot) => {
+                const burnEventsMonths = new Set();
+                
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const currentMonth = today.getMonth(); // 0-indexed
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const dateKey = data.date; 
+                    const dateObj = new Date(dateKey + 'T00:00:00Z'); // Asegurar UTC para la comparación
+                    
+                    // Solo contamos como quemado (historial) si la fecha de la votación ya pasó el mes actual.
+                    // Los votos en curso (para el próximo mes) no cuentan como quemados todavía.
+                    const voteYear = dateObj.getUTCFullYear();
+                    const voteMonth = dateObj.getUTCMonth();
+                    
+                    if (voteYear < currentYear || (voteYear === currentYear && voteMonth < currentMonth)) {
+                         const monthKey = `${voteYear}-${String(voteMonth + 1).padStart(2, '0')}`;
+                         burnEventsMonths.add(monthKey); // Contamos los meses únicos quemados
+                    }
+                });
+                
+                // La quema real se basa en los eventos de quema *históricos* (meses donde se votó)
+                const burnEventsCount = burnEventsMonths.size;
+                
+                // Calcular el total quemado REAL (100 AERO por evento/mes)
+                const totalBurned = Math.min(burnEventsCount * window.MONTHLY_BURN, window.TOTAL_SUPPLY_BASE);
+                const remainingTokens = window.TOTAL_SUPPLY_BASE - totalBurned;
+                const progressPercent = (totalBurned / window.TOTAL_SUPPLY_BASE) * 100;
+
+                // Actualizar variables globales que setLanguage usará para sustituir el texto
+                window.remainingTokens = remainingTokens.toLocaleString();
+                window.burnedTokens = totalBurned.toLocaleString();
+                window.progressPercent = progressPercent.toFixed(4); 
+
+                // Actualizar la barra de progreso
+                const progressBar = document.getElementById('countdownProgressBar');
+                if (progressBar) progressBar.style.width = `${progressPercent.toFixed(2)}%`;
+                
+                // Llamar a setLanguage para re-renderizar todos los textos dinámicos
+                window.setLanguage(window.currentLanguage);
+
+            }, (error) => {
+                console.error("Error reading burn votes for progress:", error);
+            });
+        }
+        window.calculateBurnProgress = calculateBurnProgress;
+
+        // --- Faucet/Claims Logic (Loaders) ---
+        function loadClaims() {
+            if (!window.db || !window.isAuthReady) return;
+
+            const claimsRef = collection(window.db, window.FIREBASE_COLLECTION_PATH);
+            const claimsQuery = query(claimsRef);
+
+            onSnapshot(claimsQuery, (snapshot) => {
+                const addresses = [];
+                snapshot.forEach((doc) => {
+                    addresses.push(doc.data());
+                });
+                
+                const claimCount = addresses.length;
+                const totalHolders = window.INITIAL_HOLDER_COUNT + claimCount;
+                const nextClaimAmount = claimCount + 1; // Dynamic claim amount
+                
+                // Actualizar contador de holders
+                document.getElementById('holdersCount').textContent = totalHolders.toLocaleString();
+                
+                // Actualizar meta de holders
+                document.getElementById('holdersGoalText').textContent = `${totalHolders.toLocaleString()} / ${window.HOLDER_GOAL.toLocaleString()}`;
+                
+                // Actualizar barra de progreso
+                const progress = (totalHolders / window.HOLDER_GOAL) * 100;
+                document.getElementById('holdersProgressBar').style.width = `${Math.min(progress, 100)}%`;
+
+                window.dynamicClaimAmount = nextClaimAmount; 
+                
+                // Update lists of addresses (showing full address)
+                const listContainer = document.getElementById('claimedAddressesList');
+                listContainer.innerHTML = ''; 
+                
+                if (addresses.length === 0) {
+                    listContainer.innerHTML = `<p class="text-gray-500 italic" data-localize="claim_address_placeholder"></p>`;
+                } else {
+                    addresses.sort((a, b) => b.claimedAt.toDate() - a.claimedAt.toDate());
+                    const latestAddresses = addresses.slice(0, 5);
+
+                    latestAddresses.forEach(claim => {
+                        const listItem = document.createElement('li');
+                        const fullAddress = claim.address; 
+                        const claimedAmount = claim.amount;
+                        // Calculate percentage based on fixed TOTAL_SUPPLY_BASE
+                        const percentage = (claimedAmount / window.TOTAL_SUPPLY_BASE) * 100;
+                        
+                        // FIX: Mostrar la dirección completa sin truncate
+                        listItem.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 rounded-lg text-sm font-mono break-all bg-gray-700/50 hover:bg-gray-700 transition duration-150';
+                        listItem.innerHTML = `
+                            <span class="pr-2 w-full sm:w-1/2 text-aero-light" title="${fullAddress}">${fullAddress}</span>
+                            <div class="flex items-center mt-1 sm:mt-0 sm:justify-end w-full sm:w-1/2 space-x-2">
+                                <span class="text-aero-light text-xs whitespace-nowrap">${claimedAmount} AERO 
+                                    <span class="text-gray-400">(${percentage.toFixed(8)}%)</span>
+                                </span>
+                                <span class="text-green-400 text-lg flex-shrink-0" title="Amount: ${claimedAmount} AERO">✅</span>
+                            </div>
+                        `;
+                        listContainer.appendChild(listItem);
+                    });
+                }
+
+                window.setLanguage(window.currentLanguage);
+            }, (error) => {
+                console.error("Error reading claims from Firestore: ", error);
+                document.getElementById('holdersCount').textContent = "Error";
+            });
+        }
+        window.loadClaims = loadClaims;
+        
+        // --- Burn Vote Logic (Loaders) ---
+        
+        // Function to set up date picker min/max for the next month
+        function getNextMonthFirstDay() {
+            const date = new Date();
+            // Go to the first day of the next month
+            const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+            return nextMonth.toISOString().split('T')[0];
+        }
+
+        function getNextMonthLastDay() {
+            const date = new Date();
+            // Go to day 0 of the month after next (which is the last day of the next month)
+            const lastDay = new Date(date.getFullYear(), date.getMonth() + 2, 0); 
+            return lastDay.toISOString().split('T')[0];
+        }
+        
+        function setupDatePicker() {
+            const input = document.getElementById('burnDateInput');
+            input.setAttribute('min', getNextMonthFirstDay());
+            input.setAttribute('max', getNextMonthLastDay());
+            // Set default value to the first day of the next month
+            input.value = getNextMonthFirstDay();
+        }
+
+        // Function to load and display current votes
+        function loadBurnVotes() {
+            if (!window.db || !window.isAuthReady) return;
+
+            const votesRef = collection(window.db, window.VOTES_COLLECTION_PATH);
+            const votesQuery = query(votesRef);
+            
+            const resultsContainer = document.getElementById('votingResults');
+            const winningDateElement = document.getElementById('winningDate');
+            const totalVotesElement = document.getElementById('totalVotesCount');
+            const historyContainer = document.getElementById('burnHistoryList');
+
+            onSnapshot(votesQuery, (snapshot) => {
+                const currentVotesMap = {};
+                const historicalVotes = {};
+                
+                const today = new Date();
+                const nextMonth = today.getMonth() + 1;
+                const nextYear = today.getFullYear() + (nextMonth === 12 ? 1 : 0);
+                const currentMonth = today.getMonth();
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const dateKey = data.date; // Date string 'YYYY-MM-DD'
+                    // Añadir 'T00:00:00Z' para asegurar que se interprete como UTC al inicio del día
+                    const dateObj = new Date(dateKey + 'T00:00:00Z'); 
+                    
+                    const voteYear = dateObj.getUTCFullYear();
+                    const voteMonth = dateObj.getUTCMonth();
+                    
+                    // Filter votes by month (Votos en curso: del próximo mes)
+                    if (voteYear === nextYear && voteMonth === nextMonth % 12) {
+                         currentVotesMap[dateKey] = (currentVotesMap[dateKey] || 0) + 1;
+                    } else if (voteYear < currentYear || (voteYear === currentYear && voteMonth < currentMonth)) {
+                         // Votos históricos: meses anteriores al actual (ya quemados)
+                         const monthKey = `${voteYear}-${String(voteMonth + 1).padStart(2, '0')}`;
+                         if (!historicalVotes[monthKey]) {
+                            historicalVotes[monthKey] = {};
+                         }
+                         historicalVotes[monthKey][dateKey] = (historicalVotes[monthKey][dateKey] || 0) + 1;
+                    }
+                });
+                
+                const totalCurrentVotes = Object.values(currentVotesMap).reduce((a, b) => a + b, 0);
+                totalVotesElement.textContent = totalCurrentVotes.toLocaleString();
+
+                // --- Current Month Results ---
+                let winningDate = translations[window.currentLanguage].vote_no_votes;
+                let maxVotes = -1;
+                
+                const sortedVotesArray = Object.entries(currentVotesMap).sort(([, a], [, b]) => b - a);
+
+                // FIX: Limpiar y repoblar el contenedor de resultados de votación
+                resultsContainer.innerHTML = '';
+
+                if (sortedVotesArray.length === 0) {
+                    resultsContainer.innerHTML = `<p class="text-gray-500 italic p-4" data-localize="vote_no_votes_full">No votes cast yet for the next month.</p>`;
+                } else {
+                     sortedVotesArray.forEach(([date, count]) => {
+                        const percent = totalCurrentVotes > 0 ? ((count / totalCurrentVotes) * 100).toFixed(1) : 0;
+                        // FIX: Determinar la fecha ganadora (el primero en la lista ordenada es el ganador)
+                        if (count > maxVotes) {
+                            maxVotes = count;
+                            winningDate = date;
+                        }
+
+                        const bar = document.createElement('div');
+                        bar.className = 'mb-2';
+                        bar.innerHTML = `
+                            <div class="flex justify-between text-sm">
+                                <span class="font-mono text-aero-light">${date}</span>
+                                <span class="font-bold text-aero-blue">${count} (${percent}%)</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2">
+                                <div class="bg-aero-blue h-2 rounded-full transition-all duration-500" style="width: ${percent}%;"></div>
+                            </div>
+                        `;
+                        resultsContainer.appendChild(bar);
+                    });
+                }
+                winningDateElement.innerHTML = winningDate;
+                
+                // --- Historical Results ---
+                historyContainer.innerHTML = '';
+                const sortedHistoryMonths = Object.keys(historicalVotes).sort().reverse(); // Show newest first
+                
+                if (sortedHistoryMonths.length === 0) {
+                    historyContainer.innerHTML = `<p class="text-gray-500 italic p-4" data-localize="history_no_data">No burn history found.</p>`;
+                } else {
+                    sortedHistoryMonths.forEach(monthKey => {
+                        const monthVotes = historicalVotes[monthKey];
+                        const monthTotalVotes = Object.values(monthVotes).reduce((a, b) => a + b, 0);
+                        
+                        let winnerDate = monthKey;
+                        let winnerVotes = 0;
+                        Object.entries(monthVotes).forEach(([date, count]) => {
+                            if (count > winnerVotes) {
+                                winnerVotes = count;
+                                winnerDate = date;
+                            }
+                        });
+
+                        const monthName = new Date(`${monthKey}-01`).toLocaleString(window.currentLanguage === 'es' ? 'es-ES' : 'en-US', { month: 'long', year: 'numeric' });
+
+                        const item = document.createElement('div');
+                        // Usar clases dinámicas para el contraste
+                        item.className = 'border-b pb-3 mb-3 border-gray-700/50';
+                        item.innerHTML = `
+                            <p class="font-bold text-lg text-red-400" data-localize="history_month_label">${monthName}</p>
+                            <p class="text-sm text-aero-light"><span data-localize="history_winning_date">Winning Date:</span> <span class="font-mono">${winnerDate}</span></p>
+                            <p class="text-sm text-aero-light"><span data-localize="history_total_votes">Total Votes:</span> <span class="font-mono">${monthTotalVotes}</span></p>
+                            <p class="text-sm text-aero-light"><span data-localize="history_burned_amount">Burned:</span> <span class="font-mono text-red-400">${window.MONTHLY_BURN} AERO</span></p>
+                        `;
+                        historyContainer.appendChild(item);
+                    });
+                }
+                
+                window.setLanguage(window.currentLanguage);
+                
+            }, (error) => {
+                console.error("Error loading votes from Firestore:", error);
+                winningDateElement.innerHTML = "Error";
+            });
+        }
+        window.loadBurnVotes = loadBurnVotes; // Expose globally
+
+        // --- Chat/Forum Logic ---
+        function loadChatMessages() {
+            if (!window.db || !window.isAuthReady) return;
+
+            const chatRef = collection(window.db, window.CHAT_COLLECTION_PATH);
+            const chatQuery = query(chatRef, orderBy("timestamp", "asc")); // Ordenar ascendente para construir el historial
+
+            const chatContainer = document.getElementById('chatMessages');
+
+            onSnapshot(chatQuery, (snapshot) => {
+                chatContainer.innerHTML = ''; // Limpiar
+                const fragment = document.createDocumentFragment();
+                
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const message = data.message;
+                    const senderId = data.senderId;
+                    const isSystem = data.isSystem;
+                    
+                    const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString(window.currentLanguage === 'es' ? 'es-ES' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+                    
+                    const senderDisplay = isSystem 
+                        ? (window.currentLanguage === 'es' ? 'Sistema' : 'System') 
+                        : (senderId ? senderId.substring(0, 6) + '...' : 'Anon');
+                    
+                    const msgDiv = document.createElement('div');
+                    const msgBgClass = isSystem ? 'bg-red-900/50 text-red-300' : 'bg-gray-700 text-white';
+                    const msgAlignment = isSystem ? 'justify-end' : 'justify-start';
+
+                    msgDiv.className = `p-3 rounded-lg max-w-[90%] break-words shadow-md ${msgBgClass} ${isSystem ? 'italic' : ''} self-start`;
+                    msgDiv.innerHTML = `
+                        <p class="text-xs font-bold ${isSystem ? 'text-red-300' : 'text-aero-blue'}">${senderDisplay} <span class="text-gray-400 text-xs font-light ml-2">${time}</span></p>
+                        <p class="mt-1 text-sm text-aero-light">${message}</p>
+                    `;
+                    
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `flex ${msgAlignment} mb-3 w-full`;
+                    wrapper.appendChild(msgDiv);
+                    fragment.appendChild(wrapper);
+                });
+
+                // FIX: Insertar el fragmento directamente y hacer scroll al final.
+                chatContainer.appendChild(fragment);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, (error) => {
+                console.error("Error loading chat messages:", error);
+                chatContainer.innerHTML = `<p class="text-red-500 p-4" data-localize="chat_error">Error loading chat messages.</p>`;
+                window.setLanguage(window.currentLanguage);
+            });
+        }
+        
+        // --- Gemini AI Function for Chat ---
+        async function getGeminiResponse(userQuery) {
+            const systemPrompt = "You are the Aerocoin AI expert. Provide concise and helpful answers related to Aerocoin, its deflationary mechanics, tokenomics, or general crypto knowledge. Keep the response to 2-3 sentences max. If the question is political or controversial, state you are an AI focused on Aerocoin.";
+            
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+
+            const maxRetries = 3;
+            let response = null;
+            let lastError = null;
+
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    response = await fetch(GEMINI_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        return text || (window.currentLanguage === 'es' ? "Lo siento, no pude generar una respuesta." : "Sorry, I couldn't generate a response.");
+                    } else {
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+                } catch (error) {
+                    lastError = error;
+                    // Implement exponential backoff (1s, 2s, 4s)
+                    if (attempt < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                    }
+                }
+            }
+            console.error("Gemini API failed after multiple retries:", lastError);
+            return window.currentLanguage === 'es' ? "El servicio de IA no está disponible temporalmente." : "AI service is temporarily unavailable.";
+        }
+
+
+        window.sendMessage = async () => {
+            const inputElement = document.getElementById('chatInput');
+            const message = inputElement.value.trim();
+            
+            if (!message || !window.db || !window.isAuthReady) return;
+
+            const sendButton = document.getElementById('chatSendButton');
+            sendButton.disabled = true;
+            // FIX: Guardar y restaurar el texto del botón correctamente para que funcione en cualquier idioma.
+            const originalButtonText = translations[window.currentLanguage].chat_send_btn;
+            sendButton.textContent = window.currentLanguage === 'es' ? 'Enviando...' : 'Sending...';
+
+            try {
+                const chatRef = collection(window.db, window.CHAT_COLLECTION_PATH);
+                
+                // 1. Save user message
+                await addDoc(chatRef, {
+                    message: message,
+                    senderId: window.userId,
+                    timestamp: Timestamp.now(),
+                    isSystem: false,
+                });
+                
+                // 2. Check for question and get AI response
+                if (message.includes('?') || message.toLowerCase().startsWith('what') || message.toLowerCase().startsWith('cómo') || message.toLowerCase().startsWith('qué')) {
+                    const aiResponse = await getGeminiResponse(message);
+                    
+                    // 3. Save AI response as system message
+                    await addDoc(chatRef, {
+                        message: aiResponse,
+                        senderId: 'AI',
+                        timestamp: Timestamp.now(),
+                        isSystem: true,
+                    });
+                }
+                
+                inputElement.value = ''; // Clear on success
+            } catch (e) {
+                console.error("Error handling chat message: ", e);
+            } finally {
+                sendButton.disabled = false;
+                // Restaurar el texto original del botón usando la traducción
+                sendButton.textContent = originalButtonText; 
+                inputElement.focus();
+                window.setLanguage(window.currentLanguage);
+            }
+        };
+
+        // --- Gemini AI Function for Market Sentiment (with Search Grounding) ---
+        window.analyzeMarketSentiment = async () => {
+            const analysisContainer = document.getElementById('sentimentAnalysisResult');
+            const analyzeButton = document.getElementById('analyzeButton');
+
+            // Clear previous results
+            analysisContainer.innerHTML = `<p class="text-gray-500 text-center" data-localize="loading_sentiment"></p>`;
+            analysisContainer.classList.remove('hidden');
+
+            analyzeButton.disabled = true;
+            const originalButtonText = analyzeButton.textContent;
+            analyzeButton.textContent = translations[window.currentLanguage].loading_sentiment;
+
+            try {
+                const systemPrompt = "You are a specialized crypto market analyst. Your task is to provide a very brief, single-paragraph summary (2-3 sentences max) on the current market sentiment (bullish, bearish, or neutral) specifically concerning deflationary micro-cap tokens on the Binance Smart Chain (BSC). Focus on trends relevant to scarcity and token burns. Output only the summary text.";
+                
+                const userQuery = "Summarize the current market outlook for deflationary BSC tokens, referencing any relevant news or trends.";
+                const apiKey = GEMINI_API_KEY; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "google_search": {} }], // Enable search grounding
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const maxRetries = 3;
+                let response = null;
+                let result = null;
+
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (response.ok) {
+                            result = await response.json();
+                            break; // Success
+                        } else {
+                            throw new Error(`API returned status ${response.status}`);
+                        }
+                    } catch (error) {
+                        if (attempt < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                        } else {
+                            throw error; // Throw after last retry
+                        }
+                    }
+                }
+                
+                const candidate = result.candidates?.[0];
+                const text = candidate?.content?.parts?.[0]?.text || translations[window.currentLanguage].chat_error;
+                
+                let sources = [];
+                const groundingMetadata = candidate?.groundingMetadata;
+                if (groundingMetadata?.groundingAttributions) {
+                    sources = groundingMetadata.groundingAttributions
+                        .map(attribution => ({
+                            uri: attribution.web?.uri,
+                            title: attribution.web?.title,
+                        }))
+                        .filter(source => source.uri && source.title);
+                }
+
+                // Display AI response
+                let htmlContent = `<p class="text-aero-light mb-4 text-justify">${text}</p>`;
+                
+                if (sources.length > 0) {
+                    htmlContent += `<p class="text-sm font-semibold text-aero-blue mt-4" data-localize="sentiment_sources">${translations[window.currentLanguage].sentiment_sources}</p>`;
+                    htmlContent += `<ul class="list-disc list-inside text-xs text-gray-500 space-y-1">`;
+                    sources.forEach((source, index) => {
+                        htmlContent += `<li><a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="hover:underline">${source.title}</a></li>`;
+                    });
+                    htmlContent += `</ul>`;
+                }
+
+                analysisContainer.innerHTML = htmlContent;
+
+            } catch (e) {
+                console.error("Gemini API error during market analysis:", e);
+                analysisContainer.innerHTML = `<p class="text-red-500">${translations[window.currentLanguage].chat_error}</p>`;
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = originalButtonText; // Restore original button text
+                window.setLanguage(window.currentLanguage); // Ensure all dynamic elements are localized
+            }
+        }
+        // --- Init ---
+        initializeFirebase();
+
+        // --- Faucet Claim Logic ---
+        window.claimAerocoin = async () => {
+            const inputElement = document.getElementById('bscAddressInput');
+            const address = inputElement.value.trim();
+            const messageElement = document.getElementById('claimMessage');
+            const claimButton = document.getElementById('claimButton');
+            
+            messageElement.classList.add('hidden');
+            messageElement.textContent = '';
+            
+            const bscRegex = /^0x[a-fA-F0-9]{40}$/;
+            if (!bscRegex.test(address)) {
+                messageElement.textContent = translations[window.currentLanguage].claim_invalid;
+                messageElement.classList.remove('hidden', 'text-green-500');
+                messageElement.classList.add('text-red-500');
+                return;
+            }
+
+            claimButton.disabled = true;
+            const originalClaimText = claimButton.textContent;
+            claimButton.textContent = window.currentLanguage === 'es' ? 'Reclamando...' : 'Claiming...';
+
+            if (!window.db || !window.isAuthReady) {
+                console.error("Firebase not ready.");
+                messageElement.textContent = translations[window.currentLanguage].claim_error.replace('{amount}', window.dynamicClaimAmount || 1);
+                messageElement.classList.remove('hidden');
+                messageElement.classList.add('text-red-500');
+                claimButton.disabled = false;
+                claimButton.textContent = originalClaimText;
+                return;
+            }
+
+            try {
+                const claimsRef = collection(window.db, window.FIREBASE_COLLECTION_PATH);
+
+                // FIX: Consulta para verificar si la dirección ya existe como holder.
+                const q = query(claimsRef, where("address", "==", address));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    // Si ya reclamó (ya es holder), notificar. El token dinámico se dará en el próximo claim de una nueva dirección.
+                    messageElement.textContent = translations[window.currentLanguage].claim_duplicate;
+                    messageElement.classList.remove('hidden', 'text-green-500');
+                    messageElement.classList.add('text-yellow-500');
+                } else {
+                    const dynamicClaimAmount = window.dynamicClaimAmount || 1;
+
+                    // FIX: Agregar el nuevo holder/claim
+                    await addDoc(claimsRef, {
+                        address: address,
+                        claimedAt: Timestamp.now(),
+                        amount: dynamicClaimAmount,
+                    });
+                    
+                    messageElement.textContent = translations[window.currentLanguage].claim_success.replace('{amount}', dynamicClaimAmount);
+                    messageElement.classList.remove('hidden', 'text-red-500', 'text-yellow-500');
+                    messageElement.classList.add('text-green-500');
+                    
+                    inputElement.value = '';
+                }
+
+            } catch (e) {
+                console.error("Error claiming document: ", e);
+                messageElement.textContent = translations[window.currentLanguage].claim_error.replace('{amount}', window.dynamicClaimAmount || 1);
+                messageElement.classList.remove('hidden', 'text-green-500');
+                messageElement.classList.add('text-red-500');
+            } finally {
+                claimButton.disabled = false;
+                // Usar la función de localización para restaurar el texto del botón con la cantidad dinámica
+                claimButton.textContent = translations[window.currentLanguage].btn_claim.replace('{amount}', window.dynamicClaimAmount || 1);
+                window.setLanguage(window.currentLanguage);
+            }
+        };
+
+        // --- BURN VOTING LOGIC ---
+        window.voteForBurnDate = async () => {
+            const inputElement = document.getElementById('burnDateInput');
+            const dateValue = inputElement.value.trim();
+            const messageElement = document.getElementById('voteMessage');
+            const voteButton = document.getElementById('voteButton');
+
+            messageElement.classList.add('hidden');
+            messageElement.textContent = '';
+            
+            if (!dateValue) {
+                messageElement.textContent = translations[window.currentLanguage].vote_invalid_date;
+                messageElement.classList.remove('hidden');
+                messageElement.classList.add('text-red-500');
+                return;
+            }
+
+            // Check if date is in the NEXT month
+            const dateObj = new Date(dateValue + 'T00:00:00Z');
+            const today = new Date();
+            const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+            
+            if (dateObj.getUTCMonth() !== nextMonth.getUTCMonth() || dateObj.getUTCFullYear() !== nextMonth.getUTCFullYear()) {
+                 messageElement.textContent = translations[window.currentLanguage].vote_invalid_month;
+                 messageElement.classList.remove('hidden');
+                 messageElement.classList.add('text-red-500');
+                 return;
+            }
+            
+            voteButton.disabled = true;
+            voteButton.textContent = window.currentLanguage === 'es' ? 'Votando...' : 'Voting...';
+
+            if (!window.db || !window.isAuthReady || !window.userId) {
+                console.error("Firebase not ready or User not authenticated.");
+                messageElement.textContent = translations[window.currentLanguage].vote_auth_required;
+                messageElement.classList.remove('hidden', 'text-green-500');
+                messageElement.classList.add('text-red-500');
+                voteButton.disabled = false;
+                voteButton.textContent = translations[window.currentLanguage].btn_vote;
+                return;
+            }
+
+            try {
+                // Usar el userId como Document ID para garantizar 1 voto por usuario y optimizar la escritura/lectura
+                const voteDocRef = doc(window.db, VOTES_COLLECTION_PATH, window.userId);
+                
+                await setDoc(voteDocRef, {
+                    date: dateValue,
+                    voterId: window.userId,
+                    votedAt: Timestamp.now(),
+                });
+                
+                messageElement.textContent = translations[window.currentLanguage].vote_success;
+                messageElement.classList.remove('hidden', 'text-red-500');
+                messageElement.classList.add('text-green-500');
+                inputElement.value = '';
+
+            } catch (e) {
+                console.error("Error submitting vote: ", e);
+                messageElement.textContent = translations[window.currentLanguage].vote_error;
+                messageElement.classList.remove('hidden', 'text-green-500');
+                messageElement.classList.add('text-red-500');
+            } finally {
+                voteButton.disabled = false;
+                voteButton.textContent = translations[window.currentLanguage].btn_vote;
+            }
+        };
+
+
+        // --- LÓGICA DE CAMBIO DE MODO ---
+        window.toggleTheme = () => {
+            const body = document.body;
+            const isLight = body.classList.toggle('light-mode');
+            
+            // Actualizar el estado en localStorage
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            
+            // Recargar estilos y traducciones dinámicas
+            window.setLanguage(window.currentLanguage);
+        }
+
+        // Aplicar tema al inicio
+        window.applyInitialTheme = () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+            }
+        }
+        window.applyInitialTheme();
+
+
+        // --- LANGUAGE DATA ---
+        const translations = {
+            'en': {
+                'title': 'Aerocoin (AERO) - The Deflationary Scarcity on BSC',
+                'nav_vision': 'Vision',
+                'nav_tokenomics': 'Tokenomics',
+                'nav_market': 'Market',
+                'voting_title': 'Burn Vote',
+                'forum_title': 'Public Forum',
+                'faq_title': 'FAQ',
+                'hero_title': 'Aerocoin (AERO)',
+                'hero_subtitle': 'Deflationary Scarcity Taking Off on the <span class="font-semibold text-aero-blue">Binance Smart Chain</span>.',
+                'hero_text': 'With an ultra-limited supply of **only 800,000 AERO**, Aerocoin is not just another token. It is a statement of value driven by programmed scarcity and the creator\'s active commitment to deflation.',
+                'btn_buy_aero': 'Buy AERO on PancakeSwap',
+                'btn_contract': 'View Contract on BscScan',
+                'btn_vision': 'Discover the Deflationary Vision',
+                'countdown_title': 'Total Supply Deflationary Countdown',
+                // FIX: {remaining} AERO will be colored via CSS.
+                'countdown_text': 'Remaining: <span class="text-red-400 font-extrabold">{remaining} AERO</span> | {percent}% Burned (Total: {burned} AERO)', 
+                'burned_text': 'Burned (Total)',
+                'vision_title': 'Our Advantage: Active Deflation and Genuine Scarcity',
+                'card1_title': 'Ultra-Scarce Supply',
+                'card1_text': 'Only **800,000 AERO** in circulation. While other tokens launch billions, Aerocoin opts for an extremely limited supply to maximize demand and exclusivity.',
+                'card2_title': 'Proactive Creator Burn',
+                'card2_text': 'The developer is committed to strategically and continually **burning AERO tokens**. This deflationary policy aims to protect value and create sustained upward pressure on price.',
+                'card3_title': 'Solid Foundations',
+                'card3_text': 'Based on advanced ERC20 standards (including Permit) and deployed on the robust Binance Smart Chain. Aerocoin is designed for security and long-term functionality.',
+                // FIX: Nueva clave para mostrar quemados
+                'tokenomics_stat1_title_dynamic': 'Total Supply (Max: 800,000 AERO) - {burned} AERO Burned',
+                'tokenomics_title': 'Essential AERO Details',
+                'stat1_title': 'Total Supply (Max.)',
+                'stat1_value': '800,000 AERO',
+                'stat1_desc': 'Designed for scarcity.',
+                'stat2_title': 'Symbol / Decimals',
+                'stat2_value': 'AERO / 9',
+                'stat2_desc': 'Precision in transactions.',
+                'stat3_title': 'Network / Blockchain',
+                'stat3_value': 'Binance Smart Chain (BSC)',
+                'stat3_desc': 'Speed and low fees.',
+                'stat4_title': 'Additional Functionality',
+                'stat4_value': 'ERC20 + EIP-2612 Permit',
+                'stat4_desc': 'Gas-less transactions for approvals (Permit).',
+                'contract_title': 'Contract Address (AERO)',
+                'btn_copy': 'Copy',
+                'msg_copied': 'Address Copied!',
+                'trust_title': 'Audit and Trust',
+                'trust_text': 'Transparency is key. Verify the source code and technical details on the leading platforms.',
+                'btn_bscscan_verified': 'BscScan (Verified Code)',
+                'btn_binance_details': 'Binance Wallet (Token Details)',
+                'market_title': 'Community and Market Data',
+                'holders_title': 'AERO Holders',
+                'holders_estimate': '18',
+                'holders_desc': 'Click below to see the real-time count and detailed balance distribution on the blockchain.',
+                'btn_view_holders': 'View Holders on BscScan',
+                'burn_title': 'Deflationary Commitment',
+                'burn_monthly_commit': 'Monthly Burn Commitment:',
+                'holder_goal_title': 'Holder Goal (10,000 Holders)',
+                'holder_goal_desc': 'Every Faucet claim adds 1 holder towards the 10,000 goal, increasing the value proposition.',
+                'claim_title': 'AERO Faucet: Claim {amount} Aerocoin',
+                'claim_desc': 'Enter your BSC address to claim **{amount} AERO** (for demonstration). Addresses are tracked on-chain. **Holding % = Amount / 800,000**',
+                'claim_input_placeholder': 'Paste your BSC address (0x...)',
+                'btn_claim': 'Claim {amount} Aerocoin',
+                'claim_list_title': 'Recent Claimed Addresses',
+                'claim_address_placeholder': 'No claims yet.',
+                'claim_success': 'Success! Address recorded as holder. ✅ ({amount} AERO simulated)',
+                'claim_invalid': 'Invalid BSC address format.',
+                'claim_error': 'Error saving address. Check console.',
+                'claim_duplicate': 'Address already claimed.',
+                'vote_input_title': 'Vote for the Monthly Burn Date',
+                'vote_input_desc': 'Select a date within the **next month** (YYYY-MM-DD). Only one vote per unique holder (account) is allowed.',
+                'btn_vote': 'Submit Vote',
+                'vote_results_title': 'Current Voting Results (Next Burn)',
+                'vote_winning_date': 'Winning Burn Date:',
+                'vote_total_votes': 'Total Votes: <span id="totalVotesCount">0</span>',
+                'vote_no_votes': 'No date yet.',
+                'vote_no_votes_full': 'No votes cast yet for the next month.',
+                'vote_success': 'Vote successfully submitted! Thank you for participating.',
+                'vote_invalid_date': 'Invalid date format or missing date.',
+                'vote_invalid_month': 'The date must be within the next month.',
+                'vote_error': 'Error submitting vote. Check console.',
+                'vote_auth_required': 'Authentication required to vote.',
+                'history_title': 'Burn History',
+                'history_month_label': 'Burn Event for {month}',
+                'history_winning_date': 'Winning Date:',
+                'history_total_votes': 'Total Votes:',
+                'history_burned_amount': 'Burned:',
+                'history_no_data': 'No burn history found (votes older than the next month are considered history).',
+                'faq_q1': 'What is the utility of Aerocoin?',
+                'faq_a1': 'Aerocoin is primarily a deflationary asset designed for value preservation and speculation due to its extreme scarcity and the developer\'s burn commitment. Future utility will depend on community development and potential ecosystem integration.',
+                'faq_q2': 'What is the purpose of the burn mechanism?',
+                'faq_a2': 'The burn mechanism is a manual process executed by the developer to continually reduce the circulating supply. This reduction increases the scarcity of AERO, aiming to counteract selling pressure and support long-term price appreciation.',
+                'faq_q3': 'Why only 800,000 total supply?',
+                'faq_a3': 'The highly limited supply is the core pillar of Aerocoin\'s value proposition. Unlike inflationary tokens, AERO is positioned as a rare, high-value asset, making every unit proportionally more significant.',
+                'faq_q4': 'How can I acquire AERO?',
+                'faq_a4': 'AERO can be acquired through decentralized exchanges (DEXs) on the Binance Smart Chain (BSC) after its official listing. Always use the official contract address (0x19F7ac2439143E7d63a8B55AD7242036897647cA).',
+                'faq_q5': 'When will all tokens be burned, and what happens then?',
+                'faq_a5': 'If the monthly burn commitment of 100 AERO continues, it would take several millennia to burn all 800,000 tokens. However, the true purpose is not total destruction, but to establish a constant deflationary pressure. If the circulating supply ever approaches extreme scarcity, the governance mechanism (which is currently controlled by the creator via the token contract) would decide the next steps, potentially locking the remaining supply to turn AERO into a historical collectible asset. The deflationary commitment is primarily a tool to support the price and rarity.',
+                'footer_copy': '© 2024 Aerocoin (AERO). A scarcity project powered by the community on BSC.',
+                'chat_input_placeholder': 'Type your public message here...',
+                'chat_send_btn': 'Send',
+                'chat_error': 'Error loading chat messages.',
+                
+                // NEW GEMINI FEATURE TRANSLATIONS
+                'sentiment_title': '✨ Análisis de Sentimiento del Mercado',
+                'sentiment_desc': 'Obtén un resumen conciso del sentimiento actual del mercado de criptomonedas (basado en la web) para tokens deflacionarios en BSC.',
+                'btn_analyze': 'Analizar Sentimiento ✨',
+                'loading_sentiment': 'Analizando datos web en tiempo real...',
+                'sentiment_sources': 'Fuentes Citadas:',
+            },
+            'es': {
+                'title': 'Aerocoin (AERO) - La Escasez Deflacionaria en BSC',
+                'nav_vision': 'Visión',
+                'nav_tokenomics': 'Tokenomics',
+                'nav_market': 'Mercado',
+                'voting_title': 'Votación de Quema',
+                'forum_title': 'Foro Público',
+                'faq_title': 'FAQ',
+                'hero_title': 'Aerocoin (AERO)',
+                'hero_subtitle': 'La Escasez Deflacionaria que Despega en la <span class="font-semibold text-aero-blue">Binance Smart Chain</span>.',
+                'hero_text': 'Con un suministro ultralimitado de **solo 800,000 AERO**, Aerocoin no es un token más. Es una declaración de valor impulsada por la escasez programada y el compromiso activo de su creador con la deflación.',
+                'btn_buy_aero': 'Comprar AERO en PancakeSwap',
+                'btn_contract': 'Ver Contrato en BscScan',
+                'btn_vision': 'Descubre la Visión Deflacionaria',
+                'countdown_title': 'Cuenta Regresiva Deflacionaria del Suministro Total',
+                'countdown_text': 'Restante: <span class="text-red-400 font-extrabold">{remaining} AERO</span> | {percent}% Quemado (Total: {burned} AERO)',
+                'burned_text': 'Quemado (Total)',
+                'vision_title': 'Nuestra Ventaja: Deflación Activa y Escasez Genuina',
+                'card1_title': 'Suministro Ultra-Escaso',
+                'card1_text': 'Solo **800,000 AERO** en circulación. Mientras otros tokens lanzan miles de millones, Aerocoin apuesta por un suministro extremadamente limitado para maximizar la demanda y la exclusividad.',
+                'card2_title': 'Quema Proactiva del Creador',
+                'card2_text': 'El desarrollador está comprometido a **quemar tokens AERO** de forma estratégica y continua. Esta política deflacionaria tiene como objetivo proteger el valor y crear una presión alcista sostenida sobre el precio.',
+                'card3_title': 'Un Token con Fundamentos Sólidos',
+                'card3_text': 'Basado en estándares ERC20 avanzados (incluyendo Permit) y desplegado en la robusta Binance Smart Chain. Aerocoin está diseñado para la seguridad y la funcionalidad a largo plazo.',
+                // FIX: Nueva clave para mostrar quemados
+                'tokenomics_stat1_title_dynamic': 'Suministro Total (Máx: 800.000 AERO) - {burned} AERO Quemados',
+                'tokenomics_title': 'Detalles Esenciales de AERO',
+                'stat1_title': 'Suministro Total (Máx.)',
+                'stat1_value': '800,000 AERO',
+                'stat1_desc': 'Diseñado para la escasez.',
+                'stat2_title': 'Símbolo / Decimals',
+                'stat2_value': 'AERO / 9',
+                'stat2_desc': 'Precisión en las transacciones.',
+                'stat3_title': 'Red / Blockchain',
+                'stat3_value': 'Binance Smart Chain (BSC)',
+                'stat3_desc': 'Velocidad y bajas comisiones.',
+                'stat4_title': 'Funcionalidad Adicional',
+                'stat4_value': 'ERC20 + EIP-2612 Permit',
+                'stat4_desc': 'Transacciones sin gas para aprobaciones (Permit).',
+                'contract_title': 'Dirección del Contrato (AERO)',
+                'btn_copy': 'Copiar',
+                'msg_copied': '¡Dirección copiada!',
+                'trust_title': 'Auditoría y Confianza',
+                'trust_text': 'La transparencia es clave. Verifica el código fuente y los detalles técnicos en las plataformas líderes.',
+                'btn_bscscan_verified': 'BscScan (Código Verificado)',
+                'btn_binance_details': 'Binance Wallet (Detalles del Token)',
+                'market_title': 'Comunidad y Datos de Mercado',
+                'holders_title': 'Holders de AERO',
+                'holders_estimate': '18',
+                'holders_desc': 'Haz clic abajo para ver el conteo en tiempo real y la distribución detallada de balances en la blockchain.',
+                'btn_view_holders': 'Ver Holders en BscScan',
+                'burn_title': 'Compromiso Deflacionario',
+                'burn_monthly_commit': 'Compromiso de Quema Mensual:',
+                'holder_goal_title': 'Meta de Holders (10.000 Holders)',
+                'holder_goal_desc': 'Cada reclamo de Faucet suma 1 holder a la meta de 10.000, aumentando la propuesta de valor.',
+                'claim_title': 'AERO Faucet: Reclama {amount} Aerocoin',
+                'claim_desc': 'Introduce tu dirección de BSC para reclamar **{amount} AERO** (demostración). Las direcciones se registran en la cadena. **Tenencia % = Cantidad / 800.000**',
+                'claim_input_placeholder': 'Pega tu dirección de BSC (0x...)',
+                'btn_claim': 'Reclamar {amount} Aerocoin',
+                'claim_list_title': 'Direcciones Recientemente Reclamadas',
+                'claim_address_placeholder': 'Aún no hay reclamos.',
+                'claim_success': '¡Éxito! Dirección registrada como holder. ✅ ({amount} AERO simulado)',
+                'claim_invalid': 'Formato de dirección de BSC inválido.',
+                'claim_error': 'Error al guardar la dirección. Revisa la consola.',
+                'claim_duplicate': 'Esta dirección ya ha reclamado.',
+                'vote_input_title': 'Vota por la Fecha de Quema Mensual',
+                'vote_input_desc': 'Selecciona una fecha dentro del **próximo mes** (AAAA-MM-DD). Solo se permite un voto por holder (cuenta) único.',
+                'btn_vote': 'Enviar Voto',
+                'vote_results_title': 'Resultados de la Votación (Próxima Quema)',
+                'vote_winning_date': 'Fecha de Quema Ganadora:',
+                'vote_total_votes': 'Votos Totales: <span id="totalVotesCount">0</span>',
+                'vote_no_votes': 'Aún no hay fecha.',
+                'vote_no_votes_full': 'Aún no hay votos registrados para el próximo mes.',
+                'vote_success': '¡Voto enviado con éxito! Gracias por participar.',
+                'vote_invalid_date': 'Formato de fecha inválido o fecha faltante.',
+                'vote_invalid_month': 'La fecha debe estar dentro del próximo mes.',
+                'vote_error': 'Error al enviar el voto. Revisa la consola.',
+                'vote_auth_required': 'Se requiere autenticación para votar.',
+                'history_title': 'Historial de Quema',
+                'history_month_label': 'Evento de Quema de {month}',
+                'history_winning_date': 'Fecha Ganadora:',
+                'history_total_votes': 'Votos Totales:',
+                'history_burned_amount': 'Quemado:',
+                'history_no_data': 'No se encontró historial de quema (los votos anteriores al próximo mes se consideran historial).',
+                'faq_q1': '¿Cuál es la utilidad de Aerocoin?',
+                'faq_a1': 'Aerocoin es principalmente un activo deflacionario diseñado para la preservación de valor y la especulación debido a su escasez extrema y el compromiso de quema del desarrollador. La utilidad futura dependerá del desarrollo comunitario y la potencial integración en el ecosistema.',
+                'faq_q2': '¿Cuál es el propósito del mecanismo de quema?',
+                'faq_a2': 'El mecanismo de quema es un proceso manual ejecutado por el desarrollador para reducir continuamente el suministro circulante. Esta reducción aumenta la escasez de AERO, buscando contrarrestar la presión de venta y apoyar la apreciación del precio a largo plazo.',
+                'faq_q3': '¿Por qué solo 800.000 de suministro total?',
+                'faq_a3': 'El suministro altamente limitado es el pilar central de la propuesta de valor de Aerocoin. A diferencia de los tokens inflacionarios, AERO se posiciona como un activo raro y de alto valor, haciendo que cada unidad sea proporcionalmente más significativa.',
+                'faq_q4': '¿Cómo puedo adquirir AERO?',
+                'faq_a4': 'AERO se puede adquirir a través de intercambios descentralizados (DEX) en la Binance Smart Chain (BSC) después de su listado oficial. Utiliza siempre la dirección de contrato oficial (0x19F7ac2439143E7d63a8B55AD7242036897647cA).',
+                'faq_q5': '¿Cuándo se queman todos los tokens y qué pasa llegado al caso?',
+                'faq_a5': 'Si el compromiso de quema mensual de 100 AERO continúa, se tardarían varios milenios en quemar los 800.000 tokens. Sin embargo, el verdadero propósito no es la destrucción total, sino establecer una presión deflacionaria constante. Si el suministro circulante alguna vez se acerca a la escasez extrema, el mecanismo de gobernanza (actualmente controlado por el creador via el token contract) decidiría los siguientes pasos, potencialmente bloqueando el suministro restante para convertir a AERO en un activo coleccionable histórico. El compromiso deflacionario es principalmente una herramienta para apoyar el precio y la rareza.',
+                'footer_copy': '© 2024 Aerocoin (AERO). Un proyecto de escasez impulsado por la comunidad en BSC.',
+                'chat_input_placeholder': 'Escribe tu mensaje público aquí...',
+                'chat_send_btn': 'Enviar',
+                'chat_error': 'Error al cargar mensajes del chat.',
+
+                // NEW GEMINI FEATURE TRANSLATIONS
+                'sentiment_title': '✨ Análisis de Sentimiento del Mercado',
+                'sentiment_desc': 'Obtén un resumen conciso del sentimiento actual del mercado de criptomonedas (basado en la web) para tokens deflacionarios en BSC.',
+                'btn_analyze': 'Analizar Sentimiento ✨',
+                'loading_sentiment': 'Analizando datos web en tiempo real...',
+                'sentiment_sources': 'Fuentes Citadas:',
+            }
+        };
+
+        window.currentLanguage = 'en'; // Default language
+        window.translations = translations;
+
+        // --- LANGUAGE SWITCHING LOGIC ---
+        window.setLanguage = (lang) => {
+            if (!translations[lang]) return;
+            window.currentLanguage = lang;
+            
+            const titleElement = document.querySelector('title');
+            if (titleElement) {
+                titleElement.textContent = translations[lang]['title'];
+            }
+
+            document.querySelectorAll('[data-localize]').forEach(element => {
+                const key = element.getAttribute('data-localize');
+                if (translations[lang][key]) {
+                    let localizedContent = translations[lang][key];
+                    
+                    // --- Lógica para el contador de suministro ---
+                    if (key === 'countdown_text') {
+                        // Reemplazar los placeholders usando las variables globales calculadas
+                        localizedContent = localizedContent
+                            .replace('{remaining}', window.remainingTokens)
+                            .replace('{percent}', window.progressPercent)
+                            .replace('{burned}', window.burnedTokens);
+
+                        // Actualizar el texto del progreso dentro de la barra 
+                        const progressText = document.getElementById('countdownProgressText');
+                        if (progressText) {
+                            // Usar el texto localizado de la traducción
+                            const burnedLabel = translations[lang].burned_text || 'Quemado (Simulado)';
+                            progressText.textContent = `${window.progressPercent}% ${burnedLabel}`;
+                            progressText.innerHTML = `${window.progressPercent}% ${burnedLabel}`;
+                        }
+                    }
+
+                    // --- Lógica para el título de Suministro Total (AERO Quemados) ---
+                    if (key === 'tokenomics_stat1_title_dynamic') {
+                        // Reemplazar el placeholder con la cantidad quemada real
+                        localizedContent = localizedContent.replace('{burned}', window.burnedTokens);
+                        element.innerHTML = localizedContent;
+                        return; // Evita el innerHTML genérico al final
+                    }
+                    
+                    // Actualizar el innerHTML del elemento
+                    element.innerHTML = localizedContent;
+                }
+            });
+
+            document.querySelectorAll('[data-localize-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-localize-placeholder');
+                if (translations[lang][key]) {
+                    element.setAttribute('placeholder', translations[lang][key]);
+                }
+            });
+            
+            // Update dynamic elements manually
+            const claimButton = document.getElementById('claimButton');
+            const amount = window.dynamicClaimAmount || 1;
+            if (claimButton) {
+                claimButton.textContent = translations[lang].btn_claim.replace('{amount}', amount);
+            }
+            const claimTitleElement = document.getElementById('claimTitle');
+            if (claimTitleElement) {
+                claimTitleElement.innerHTML = translations[lang].claim_title.replace('{amount}', amount);
+            }
+            const claimDescElement = document.getElementById('claimDesc');
+            if (claimDescElement) {
+                claimDescElement.innerHTML = translations[lang].claim_desc.replace('{amount}', amount);
+            }
+            
+            if (window.loadClaims) {
+                window.loadClaims();
+            }
+            if (window.loadBurnVotes) {
+                window.loadBurnVotes();
+            }
+        };
+
+        // Initialize language on load
+        window.addEventListener('load', () => {
+            document.getElementById('holdersCount').textContent = INITIAL_HOLDER_COUNT.toLocaleString();
+            window.setLanguage(window.currentLanguage);
+        });
+        
+        // --- COPY CONTRACT FUNCTIONALITY ---
+        window.copyContract = () => {
+            const address = document.getElementById('contractAddress').textContent.trim();
+            const copyMessage = document.getElementById('copyMessage');
+            
+            // FIX: Usar navigator.clipboard si es posible, si no, fallback
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(address).then(() => {
+                    copyMessage.textContent = translations[window.currentLanguage].msg_copied;
+                    copyMessage.classList.remove('hidden', 'text-red-500');
+                    copyMessage.classList.add('text-green-500');
+                    setTimeout(() => copyMessage.classList.add('hidden'), 2000);
+                }).catch(err => {
+                    console.error('Error copying using navigator.clipboard:', err);
+                    // Fallback to execCommand (required for some iframes/environments)
+                    const textarea = document.createElement('textarea');
+                    textarea.value = address;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        copyMessage.textContent = translations[window.currentLanguage].msg_copied;
+                        copyMessage.classList.remove('hidden', 'text-red-500');
+                        copyMessage.classList.add('text-green-500');
+                        setTimeout(() => copyMessage.classList.add('hidden'), 2000);
+                    } catch (err2) {
+                        copyMessage.textContent = window.currentLanguage === 'es' ? 'Error al copiar (fallback).' : 'Error copying (fallback).';
+                        copyMessage.classList.remove('hidden', 'text-green-500');
+                        copyMessage.classList.add('text-red-500');
+                        setTimeout(() => copyMessage.classList.add('hidden'), 3000);
+                    }
+                    document.body.removeChild(textarea);
+                });
+            } else {
+                 // Fallback to execCommand directly
+                 const textarea = document.createElement('textarea');
+                 textarea.value = address;
+                 document.body.appendChild(textarea);
+                 textarea.select();
+                 try {
+                     document.execCommand('copy');
+                     copyMessage.textContent = translations[window.currentLanguage].msg_copied;
+                     copyMessage.classList.remove('hidden', 'text-red-500');
+                     copyMessage.classList.add('text-green-500');
+                     setTimeout(() => copyMessage.classList.add('hidden'), 2000);
+                 } catch (err) {
+                     copyMessage.textContent = window.currentLanguage === 'es' ? 'Error al copiar.' : 'Error copying.';
+                     copyMessage.classList.remove('hidden', 'text-green-500');
+                     copyMessage.classList.add('text-red-500');
+                     setTimeout(() => copyMessage.classList.add('hidden'), 3000);
+                 }
+                 document.body.removeChild(textarea);
+            }
+        }
+
+        // --- FAUCET CLAIM LOGIC (Defined in the same scope as Firebase logic) ---
+        // (Functionality defined above inside the module script to access imports)
+
+    </script>
+</head>
+<body class="bg-gray-900 text-aero-light font-sans">
+
+    <!-- Navbar (Simple) -->
+    <header class="p-4 border-b border-aero-blue/20 shadow-lg" style="background-color: var(--nav-bg);">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-aero-blue">AERO<span class="text-aero-light">COIN</span></h1>
+            <nav class="flex items-center space-x-4">
+                <a href="#vision" class="hidden sm:inline text-sm md:text-base text-gray-300 hover:text-aero-blue transition-colors mr-4" data-localize="nav_vision">Vision</a>
+                <a href="#tokenomics" class="hidden sm:inline text-sm md:text-base text-gray-300 hover:text-aero-blue transition-colors" data-localize="nav_tokenomics">Tokenomics</a>
+                <a href="#market" class="hidden sm:inline text-sm md:text-base text-gray-300 hover:text-aero-blue transition-colors ml-4" data-localize="nav_market">Market</a>
+                <a href="#voting" class="hidden sm:inline text-sm md:text-base text-gray-300 hover:text-aero-blue transition-colors ml-4" data-localize="voting_title">Burn Vote</a>
+                <a href="#forum" class="hidden sm:inline text-sm md:text-base text-gray-300 hover:text-aero-blue transition-colors ml-4" data-localize="forum_title">Public Forum</a>
+                <a href="#faq" class="hidden sm:inline text-sm md:text-base text-gray-300 hover:text-aero-blue transition-colors ml-4" data-localize="faq_title">FAQ</a>
+
+
+                <!-- Language Toggles -->
+                <button onclick="setLanguage('en')" class="text-2xl p-1 rounded-full hover:bg-gray-700 transition">
+                    🇺🇸
+                </button>
+                <button onclick="setLanguage('es')" class="text-2xl p-1 rounded-full hover:bg-gray-700 transition">
+                    🇪🇸
+                </button>
+                
+                <!-- Theme Toggle (Moon/Sun) -->
+                <button onclick="toggleTheme()" class="text-2xl p-1 rounded-full hover:bg-gray-700 transition ml-4 text-aero-light" aria-label="Toggle dark/light mode">
+                    <!-- Icono de Sol (Modo Claro) -->
+                    <svg class="h-6 w-6 hidden dark-mode-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <!-- Icono de Luna (Modo Oscuro) -->
+                    <svg class="h-6 w-6 light-mode-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+                <script>
+                    // Mostrar el icono correcto basado en el estado inicial
+                    function updateThemeIcon() {
+                        const body = document.body;
+                        const sun = document.querySelector('.dark-mode-icon');
+                        const moon = document.querySelector('.light-mode-icon');
+                        // Usar .has() para detectar la clase, compatible con Tailwind
+                        const isLightMode = body.classList.contains('light-mode');
+                        
+                        if (sun) sun.classList.toggle('hidden', !isLightMode);
+                        if (moon) moon.classList.toggle('hidden', isLightMode);
+                    }
+                    
+                    // Ejecutar al cargar la página y después de cualquier cambio de idioma
+                    window.addEventListener('load', updateThemeIcon);
+                    // Sobreescribir las funciones para asegurar que updateThemeIcon se llama
+                    window.setLanguage = ((originalSetLanguage) => {
+                        return (lang) => {
+                            originalSetLanguage(lang);
+                            updateThemeIcon(); // Asegurar que el icono se actualice con el lenguaje
+                        };
+                    })(window.setLanguage || (() => {})); // Encapsular la función original
+                    window.toggleTheme = ((originalToggleTheme) => {
+                         return () => {
+                            originalToggleTheme();
+                            updateThemeIcon();
+                        };
+                    })(window.toggleTheme || (() => {})); // Encapsular la función original
+                </script>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="py-20 md:py-32 text-center shadow-inner shadow-aero-blue/10 section-bg-light">
+            <div class="max-w-7xl mx-auto px-6">
+                <!-- AERO Icon / Logo -->
+                <div class="w-24 h-24 mx-auto mb-8 bg-aero-blue rounded-full flex items-center justify-center shadow-2xl">
+                    <!-- Icono de un avión simple para representar AERO -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                </div>
+                
+                <h2 class="text-5xl md:text-7xl font-extrabold text-aero-blue mb-4 leading-tight">
+                    Aerocoin (AERO)
+                </h2>
+                <p class="text-xl md:text-3xl font-light mb-8 text-aero-light" data-localize="hero_subtitle">
+                    Deflationary Scarcity Taking Off on the <span class="font-semibold text-aero-blue">Binance Smart Chain</span>.
+                </p>
+                <p class="max-w-3xl mx-auto text-gray-500 text-lg mb-10" data-localize="hero_text">
+                    With an ultra-limited supply of **only 800,000 AERO**, Aerocoin is not just another token. It is a statement of value driven by programmed scarcity and the creator's active commitment to deflation.
+                </p>
+
+                <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                    <!-- Buy Button -->
+                    <a href="https://pancakeswap.finance/swap?outputCurrency=0x19F7ac2439143E7d63a8B55AD7242036897647cA&chain=bsc" target="_blank" rel="noopener noreferrer" class="bg-green-500 text-gray-900 font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-green-400 transition transform hover:scale-105">
+                        Buy AERO on PancakeSwap
+                    </a>
+                    
+                    <a href="https://bscscan.com/token/0x19F7ac2439143E7d63a8B55AD7242036897647cA" target="_blank" rel="noopener noreferrer" class="bg-aero-blue text-gray-900 font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-aero-blue/80 transition transform hover:scale-105" data-localize="btn_contract">
+                        View Contract on BscScan
+                    </a>
+                    <a href="#vision" class="btn-secondary font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-gray-600 transition transform hover:scale-105" data-localize="btn_vision">
+                        Discover the Deflationary Vision
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Total Supply Countdown Bar -->
+        <section class="py-12 section-bg-light border-t border-b border-aero-blue/20">
+            <div class="max-w-5xl mx-auto px-6">
+                <h3 class="text-3xl font-bold text-center text-red-500 mb-6" data-localize="countdown_title">Total Supply Deflationary Countdown</h3>
+                
+                <div class="card-bg p-6 rounded-xl shadow-xl border border-gray-700">
+                    <p id="countdownDisplay" class="text-xl font-semibold mb-2 text-aero-light" data-localize="countdown_text">
+                        Remaining: <span class="text-red-400 font-extrabold">{remaining} AERO</span> | {percent}% Burned (Total: {burned} AERO)
+                    </p>
+                    
+                    <div class="w-full bg-gray-700 rounded-full h-4 relative">
+                        <div id="countdownProgressBar" class="bg-red-600 h-4 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        <!-- Este ID se mantiene para actualizar el porcentaje de texto dentro de la barra -->
+                        <span id="countdownProgressText" class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white text-shadow-md">
+                            0.0000% Burned
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center" data-localize="stat1_desc">Total supply is 800,000 AERO. Burned amount is accumulated from historical burn votes.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deflationary Vision Section -->
+        <section id="vision" class="py-20 section-bg-dark">
+            <div class="max-w-6xl mx-auto px-6">
+                <h3 class="text-4xl font-bold text-center text-aero-blue mb-12" data-localize="vision_title">Our Advantage: Active Deflation and Genuine Scarcity</h3>
+
+                <div class="grid md:grid-cols-3 gap-10">
+                    <!-- Card 1: Suministro Raro -->
+                    <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 card-border-primary transform hover:scale-[1.02] transition duration-300 border">
+                        <div class="text-4xl text-aero-blue mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8v8m0-8H9m3 0h3m-3 8h-3m3 0h3" />
+                            </svg>
+                        </div>
+                        <h4 class="text-2xl font-semibold text-aero-light mb-4" data-localize="card1_title">Ultra-Scarce Supply</h4>
+                        <p class="text-gray-500" data-localize="card1_text">
+                            Only **800,000 AERO** in circulation. While other tokens launch billions, Aerocoin opts for an extremely limited supply to maximize demand and exclusivity.
+                        </p>
+                    </div>
+
+                    <!-- Card 2: Quema de Tokens (El Motor Deflacionario) -->
+                    <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 card-border-primary transform hover:scale-[1.02] transition duration-300 border">
+                        <div class="text-4xl text-aero-blue mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c-2 3-4 4.5-4 4.5S2 16 2 20h20c0-4-3-5.5-3-5.5s-2-1.5-4-4.5c2-1 2.657-3.343 2.657-3.343A8 8 0 0117.657 18.657z" />
+                            </svg>
+                        </div>
+                        <h4 class="text-2xl font-semibold text-aero-light mb-4" data-localize="card2_title">Proactive Creator Burn</h4>
+                        <p class="text-gray-500" data-localize="card2_text">
+                            The developer is committed to strategically and continually **burning AERO tokens**. This deflationary policy aims to protect value and create sustained upward pressure on price.
+                        </p>
+                    </div>
+
+                    <!-- Card 3: Estabilidad y Futuro -->
+                    <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 card-border-primary transform hover:scale-[1.02] transition duration-300 border">
+                        <div class="text-4xl text-aero-blue mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <h4 class="text-2xl font-semibold text-aero-light mb-4" data-localize="card3_title">Solid Foundations</h4>
+                        <p class="text-gray-500" data-localize="card3_text">
+                            Based on advanced ERC20 standards (including Permit) and deployed on the robust Binance Smart Chain. Aerocoin is designed for security and long-term functionality.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tokenomics & Contract Details Section -->
+        <section id="tokenomics" class="py-20 section-bg-light">
+            <div class="max-w-5xl mx-auto px-6">
+                <h3 class="text-4xl font-bold text-center text-aero-light mb-12" data-localize="tokenomics_title">Essential AERO Details</h3>
+                
+                <div class="card-bg p-8 rounded-xl shadow-2xl space-y-6 border">
+                    <!-- Key Stats Grid -->
+                    <div class="grid sm:grid-cols-2 gap-6 text-lg">
+                        <div class="p-4 bg-gray-700/50 rounded-lg shadow-inner">
+                            <!-- FIX: Se usa la clave dinámica para mostrar la cantidad quemada -->
+                            <p class="text-aero-blue font-bold" data-localize="tokenomics_stat1_title_dynamic">Total Supply (Max: 800,000 AERO) - {burned} AERO Burned</p>
+                            <p class="text-aero-light font-mono" data-localize="stat1_value">800,000 AERO</p>
+                            <p class="text-xs text-gray-500" data-localize="stat1_desc">Designed for scarcity.</p>
+                        </div>
+                        <div class="p-4 bg-gray-700/50 rounded-lg shadow-inner">
+                            <p class="text-aero-blue font-bold" data-localize="stat2_title">Symbol / Decimals</p>
+                            <p class="text-aero-light font-mono" data-localize="stat2_value">AERO / 9</p>
+                            <p class="text-xs text-gray-500" data-localize="stat2_desc">Precision in transactions.</p>
+                        </div>
+                        <div class="p-4 bg-gray-700/50 rounded-lg shadow-inner">
+                            <p class="text-aero-blue font-bold" data-localize="stat3_title">Network / Blockchain</p>
+                            <p class="text-aero-light font-mono" data-localize="stat3_value">Binance Smart Chain (BSC)</p>
+                            <p class="text-xs text-gray-500" data-localize="stat3_desc">Speed and low fees.</p>
+                        </div>
+                        <div class="p-4 bg-gray-700/50 rounded-lg shadow-inner">
+                            <p class="text-aero-blue font-bold" data-localize="stat4_title">Additional Functionality</p>
+                            <p class="text-aero-light font-mono" data-localize="stat4_value">ERC20 + EIP-2612 Permit</p>
+                            <p class="text-xs text-gray-500" data-localize="stat4_desc">Gas-less transactions for approvals (Permit).</p>
+                        </div>
+                    </div>
+
+                    <!-- Contract Address -->
+                    <div class="pt-4 border-t border-gray-700/50">
+                        <p class="text-aero-blue font-bold mb-2" data-localize="contract_title">Contract Address (AERO)</p>
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                            <p id="contractAddress" class="input-style p-3 rounded-lg text-sm font-mono flex-grow shadow-inner break-all">
+                                0x19F7ac2439143E7d63a8B55AD7242036897647cA
+                            </p>
+                            <button onclick="copyContract()" class="bg-aero-blue text-gray-900 font-bold py-2 px-4 rounded-lg hover:opacity-80 transition duration-150 flex-shrink-0 shadow-lg hover:shadow-aero-blue/50" data-localize="btn_copy">
+                                Copy
+                            </button>
+                        </div>
+                        <p id="copyMessage" class="text-sm text-green-500 mt-2 hidden" data-localize="msg_copied">Address Copied!</p>
+                    </div>
+                </div>
+
+                <!-- Trust Section -->
+                <div class="mt-16 text-center">
+                    <h4 class="text-2xl font-semibold text-aero-light mb-6" data-localize="trust_title">Audit and Trust</h4>
+                    <p class="text-gray-500 mb-6" data-localize="trust_text">
+                        Transparency is key. Verify the source code and technical details on the leading platforms.
+                    </p>
+                    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                        <a href="https://bscscan.com/token/0x19F7ac2439143E7d63a8B55AD7242036897647cA#readContract" target="_blank" rel="noopener noreferrer" class="bg-gray-700/50 text-aero-light py-3 px-6 rounded-xl border border-gray-600 hover:border-aero-blue transition duration-300 transform hover:scale-105 shadow-md">
+                            <span class="font-bold">BscScan</span> (Verified Code)
+                        </a>
+                        <a href="https://app.binance.com/uni-qr/web3-token-details?utm_medium=share&tokenCA=0x19f7ac2439143e7d63a8b55ad77242036897647ca&binanceChainId=56&chain=bsc" target="_blank" rel="noopener noreferrer" class="bg-gray-700/50 text-aero-light py-3 px-6 rounded-xl border border-gray-600 hover:border-aero-blue transition duration-300 transform hover:scale-105 shadow-md">
+                            <span class="font-bold">Binance Wallet</span> (Token Details)
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Market & Holders Section -->
+        <section id="market" class="py-20 section-bg-dark">
+            <div class="max-w-5xl mx-auto px-6">
+                <h3 class="text-4xl font-bold text-center text-aero-blue mb-12" data-localize="market_title">Community and Market Data</h3>
+                
+                <div class="grid md:grid-cols-2 gap-8 mb-12">
+                    <!-- Card 1: Holders Count & Link -->
+                    <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 card-border-primary flex flex-col justify-between border">
+                        <div>
+                            <div class="text-4xl text-aero-blue mb-4 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20v-2m0 2h2m-2v-2m-2-3a4 4 0 100-8 4 4 0 000 8zM12 20h2v-2a3 3 0 00-2.356-1.857M12 20v-2m0 2h2m-2v-2m-2-3a4 4 0 100-8 4 4 0 000 8z" />
+                                </svg>
+                                <span class="font-semibold" data-localize="holders_title">AERO Holders</span>
+                            </div>
+                            <!-- Initialized with 18, updated by loadClaims -->
+                            <p id="holdersCount" class="text-3xl font-bold text-aero-light mb-2">18</p> 
+                            <p class="text-gray-500 mb-6" data-localize="holders_desc">
+                                Click below to see the real-time count and detailed balance distribution on the blockchain.
+                            </p>
+                        </div>
+                        <a href="https://bscscan.com/token/tokenholderchart/0x19F7ac2439143E7d63a8B55AD7242036897647cA" target="_blank" rel="noopener noreferrer" class="text-center bg-aero-blue text-gray-900 font-bold py-3 px-6 rounded-lg hover:opacity-80 transition duration-150 transform hover:scale-[1.02] shadow-lg hover:shadow-aero-blue/50" data-localize="btn_view_holders">
+                            View Holders on BscScan
+                        </a>
+                    </div>
+
+                    <!-- Card 2: Deflationary Commitment / Holder Goal -->
+                    <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 card-border-accent flex flex-col justify-between border">
+                        <div>
+                            <div class="text-4xl text-red-500 mb-4 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c-2 3-4 4.5-4 4.5S2 16 2 20h20c0-4-3-5.5-3-5.5s-2-1.5-4-4.5c2-1 2.657-3.343 2.657-3.343A8 8 0 0117.657 18.657z" />
+                                </svg>
+                                <span class="font-semibold" data-localize="burn_title">Deflationary Commitment</span>
+                            </div>
+
+                            <p class="text-xl font-bold text-aero-light mb-2" data-localize="burn_monthly_commit">Monthly Burn Commitment:</p>
+                            <p class="text-3xl font-extrabold text-red-400 mb-6">100 AERO</p>
+                            
+                            <p class="text-xl font-bold text-aero-light mb-2" data-localize="holder_goal_title">Holder Goal (10,000 Holders)</p>
+                            <p id="holdersGoalText" class="text-aero-blue text-xl font-mono mb-2">18 / 10,000</p>
+                            
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-gray-700/50 rounded-full h-2.5 mb-4">
+                                <div id="holdersProgressBar" class="bg-aero-blue h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            
+                            <p class="text-gray-500 text-sm" data-localize="holder_goal_desc">
+                                Every Faucet claim adds 1 holder towards the 10,000 goal, increasing the value proposition.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Market Sentiment Analysis Card (Gemini with Search Grounding) -->
+                <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 border-aero-blue/50 border mt-12">
+                    <h4 class="text-2xl font-semibold text-aero-light mb-4 text-center" data-localize="sentiment_title">✨ Análisis de Sentimiento del Mercado</h4>
+                    <p class="text-gray-500 mb-6 text-center" data-localize="sentiment_desc">Obtén un resumen conciso del sentimiento actual del mercado de criptomonedas (basado en la web) para tokens deflacionarios en BSC.</p>
+
+                    <div id="sentimentAnalysisResult" class="p-4 input-style rounded-lg mb-4 text-sm hidden">
+                        <!-- Analysis result will be displayed here -->
+                    </div>
+
+                    <button onclick="analyzeMarketSentiment()" id="analyzeButton" class="w-full bg-aero-blue text-gray-900 font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-aero-blue/80 transition transform hover:scale-105" data-localize="btn_analyze">
+                        Analizar Sentimiento ✨
+                    </button>
+                </div>
+                <!-- END NEW CARD -->
+
+
+                <!-- Claim/Faucet Section -->
+                <div class="card-bg p-8 rounded-xl shadow-2xl border-t-4 border-aero-blue/50 border mt-12">
+                    <h4 id="claimTitle" class="text-2xl font-semibold text-aero-light mb-4 text-center" data-localize="claim_title">AERO Faucet: Claim 1 Aerocoin</h4>
+                    <p id="claimDesc" class="text-gray-500 mb-6 text-center" data-localize="claim_desc">Enter your BSC address to claim 1 AERO (for demonstration). Addresses are tracked on-chain.</p>
+                    
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 items-center">
+                        <input type="text" id="bscAddressInput" class="flex-grow p-3 rounded-lg input-style placeholder-gray-500 border focus:border-aero-blue focus:ring-1 focus:ring-aero-blue shadow-inner" placeholder="Paste your BSC address (0x...)" data-localize-placeholder="claim_input_placeholder">
+                        
+                        <button onclick="claimAerocoin()" id="claimButton" class="w-full sm:w-auto bg-aero-blue text-gray-900 font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-aero-blue/80 transition transform hover:scale-105 flex-shrink-0">
+                            Claim 1 Aerocoin
+                        </button>
+                    </div>
+
+                    <p id="claimMessage" class="mt-4 text-center text-lg font-medium hidden"></p>
+
+                    <!-- Claimed Address List -->
+                    <div class="mt-8 pt-4 border-t border-gray-700/50">
+                        <h5 class="text-xl font-semibold text-aero-light mb-4" data-localize="claim_list_title">Recent Claimed Addresses</h5>
+                        <ul id="claimedAddressesList" class="space-y-2 max-h-48 overflow-y-auto p-2 input-style rounded-lg border border-gray-700/50 shadow-inner">
+                            <p class="text-gray-500 italic" data-localize="claim_address_placeholder">No claims yet.</p>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Burn Voting Section (New) -->
+        <section id="voting" class="py-20 section-bg-light">
+            <div class="max-w-4xl mx-auto px-6">
+                <h3 class="text-4xl font-bold text-center text-aero-light mb-12" data-localize="voting_title">Decentralized Burn Voting (100 AERO)</h3>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Voting Mechanism -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-primary border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-4" data-localize="vote_input_title">Vote for the Monthly Burn Date</h4>
+                        <p class="text-gray-500 mb-4 text-sm" data-localize="vote_input_desc">Select a date within the **next month** (YYYY-MM-DD). Only one vote per unique holder (account) is allowed.</p>
+                        
+                        <input type="date" id="burnDateInput" class="w-full p-3 rounded-lg input-style border focus:border-aero-blue focus:ring-1 focus:ring-aero-blue mb-4 shadow-inner">
+                        
+                        <button onclick="voteForBurnDate()" id="voteButton" class="w-full bg-aero-blue text-gray-900 font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-aero-blue/80 transition hover:shadow-aero-blue/50" data-localize="btn_vote">
+                            Submit Vote
+                        </button>
+                        <p id="voteMessage" class="mt-4 text-center text-lg font-medium hidden"></p>
+                    </div>
+
+                    <!-- Voting Results -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-accent border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-4" data-localize="vote_results_title">Current Voting Results (Next Burn)</h4>
+                        <div class="mb-4">
+                            <p class="text-sm font-bold text-aero-blue" data-localize="vote_winning_date">Winning Burn Date:</p>
+                            <p id="winningDate" class="text-2xl font-mono text-red-400 mt-1" data-localize="vote_no_votes">No date yet.</p>
+                            <p class="text-sm text-gray-500 mt-2" data-localize="vote_total_votes">Total Votes: <span id="totalVotesCount">0</span></p>
+                        </div>
+                        
+                        <div id="votingResults" class="space-y-3 max-h-48 overflow-y-auto p-2">
+                            <p class="text-gray-500 italic" data-localize="vote_no_votes_full">No votes cast yet for the next month.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Burn History Toggle -->
+                <details class="mt-12 card-bg p-6 rounded-xl shadow-lg border-t border-gray-700/50">
+                    <summary class="text-xl font-bold text-aero-light cursor-pointer" data-localize="history_title">Burn History</summary>
+                    <div id="burnHistoryList" class="mt-4 pt-4 max-h-60 overflow-y-auto">
+                        <p class="text-gray-500 italic" data-localize="history_no_data">No burn history found.</p>
+                    </div>
+                </details>
+
+            </div>
+        </section>
+        
+        <!-- Public Chat/Forum Section -->
+        <section id="forum" class="py-20 section-bg-dark">
+            <div class="max-w-4xl mx-auto px-6">
+                <h3 class="text-4xl font-bold text-center text-aero-blue mb-12" data-localize="forum_title">AERO Public Forum (Chat)</h3>
+
+                <div class="card-bg p-6 rounded-xl shadow-2xl border-t-4 border-aero-blue/50 border">
+                    <!-- Message Display Area -->
+                    <div id="chatMessages" class="h-64 overflow-y-auto mb-4 p-3 input-style rounded-lg border border-gray-600 shadow-inner flex flex-col-reverse">
+                        <!-- Messages will be injected here (reverse order for chat history scrolling) -->
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <input type="text" id="chatInput" class="flex-grow p-3 rounded-lg input-style placeholder-gray-500 border border-aero-blue/30 focus:border-aero-blue focus:ring-1 focus:ring-aero-blue shadow-inner" placeholder="Type your public message here..." data-localize-placeholder="chat_input_placeholder" onkeydown="if (event.key === 'Enter') sendMessage()">
+                        
+                        <button onclick="sendMessage()" id="chatSendButton" class="bg-aero-blue text-gray-900 font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-aero-blue/80 transition flex-shrink-0 hover:shadow-aero-blue/50" data-localize="chat_send_btn">
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq" class="py-20 section-bg-light">
+            <div class="max-w-4xl mx-auto px-6">
+                <h3 class="text-4xl font-bold text-center text-aero-light mb-12" data-localize="faq_title">Frequently Asked Questions (FAQ)</h3>
+
+                <div class="space-y-6">
+                    <!-- Q1 -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-primary border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-2" data-localize="faq_q1">What is the utility of Aerocoin?</h4>
+                        <p class="text-gray-500" data-localize="faq_a1">Aerocoin is primarily a deflationary asset designed for value preservation and speculation due to its extreme scarcity and the developer's burn commitment. Future utility will depend on community development and potential ecosystem integration.</p>
+                    </div>
+                    <!-- Q2 -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-primary border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-2" data-localize="faq_q2">What is the purpose of the burn mechanism?</h4>
+                        <p class="text-gray-500" data-localize="faq_a2">The burn mechanism is a manual process executed by the developer to continually reduce the circulating supply. This reduction increases the scarcity of AERO, aiming to counteract selling pressure and support long-term price appreciation.</p>
+                    </div>
+                    <!-- Q3 -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-primary border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-2" data-localize="faq_q3">Why only 800,000 total supply?</h4>
+                        <p class="text-gray-500" data-localize="faq_a3">The highly limited supply is the core pillar of Aerocoin\'s value proposition. Unlike inflationary tokens, AERO is positioned as a rare, high-value asset, making every unit proportionally more significant.</p>
+                    </div>
+                    <!-- Q4: NEW FAQ -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-accent border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-2" data-localize="faq_q5">When will all tokens be burned, and what happens then?</h4>
+                        <p class="text-gray-500" data-localize="faq_a5">If the monthly burn commitment of 100 AERO continues, it would take several millennia to burn all 800,000 tokens. However, the true purpose is not total destruction, but to establish a constant deflationary pressure. If the circulating supply ever approaches extreme scarcity, the governance mechanism (which is currently controlled by the creator via the token contract) would decide the next steps, potentially locking the remaining supply to turn AERO into a historical collectible asset. The deflationary commitment is primarily a tool to support the price and rarity.</p>
+                    </div>
+                    <!-- Q5 (Old Q4) -->
+                    <div class="card-bg p-6 rounded-xl shadow-lg border-l-4 card-border-primary border">
+                        <h4 class="text-xl font-semibold text-aero-light mb-2" data-localize="faq_q4">How can I acquire AERO?</h4>
+                        <p class="text-gray-500" data-localize="faq_a4">AERO can be acquired through decentralized exchanges (DEXs) on the Binance Smart Chain (BSC) after its official listing. Always use the official contract address (0x19F7ac2439143E7d63a8B55AD7242036897647cA).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="p-6 border-t border-aero-blue/20 text-center shadow-inner" style="background-color: var(--nav-bg);">
+        <p class="text-sm text-gray-500" data-localize="footer_copy">
+            © 2024 Aerocoin (AERO). A scarcity project powered by the community on BSC.
+        </p>
+        <p class="text-xs text-gray-500 mt-2">
+            Contract: 0x19F7ac2439143E7d63a8B55AD72420368997647cA
+        </p>
+    </footer>
+</body>
+</html>
