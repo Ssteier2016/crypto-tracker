@@ -416,14 +416,17 @@
     <script>
         // --- CONFIGURACIÓN DE FIREBASE (¡DEBES ACTUALIZAR ESTOS VALORES!) ---
      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Verificación para evitar el crash de "process is not defined"
+const env = (typeof process !== 'undefined' && process.env) ? process.env : {};
+
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+  apiKey: env.REACT_APP_FIREBASE_API_KEY || "AIzaSyDM9GK7_gnd0GaVbxwK9xnwl0qk75MnFXw",
+  authDomain: env.REACT_APP_FIREBASE_AUTH_DOMAIN || "playmobil-2d74d.firebaseapp.com",
+  projectId: env.REACT_APP_FIREBASE_PROJECT_ID || "playmobil-2d74d",
+  storageBucket: env.REACT_APP_FIREBASE_STORAGE_BUCKET || "playmobil-2d74d.firebasestorage.app",
+  messagingSenderId: env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "85202851148",
+  appId: env.REACT_APP_FIREBASE_APP_ID || "1:85202851148:web:bf8eba63238c06c7b4ebe9",
+  measurementId: env.REACT_APP_FIREBASE_MEASUREMENT_ID || "G-MX2B76PCD6"
 };
         
         // Inicialización de Firebase
